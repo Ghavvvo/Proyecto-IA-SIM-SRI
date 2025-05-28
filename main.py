@@ -27,7 +27,7 @@ class TourismCrawler:
         )
 
         # Configuración del crawler
-        self.max_pages = 1000
+        self.max_pages = 200
         self.max_depth = 3
 
 
@@ -336,10 +336,9 @@ if __name__ == "__main__":
     )
     print("\nResultados para 'playas paradisíacas en el caribe':")
     for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
-        print(f"{i+1}. {metadata['title']}")
+        print(f"{i + 1}. {metadata['title']}")
         print(f"   URL: {metadata['url']}")
         print(f"   Extracto: {doc[:150]}...\n")
-
     # Consulta ejemplo 2: Buscar información sobre monumentos históricos
     results = collection.query(
         query_texts=["monumentos históricos en europa"],
@@ -347,6 +346,23 @@ if __name__ == "__main__":
     )
     print("\nResultados para 'monumentos históricos en europa':")
     for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
-        print(f"{i+1}. {metadata['title']}")
+        print(f"{i + 1}. {metadata['title']}")
         print(f"   URL: {metadata['url']}")
         print(f"   Extracto: {doc[:150]}...\n")
+
+    while True:
+        query = input("\nIngrese una consulta para buscar información (o 'salir' para terminar): ")
+        if query.lower() == 'salir':
+            break
+
+        results = collection.query(
+            query_texts=[query],
+            n_results=3
+        )
+
+        print(f"\nResultados para '{query}':")
+        for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
+            print(f"{i+1}. {metadata['title']}")
+            print(f"   URL: {metadata['url']}")
+            print(f"   Extracto: {doc[:150]}...\n")
+
