@@ -34,6 +34,8 @@ class TourismCrawler:
             'expedia', 'airbnb', 'visit', 'tourism'
         ]
 
+        self.crawl_steps = []  # Historial de pasos del crawler
+
     def is_valid_url(self, url: str) -> bool:
         """Verifica si la URL es válida para el crawling"""
         parsed = urlparse(url)
@@ -100,8 +102,21 @@ class TourismCrawler:
             "source": urlparse(url).netloc
         }
 
+    def log_step(self, message: str, url: Optional[str] = None, depth: Optional[int] = None):
+        """Registra y muestra un paso del crawler"""
+        step = {
+            "message": message,
+            "url": url,
+            "depth": depth,
+            "visited_count": len(self.visited_urls),
+            "to_visit_count": len(self.urls_to_visit)
+        }
+        self.crawl_steps.append(step)
+        print(f"[Step] {message} | URL: {url} | Depth: {depth} | Visited: {len(self.visited_urls)} | To Visit: {len(self.urls_to_visit)}")
+
     def crawl_page(self, url: str, current_depth: int):
         """Procesa una página individual"""
+        self.log_step("Iniciando crawling", url, current_depth)
         try:
             print(f"Crawling: {url} (Depth: {current_depth})")
             headers = {
@@ -111,6 +126,7 @@ class TourismCrawler:
             response.raise_for_status()
 
             soup = BeautifulSoup(response.text, 'html.parser')
+            self.log_step("Extrayendo contenido", url, current_depth)
             content = self.extract_content(url, soup)
 
             if content:
@@ -124,32 +140,40 @@ class TourismCrawler:
                     }],
                     ids=[url]  # Usamos la URL como ID único
                 )
+                self.log_step("Contenido agregado a ChromaDB", url, current_depth)
                 print(f"Added content from {url} to ChromaDB")
 
             # Solo seguir explorando si no hemos alcanzado la profundidad máxima
             if current_depth < self.max_depth:
                 links = self.get_links(url, soup)
+                self.log_step(f"Encontrados {len(links)} links en la página", url, current_depth)
                 for link in links:
                     if link not in self.visited_urls and link not in self.urls_to_visit:
                         self.urls_to_visit.add(link)
+                        self.log_step("Agregando link a la cola de visita", link, current_depth + 1)
 
         except Exception as e:
+            self.log_step(f"Error al hacer crawling: {str(e)}", url, current_depth)
             print(f"Error crawling {url}: {str(e)}")
         finally:
             self.visited_urls.add(url)
             if url in self.urls_to_visit:
                 self.urls_to_visit.remove(url)
+            self.log_step("Finalizado crawling de la página", url, current_depth)
 
     def run_crawler(self):
         """Ejecuta el crawler desde las URLs iniciales"""
         current_depth = 0
+        self.log_step("Inicio del crawler", None, current_depth)
         while self.urls_to_visit and len(self.visited_urls) < self.max_pages:
             urls_at_current_depth = list(self.urls_to_visit)
             for url in urls_at_current_depth:
                 if len(self.visited_urls) >= self.max_pages:
                     break
+                self.log_step("Procesando nueva URL", url, current_depth)
                 self.crawl_page(url, current_depth)
             current_depth += 1
+        self.log_step("Crawler finalizado", None, current_depth)
 
 
 # Ejemplo de uso
