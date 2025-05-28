@@ -29,38 +29,83 @@ class TourismCrawler:
         # Configuración del crawler
         self.max_pages = 1000
         self.max_depth = 3
-        self.domain_whitelist = [
-            'tripadvisor', 'lonelyplanet', 'booking.com',
-            'expedia', 'airbnb', 'visit', 'tourism'
-        ]
+
 
         self.crawl_steps = []  # Historial de pasos del crawler
 
     def is_valid_url(self, url: str) -> bool:
-        """Verifica si la URL es válida para el crawling"""
-        parsed = urlparse(url)
-        if parsed.scheme not in ('http', 'https'):
+        """
+        Determina si una URL es válida para el crawler de turismo.
+        Filtra URLs no relevantes como páginas de login, secciones about, etc.
+        """
+        # Validar formato de URL
+        try:
+            parsed = urlparse(url)
+            if not parsed.scheme or not parsed.netloc:
+                return False
+        except:
             return False
 
-        # Verificar si el dominio está en la whitelist
-        if not any(domain in parsed.netloc for domain in self.domain_whitelist):
+        # Filtrar URLs de recursos estáticos
+        unwanted_extensions = [
+            '.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.pdf', '.svg',
+            '.mp3', '.mp4', '.avi', '.mov', '.webp', '.ico', '.xml'
+        ]
+        if any(url.lower().endswith(ext) for ext in unwanted_extensions):
             return False
 
-        # Excluir ciertos tipos de archivos
-        if any(parsed.path.endswith(ext) for ext in ['.pdf', '.jpg', '.png', '.zip']):
+        # Filtrar URLs no relevantes para turismo
+        unwanted_patterns = [
+            '/login', '/signin', '/signup', '/register', '/account', '/cart',
+            '/checkout', '/payment', '/admin', '/wp-admin', '/wp-login',
+            '/contact', '/legal', '/terms', '/privacy', '/cookies',
+            '/careers', '/jobs', '/author/', '/tag/', '/category/technology',
+            '/category/business', '/category/finance', '/forum', '/community',
+            '/search', '/password', '/user', '/profile', '/settings',
+            '/comment', '/feed', '/rss', '/sitemap', '/api/', '/cdn-cgi/'
+        ]
+
+        # Patrones específicamente permitidos/valorados para turismo
+        valuable_patterns = [
+            '/destination', '/travel', '/tourism', '/tour', '/visit', '/vacation',
+            '/holiday', '/hotel', '/accommodation', '/attractions', '/guide',
+            '/places', '/things-to-do', '/city-guide', '/restaurant', '/review',
+            '/experience', '/itinerary', '/trip', '/explore', '/adventure'
+        ]
+
+        # Si la URL contiene patrones específicamente valiosos, darle prioridad
+        if any(pattern in url.lower() for pattern in valuable_patterns):
+            return True
+
+        # Rechazar URLs con patrones no deseados
+        if any(pattern in url.lower() for pattern in unwanted_patterns):
             return False
 
         return True
 
     def get_links(self, url: str, soup: BeautifulSoup) -> List[str]:
-        """Extrae todos los links válidos de una página"""
+        """
+        Extrae enlaces de la página y los filtra para obtener solo URLs relevantes de turismo
+        """
         links = []
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            full_url = urljoin(url, href)
-            if self.is_valid_url(full_url) and full_url not in self.visited_urls:
-                links.append(full_url)
-        return links
+        base_url = url
+
+        # Extraer todos los enlaces de la página
+        for a_tag in soup.find_all('a', href=True):
+            href = a_tag.get('href')
+
+            # Ignorar anclas y URLs vacías
+            if not href or href.startswith('#') or href == '/' or href == '':
+                continue
+
+            # Convertir URLs relativas a absolutas
+            absolute_url = urljoin(base_url, href)
+
+            # Validar y añadir a la lista
+            if self.is_valid_url(absolute_url):
+                links.append(absolute_url)
+
+        return list(set(links))  # Eliminar duplicados
 
     def clean_text(self, text: str) -> str:
         """Limpia el texto extraído"""
@@ -76,31 +121,82 @@ class TourismCrawler:
         return len(encoding.encode(text))
 
     def extract_content(self, url: str, soup: BeautifulSoup) -> Optional[Dict]:
-        """Extrae el contenido relevante de la página"""
-        # Eliminar elementos no deseados
-        for element in soup(['script', 'style', 'nav', 'footer', 'iframe']):
-            element.decompose()
+        """
+        Extrae el contenido relevante de turismo de una página web.
+        Intenta obtener el título y el contenido principal.
+        """
+        try:
+            # Obtener el título de la página
+            title = soup.title.string if soup.title else ""
+            title = self.clean_text(title)
 
-        # Extraer título
-        title = soup.title.string if soup.title else ""
+            # Eliminar elementos que normalmente no contienen contenido útil
+            for element in soup.find_all(['script', 'style', 'nav', 'header', 'footer', 'iframe']):
+                element.decompose()
 
-        # Extraer el texto principal (puedes ajustar esto según la estructura de los sitios)
-        main_content = soup.find('main') or soup.find('article') or soup.find('div', class_=re.compile('content|main'))
-        if not main_content:
-            main_content = soup.body
+            # Buscar el contenido principal - primero intentamos con artículos o secciones principales
+            content_candidates = []
 
-        text = self.clean_text(main_content.get_text()) if main_content else ""
+            # Patrones de clases o IDs que suelen contener contenido principal en sitios de turismo
+            main_content_patterns = [
+                'article', 'main', 'content', 'post', 'entry', 'blog-post',
+                'description', 'destination', 'attraction', 'place', 'tour-details',
+                'trip-details', 'hotel-description', 'review-content'
+            ]
 
-        # Verificar que el contenido sea relevante (más de 100 tokens)
-        if self.count_tokens(text) < 100:
+            # Buscar por etiquetas semánticas
+            for tag in ['article', 'main', 'section']:
+                elements = soup.find_all(tag)
+                content_candidates.extend(elements)
+
+            # Buscar por clases o IDs que suelen contener contenido principal
+            for pattern in main_content_patterns:
+                # Buscar por ID
+                element = soup.find(id=lambda x: x and pattern in x.lower())
+                if element:
+                    content_candidates.append(element)
+
+                # Buscar por clase
+                elements = soup.find_all(class_=lambda x: x and pattern in x.lower())
+                content_candidates.extend(elements)
+
+            # Si no encontramos contenido específico, usamos todos los párrafos
+            if not content_candidates:
+                content_candidates = soup.find_all('p')
+
+            # Extraer el texto de los candidatos
+            content_text = ""
+            for candidate in content_candidates:
+                # Para cada candidato, extraemos el texto
+                text = candidate.get_text(separator=' ', strip=True)
+                if text and len(text) > 100:  # Solo texto de cierta longitud
+                    content_text += text + " "
+
+            # Limpiar el texto
+            content_text = self.clean_text(content_text)
+
+            # Verificar si tenemos suficiente contenido
+            if not title or not content_text or len(content_text) < 200:
+                self.log_step("Contenido insuficiente o no relevante", url)
+                return None
+
+            # Limitar el tamaño del contenido para vectorizar (para evitar textos demasiado grandes)
+            max_tokens = 1500  # Ajustar según necesidades
+            if self.count_tokens(content_text) > max_tokens:
+                # Truncar el texto para que quepa en los límites
+                tokens = content_text.split()
+                content_text = ' '.join(tokens[:max_tokens*2])  # Aproximación
+
+            # Retornar el resultado
+            return {
+                "url": url,
+                "title": title,
+                "content": content_text
+            }
+
+        except Exception as e:
+            self.log_step(f"Error extrayendo contenido: {str(e)}", url)
             return None
-
-        return {
-            "url": url,
-            "title": title,
-            "content": text,
-            "source": urlparse(url).netloc
-        }
 
     def log_step(self, message: str, url: Optional[str] = None, depth: Optional[int] = None):
         """Registra y muestra un paso del crawler"""
@@ -114,79 +210,143 @@ class TourismCrawler:
         self.crawl_steps.append(step)
         print(f"[Step] {message} | URL: {url} | Depth: {depth} | Visited: {len(self.visited_urls)} | To Visit: {len(self.urls_to_visit)}")
 
-    def crawl_page(self, url: str, current_depth: int):
-        """Procesa una página individual"""
-        self.log_step("Iniciando crawling", url, current_depth)
-        try:
-            print(f"Crawling: {url} (Depth: {current_depth})")
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (compatible; TourismCrawler/1.0; +https://example.com/bot)'
-            }
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.text, 'html.parser')
-            self.log_step("Extrayendo contenido", url, current_depth)
-            content = self.extract_content(url, soup)
-
-            if content:
-                # Almacenar en ChromaDB
-                self.collection.add(
-                    documents=[content["content"]],
-                    metadatas=[{
-                        "url": content["url"],
-                        "title": content["title"],
-                        "source": content["source"]
-                    }],
-                    ids=[url]  # Usamos la URL como ID único
-                )
-                self.log_step("Contenido agregado a ChromaDB", url, current_depth)
-                print(f"Added content from {url} to ChromaDB")
-
-            # Solo seguir explorando si no hemos alcanzado la profundidad máxima
-            if current_depth < self.max_depth:
-                links = self.get_links(url, soup)
-                self.log_step(f"Encontrados {len(links)} links en la página", url, current_depth)
-                for link in links:
-                    if link not in self.visited_urls and link not in self.urls_to_visit:
-                        self.urls_to_visit.add(link)
-                        self.log_step("Agregando link a la cola de visita", link, current_depth + 1)
-
-        except Exception as e:
-            self.log_step(f"Error al hacer crawling: {str(e)}", url, current_depth)
-            print(f"Error crawling {url}: {str(e)}")
-        finally:
-            self.visited_urls.add(url)
-            if url in self.urls_to_visit:
-                self.urls_to_visit.remove(url)
-            self.log_step("Finalizado crawling de la página", url, current_depth)
-
     def run_crawler(self):
-        """Ejecuta el crawler desde las URLs iniciales"""
-        current_depth = 0
-        self.log_step("Inicio del crawler", None, current_depth)
-        while self.urls_to_visit and len(self.visited_urls) < self.max_pages:
-            urls_at_current_depth = list(self.urls_to_visit)
-            for url in urls_at_current_depth:
-                if len(self.visited_urls) >= self.max_pages:
-                    break
-                self.log_step("Procesando nueva URL", url, current_depth)
-                self.crawl_page(url, current_depth)
-            current_depth += 1
-        self.log_step("Crawler finalizado", None, current_depth)
+        """
+        Ejecuta el crawler para recolectar información de turismo y almacenarla en ChromaDB
+        """
+        page_count = 0
+        url_depths = {url: 0 for url in self.starting_urls}  # Seguimiento de la profundidad de cada URL
+
+        self.log_step("Iniciando crawler de turismo", None)
+
+        while self.urls_to_visit and page_count < self.max_pages:
+            # Obtener la siguiente URL a visitar
+            url = self.urls_to_visit.pop()
+            current_depth = url_depths.get(url, 0)
+
+            # Verificar si ya visitamos esta URL
+            if url in self.visited_urls:
+                continue
+
+            # Verificar si excedimos la profundidad máxima
+            if current_depth > self.max_depth:
+                continue
+
+            self.log_step(f"Visitando página {page_count+1}/{self.max_pages}", url, current_depth)
+
+            try:
+                # Realizar la solicitud HTTP
+                response = requests.get(url, timeout=10, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                })
+
+                # Verificar si la solicitud fue exitosa
+                if response.status_code != 200:
+                    self.log_step(f"Error: Código de estado HTTP {response.status_code}", url)
+                    self.visited_urls.add(url)
+                    continue
+
+                # Parsear el contenido HTML
+                soup = BeautifulSoup(response.text, 'html.parser')
+
+                # Extraer contenido
+                content_data = self.extract_content(url, soup)
+                if content_data:
+                    # Añadir a ChromaDB
+                    self.collection.add(
+                        documents=[content_data["content"]],
+                        metadatas=[{
+                            "url": content_data["url"],
+                            "title": content_data["title"],
+                            "source": "tourism_crawler"
+                        }],
+                        ids=[f"doc_{len(self.visited_urls)}"]
+                    )
+                    self.log_step(f"Contenido añadido a ChromaDB: {content_data['title']}", url)
+
+                # Extraer y procesar enlaces si no estamos en la profundidad máxima
+                if current_depth < self.max_depth:
+                    new_links = self.get_links(url, soup)
+
+                    # Añadir nuevos enlaces a la cola de visitas
+                    for link in new_links:
+                        if link not in self.visited_urls and link not in self.urls_to_visit:
+                            self.urls_to_visit.add(link)
+                            url_depths[link] = current_depth + 1
+
+                # Marcar como visitada
+                self.visited_urls.add(url)
+                page_count += 1
+
+            except Exception as e:
+                self.log_step(f"Error procesando URL: {str(e)}", url)
+                self.visited_urls.add(url)
+
+        self.log_step(f"Crawler finalizado. Páginas procesadas: {page_count}", None)
+        return page_count
 
 
 # Ejemplo de uso
 if __name__ == "__main__":
     starting_urls = [
-        "https://www.tripadvisor.com/",
-        "https://www.lonelyplanet.com/",
-        "https://www.booking.com/",
-        "https://www.expedia.com/",
-        "https://www.airbnb.com/",
-        "https://www.visitacity.com/",
-        "https://www.tourism.com/"
+        # Sitios de guías turísticas
+        "https://www.lonelyplanet.com/destinations",
+        "https://www.tripadvisor.com/Tourism",
+        "https://www.roughguides.com/destinations/",
+        "https://www.frommers.com/destinations",
+        "https://www.nationalgeographic.com/travel/destinations/",
+
+        # Blogs de viajes
+        "https://www.nomadicmatt.com/travel-blog/",
+        "https://www.bemytravelmuse.com/",
+        "https://www.tripsavvy.com/",
+
+        # Sitios de reseñas de hoteles y destinos
+        "https://www.booking.com/reviews.html",
+        "https://www.expedia.com/explore/destinations",
+        "https://www.kayak.com/explore",
+
+        # Sitios oficiales de turismo de países
+        "https://www.spain.info/en/",
+        "https://www.italia.it/en/",
+        "https://www.visitportugal.com/en",
+        "https://www.visitmexico.com/en/"
     ]
 
+    # Crear instancia del crawler y configurar parámetros
     crawler = TourismCrawler(starting_urls)
-    crawler.run_crawler()
+
+    # Configuración específica para el crawler de turismo
+    crawler.max_pages = 200  # Limitar a 200 páginas para evitar excesivo procesamiento
+    crawler.max_depth = 2    # Profundidad de exploración moderada
+
+    # Iniciar el proceso de crawling
+    print("Iniciando extracción de información de turismo...")
+    pages_processed = crawler.run_crawler()
+    print(f"Proceso finalizado. Se procesaron {pages_processed} páginas.")
+
+    # Ejemplos de consultas a la base de datos vectorial
+    print("\nEjemplos de consulta a la base de datos:")
+    collection = crawler.collection
+
+    # Consulta ejemplo 1: Buscar información sobre playas
+    results = collection.query(
+        query_texts=["playas paradisíacas en el caribe"],
+        n_results=3
+    )
+    print("\nResultados para 'playas paradisíacas en el caribe':")
+    for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
+        print(f"{i+1}. {metadata['title']}")
+        print(f"   URL: {metadata['url']}")
+        print(f"   Extracto: {doc[:150]}...\n")
+
+    # Consulta ejemplo 2: Buscar información sobre monumentos históricos
+    results = collection.query(
+        query_texts=["monumentos históricos en europa"],
+        n_results=3
+    )
+    print("\nResultados para 'monumentos históricos en europa':")
+    for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
+        print(f"{i+1}. {metadata['title']}")
+        print(f"   URL: {metadata['url']}")
+        print(f"   Extracto: {doc[:150]}...\n")
