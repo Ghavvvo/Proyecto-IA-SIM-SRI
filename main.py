@@ -6,6 +6,9 @@ from chromadb.utils import embedding_functions
 import re
 from typing import List, Dict, Optional
 import tiktoken  # Para contar tokens
+import google.generativeai as genai
+
+GEMINI_API_KEY = "AIzaSyDmW-QXAeksN6hacpCMVpTQnOEAD8MLG00"
 
 
 class TourismCrawler:
@@ -29,7 +32,6 @@ class TourismCrawler:
         # Configuración del crawler
         self.max_pages = 200
         self.max_depth = 3
-
 
         self.crawl_steps = []  # Historial de pasos del crawler
 
@@ -286,6 +288,70 @@ class TourismCrawler:
         return page_count
 
 
+class RAGSystem:
+    def __init__(self, chroma_collection):
+        self.collection = chroma_collection
+
+        self.answersContext = []
+        # Crear instancia del modelo generativo directamente
+        genai.configure(api_key=GEMINI_API_KEY)
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
+
+    def retrieve(self, query: str, top_k: int = 20) -> List[str]:
+        """
+        Recupera los fragmentos más relevantes para la consulta del usuario.
+        Args:
+            query (str): Consulta del usuario.
+            top_k (int): Número de fragmentos relevantes a recuperar.
+        Returns:
+            List[str]: Lista de textos relevantes.
+        """
+        results = self.collection.query(
+            query_texts=[query],
+            n_results=top_k
+        )
+        return [doc for doc in results['documents'][0]]
+
+    def generate(self, query: str, context: List[str]) -> str:
+        """
+        Genera una respuesta basada en la consulta y el contexto recuperado.
+        Args:
+            query (str): Consulta del usuario.
+            context (List[str]): Fragmentos relevantes recuperados.
+        Returns:
+            str: Respuesta generada por el modelo.
+        """
+
+        prompt = f"Hola, necesito que te comportes como un guía turístico experto, estoy planificando mis vacaciones y necesito que me ayudes con lo siguiente: {query}\n\n. Dame una lista de 5 de mis mejores opciones teniendo en cuenta que estos son los mejores y únicos lugares que puedo visitar: \n{context}.\n Sé conciso, y necesito que siempre me des opciones, aunque no sean las mas adecuadas, no me digas más que el listado de opciones y una breve introducción"
+
+        try:
+
+            response = self.model.generate_content(prompt)
+            self.answersContext.insert(0, f'Yo: {query}, \nAsistente de turismo: {response.text}\n')
+
+            return response.text
+        except AttributeError as e:
+            print(f"Error al generar contenido: {e}")
+            return "No se pudo generar una respuesta."
+
+    def rag_query(self, query: str) -> str:
+        """
+        Implementa el flujo completo de RAG: recuperación y generación.
+        Args:
+            query (str): Consulta del usuario.
+        Returns:
+            str: Respuesta generada.
+        """
+        self.answersContext.append(f'Yo: {query}, \n Asistente de turismo: No hay problema')
+        prevContext = self.model.generate_content(f"""
+                   Hola, te voy enviar una conversación previa que he tenido con un asistente de turismo, necesito que me resumas en máximo {4 * len(self.answersContext)} palabras lo que deseo, no te inventes cosas, sé conciso, y la respuesta proporcionala en primera persona:
+                   \n{self.answersContext}
+               """)
+
+        context = self.retrieve(prevContext.text)
+        return self.generate(prevContext.text, context)
+
+
 # Ejemplo de uso
 if __name__ == "__main__":
     starting_urls = [
@@ -305,12 +371,14 @@ if __name__ == "__main__":
         "https://www.booking.com/reviews.html",
         "https://www.expedia.com/explore/destinations",
         "https://www.kayak.com/explore",
-
-        # Sitios oficiales de turismo de países
-        "https://www.spain.info/en/",
-        "https://www.italia.it/en/",
-        "https://www.visitportugal.com/en",
-        "https://www.visitmexico.com/en/"
+        "https://www.trivago.com/",
+        "https://www.hotels.com/",
+        "https://www.airbnb.com/",
+        "https://www.agoda.com/",
+        "https://www.skyscanner.net/",
+        "https://www.orbitz.com/",
+        "https://www.priceline.com/",
+        "https://www.travelocity.com/"
     ]
 
     # Crear instancia del crawler y configurar parámetros
@@ -322,47 +390,51 @@ if __name__ == "__main__":
 
     # Iniciar el proceso de crawling
     print("Iniciando extracción de información de turismo...")
-    pages_processed = crawler.run_crawler()
-    print(f"Proceso finalizado. Se procesaron {pages_processed} páginas.")
+    #pages_processed = crawler.run_crawler()
+    #print(f"Proceso finalizado. Se procesaron {pages_processed} páginas.")
 
     # Ejemplos de consultas a la base de datos vectorial
     print("\nEjemplos de consulta a la base de datos:")
     collection = crawler.collection
 
     # Consulta ejemplo 1: Buscar información sobre playas
-    results = collection.query(
-        query_texts=["playas paradisíacas en el caribe"],
-        n_results=3
-    )
-    print("\nResultados para 'playas paradisíacas en el caribe':")
-    for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
-        print(f"{i + 1}. {metadata['title']}")
-        print(f"   URL: {metadata['url']}")
-        print(f"   Extracto: {doc[:150]}...\n")
-    # Consulta ejemplo 2: Buscar información sobre monumentos históricos
-    results = collection.query(
-        query_texts=["monumentos históricos en europa"],
-        n_results=3
-    )
-    print("\nResultados para 'monumentos históricos en europa':")
-    for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
-        print(f"{i + 1}. {metadata['title']}")
-        print(f"   URL: {metadata['url']}")
-        print(f"   Extracto: {doc[:150]}...\n")
+    #results = collection.query(
+    #    query_texts=["playas paradisíacas en el caribe"],
+    #    n_results=3
+    #)
+    #print("\nResultados para 'playas paradisíacas en el caribe':")
+    #for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
+    #    print(f"{i + 1}. {metadata['title']}")
+    #    print(f"   URL: {metadata['url']}")
+    #    print(f"   Extracto: {doc[:150]}...\n")
+    ## Consulta ejemplo 2: Buscar información sobre monumentos históricos
+    #results = collection.query(
+    #    query_texts=["monumentos históricos en europa"],
+    #    n_results=3
+    #)
+    #print("\nResultados para 'monumentos históricos en europa':")
+    #for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
+    #    print(f"{i + 1}. {metadata['title']}")
+    #    print(f"   URL: {metadata['url']}")
+    #    print(f"   Extracto: {doc[:150]}...\n")
+
+    # Crear instancia del sistema RAG
+    rag_system = RAGSystem(crawler.collection)
+
+    # Ejemplo de consulta al sistema RAG
+    #print("\nEjemplo de consulta al sistema RAG:")
+    #query = "¿Cuáles son las mejores playas en el Caribe?"
+    #response = rag_system.rag_query(query)
+    #print(f"Respuesta: {response}")
 
     while True:
-        query = input("\nIngrese una consulta para buscar información (o 'salir' para terminar): ")
-        if query.lower() == 'salir':
+        user_query = input("\nIngrese una consulta para el sistema RAG o 'clean' para borrar el contexto (o 'salir' para terminar): ")
+        if user_query.lower() == 'salir':
             break
+        if user_query.lower() == 'clean':
+            rag_system.answersContext = []
+            continue
 
-        results = collection.query(
-            query_texts=[query],
-            n_results=3
-        )
-
-        print(f"\nResultados para '{query}':")
-        for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0])):
-            print(f"{i+1}. {metadata['title']}")
-            print(f"   URL: {metadata['url']}")
-            print(f"   Extracto: {doc[:150]}...\n")
+        response = rag_system.rag_query(user_query)
+        print(f"Respuesta: {response}")
 
