@@ -9,7 +9,7 @@ import tiktoken  # Para contar tokens
 
 
 class TourismCrawler:
-    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data"):
+    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data", max_pages: int = 200, max_depth: int = 3):
         self.starting_urls = starting_urls
         self.visited_urls = set()
         self.urls_to_visit = set(starting_urls)
@@ -27,8 +27,8 @@ class TourismCrawler:
         )
 
         # Configuración del crawler
-        self.max_pages = 200
-        self.max_depth = 3
+        self.max_pages = max_pages
+        self.max_depth = max_depth
 
         self.crawl_steps = []  # Historial de pasos del crawler
 
