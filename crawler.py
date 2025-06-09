@@ -125,7 +125,7 @@ class TourismCrawler:
         Intenta obtener el título y el contenido principal.
         """
         try:
-            # Obtener el título de la página
+            # Obtenerg el título de la página
             title = soup.title.string if soup.title else ""
             title = self.clean_text(title)
 
@@ -208,6 +208,165 @@ class TourismCrawler:
         }
         self.crawl_steps.append(step)
         print(f"[Step] {message} | URL: {url} | Depth: {depth} | Visited: {len(self.visited_urls)} | To Visit: {len(self.urls_to_visit)}")
+
+    def google_search_links(self, keywords: list, num_results: int = 10) -> list:
+        """
+        Busca enlaces relevantes para las palabras clave usando DuckDuckGo.
+        Devuelve una lista de URLs encontradas.
+        """
+        import time
+        import random
+
+        links = []
+        if keywords:
+            query = '+'.join(keywords)
+
+            # Cabeceras más completas para simular un navegador real
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3',
+                'DNT': '1',  # Do Not Track
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+
+            # Intentos en caso de errores
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    # Añadir un delay aleatorio para evitar ser detectado como bot
+                    if attempt > 0:
+                        sleep_time = random.uniform(2, 5) * attempt
+                        self.log_step(f"Esperando {sleep_time:.1f} segundos antes de reintentar (intento {attempt+1}/{max_retries})", None)
+                        time.sleep(sleep_time)
+
+                    # Buscar en DuckDuckGo
+                    ddg_url = f"https://duckduckgo.com/html/?q={query}&kl=wt-wt"
+                    self.log_step(f"Buscando en DuckDuckGo: '{' '.join(keywords)}'", None)
+
+                    resp = requests.get(ddg_url, headers=headers, timeout=20)
+
+                    if resp.status_code == 200:
+                        soup = BeautifulSoup(resp.text, 'html.parser')
+                        # Buscar resultados en diferentes elementos según la estructura de DuckDuckGo
+                        for result in soup.select('.result__a'):
+                            href = result.get('href')
+                            if href and self.is_valid_url(href) and href not in self.visited_urls:
+                                links.append(href)
+
+                        # Intentar con otro selector en caso de que la estructura sea diferente
+                        if not links:
+                            for result in soup.select('a.result__url'):
+                                href = result.get('href')
+                                if href and self.is_valid_url(href) and href not in self.visited_urls:
+                                    links.append(href)
+
+                        # Intentar extraer URLs desde elementos con atributo data-nrn
+                        if not links:
+                            for result in soup.select('a[data-nrn]'):
+                                href = result.get('href')
+                                if href and self.is_valid_url(href) and href not in self.visited_urls:
+                                    links.append(href)
+
+                        # Extraer URLs desde cualquier enlace que parezca un resultado
+                        if not links:
+                            for result in soup.select('a'):
+                                href = result.get('href')
+                                # Filtrar enlaces que parezcan resultados de búsqueda
+                                if (href and self.is_valid_url(href) and
+                                    '/duckduckgo.com/' not in href and
+                                    'duckduckgo.com/settings' not in href and
+                                    href not in self.visited_urls):
+                                    links.append(href)
+
+                        self.log_step(f"Se encontraron {len(links)} URLs relevantes en DuckDuckGo", None)
+                        break  # Salir del bucle de intentos si todo fue bien
+
+                    else:
+                        self.log_step(f"Error al buscar en DuckDuckGo: Código de estado HTTP {resp.status_code}", None)
+
+                except Exception as e:
+                    self.log_step(f"Error al buscar en DuckDuckGo: {str(e)}", None)
+                    if attempt == max_retries - 1:  # Si es el último intento
+                        break
+
+        # Limitar el número de resultados
+        links = list(set(links))[:num_results]  # Eliminar duplicados y limitar resultados
+        return links
+
+    def crawl_from_links(self, links: list, max_depth: int = 0):
+        """
+        Realiza crawling ÚNICAMENTE de las URLs proporcionadas sin seguir enlaces adicionales.
+        Actualiza la base de datos solo con estas URLs específicas.
+        Retorna el número de páginas procesadas.
+        """
+        if not links:
+            self.log_step("No hay nuevas URLs para procesar", None)
+            return 0
+
+        self.log_step(f"Iniciando procesamiento de {len(links)} nuevos enlaces de Google", None)
+        pages_processed = 0
+
+        # Lista para seguir las URLs procesadas
+        processed_links = []
+
+        # Procesar solo las URLs originales sin explorar enlaces adicionales
+        for url in links:
+            # Verificar si ya visitamos esta URL
+            if url in self.visited_urls:
+                continue
+
+            processed_links.append(url)
+            self.log_step(f"Procesando URL {len(processed_links)}/{len(links)}", url, 0)
+
+            try:
+                # Realizar la solicitud HTTP
+                response = requests.get(url, timeout=15, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                })
+
+                # Verificar si la solicitud fue exitosa
+                if response.status_code != 200:
+                    self.log_step(f"Error: Código de estado HTTP {response.status_code}", url)
+                    self.visited_urls.add(url)
+                    continue
+
+                # Parsear el contenido HTML
+                soup = BeautifulSoup(response.text, 'html.parser')
+
+                # Extraer contenido relevante
+                content_data = self.extract_content(url, soup)
+                if content_data:
+                    # Generar un ID único para el documento
+                    doc_id = f"kw_doc_{hash(url) % 10000000}"
+
+                    # Añadir a ChromaDB
+                    self.collection.add(
+                        documents=[content_data["content"]],
+                        metadatas=[{
+                            "url": content_data["url"],
+                            "title": content_data["title"],
+                            "source": "keyword_search",
+                            "query_date": "auto_updated"
+                        }],
+                        ids=[doc_id]
+                    )
+                    self.log_step(f"Contenido añadido a ChromaDB: {content_data['title']}", url)
+                    pages_processed += 1
+                else:
+                    self.log_step(f"No se pudo extraer contenido relevante", url)
+
+                # Marcar como visitada
+                self.visited_urls.add(url)
+
+            except Exception as e:
+                self.log_step(f"Error procesando URL: {str(e)}", url)
+                self.visited_urls.add(url)
+
+        # Mostrar estadísticas finales
+        self.log_step(f"Actualización finalizada. {pages_processed} páginas procesadas de {len(links)} URLs", None)
+        return pages_processed
 
     def run_crawler(self):
         """

@@ -41,10 +41,36 @@ class CoordinatorAgent(Agent):
             if not evaluation:
                 # Extraer palabras clave problemáticas cuando la consulta no es relevante
                 problematic_keywords = self._extract_problematic_keywords(query, response['answer'])
-                print(f"La respuesta proporcionada por el sistema RAG no parece ser útil para la consulta.")
+
+                print(f"La respuesta proporcionada por el sistema RAG no es útil para la consulta.")
                 print(f"Palabras clave problemáticas identificadas: {', '.join(problematic_keywords)}")
+                print("Actualizando la base de datos con información relevante...")
+
+                # Informar al agente crawler para buscar en Google y actualizar la base de datos
+                crawl_result = self.crawler_agent.receive({'type': 'crawl_keywords', 'keywords': problematic_keywords}, self)
+
+                if crawl_result.get('type') == 'crawled':
+                    # La base de datos se actualizó correctamente
+                    pages_processed = crawl_result.get('pages_processed', 0)
+                    print(f"Base de datos actualizada exitosamente con {pages_processed} nuevas páginas.")
+
+                    # Volver a consultar al agente RAG con la misma consulta
+                    print("Consultando nuevamente con la información actualizada...")
+                    new_response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
+
+                    if new_response['type'] == 'answer':
+                        return new_response['answer']
+                    else:
+                        return new_response.get('msg', 'Error en la nueva consulta después de actualizar la base de datos')
+                else:
+                    error_msg = crawl_result.get('msg', 'Error desconocido')
+                    print(f"No se pudo actualizar la base de datos: {error_msg}")
+                    # Devolver la respuesta original si no se pudo actualizar
+                    return response['answer']
+
             return response['answer']
-        return response.get('msg', 'Error')
+
+        return response.get('msg', 'Error al consultar la base de datos')
 
     def _evaluate_response_usefulness(self, query, answer):
         """
