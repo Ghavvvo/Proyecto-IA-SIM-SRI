@@ -26,8 +26,7 @@ class CoordinatorAgent(Agent):
             # Si ya hay datos, inicializar el RAG directamente
             self.rag_agent.receive({'type': 'init_collection', 'collection': self.crawler_agent.crawler.collection},
                                    self)
-        else:
-            # Si no hay datos, correr el crawler
+        else:            # Si no hay datos, correr el crawler
             crawl_result = self.crawler_agent.receive({'type': 'crawl'}, self)
             if crawl_result['type'] == 'crawled':
                 self.rag_agent.receive({'type': 'init_collection', 'collection': crawl_result['collection']}, self)
@@ -40,7 +39,10 @@ class CoordinatorAgent(Agent):
             # Utilizar Gemini para evaluar si la respuesta es útil
             evaluation = self._evaluate_response_usefulness(query, response['answer'])
             if not evaluation:
-                print("La respuesta proporcionada por el sistema RAG no parece ser útil para la consulta.")
+                # Extraer palabras clave problemáticas cuando la consulta no es relevante
+                problematic_keywords = self._extract_problematic_keywords(query, response['answer'])
+                print(f"La respuesta proporcionada por el sistema RAG no parece ser útil para la consulta.")
+                print(f"Palabras clave problemáticas identificadas: {', '.join(problematic_keywords)}")
             return response['answer']
         return response.get('msg', 'Error')
 
@@ -80,3 +82,48 @@ class CoordinatorAgent(Agent):
             print(f"Error al evaluar la utilidad de la respuesta: {e}")
             # En caso de error, asumimos que la respuesta es útil
             return True
+
+    def _extract_problematic_keywords(self, query, answer):
+        """
+        Extrae las palabras clave que hicieron que la consulta no fuera relevante.
+
+        Args:
+            query (str): La consulta original del usuario.
+            answer (str): La respuesta generada por el sistema RAG.
+
+        Returns:
+            List[str]: Lista de palabras clave problemáticas.
+        """
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"""
+            Eres un analizador de consultas. Tu tarea es identificar las palabras clave específicas en la consulta del usuario que causaron que el sistema no pudiera proporcionar una respuesta útil.
+
+            Consulta del usuario: {query}
+
+            Respuesta del sistema: {answer}
+
+            INSTRUCCIONES:
+            - Identifica las palabras clave, términos específicos, nombres de lugares, actividades o conceptos en la consulta que el sistema no pudo manejar adecuadamente
+            - Enfócate en sustantivos, nombres propios, actividades específicas, y términos técnicos que parecen estar fuera del alcance de la base de datos
+            - No incluyas palabras comunes como artículos, preposiciones o verbos generales
+            - Devuelve ÚNICAMENTE las palabras clave separadas por comas, sin explicaciones adicionales
+            - Si no hay palabras problemáticas específicas, responde con "ninguna"
+
+            Palabras clave problemáticas:"""
+
+            response = model.generate_content(prompt)
+            result = response.text.strip()
+
+            # Procesar la respuesta
+            if result.lower() == "ninguna" or not result:
+                return []
+            
+            # Dividir por comas y limpiar espacios
+            keywords = [keyword.strip() for keyword in result.split(',') if keyword.strip()]
+            
+            return keywords
+
+        except Exception as e:
+            print(f"Error al extraer palabras clave problemáticas: {e}")
+            return []
