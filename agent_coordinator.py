@@ -3,12 +3,17 @@ from typing import List
 import google.generativeai as genai
 
 class CoordinatorAgent(Agent):
-    def __init__(self, name, crawler_agent, rag_agent):
+    def __init__(self, name, crawler_agent, rag_agent, interface_agent):
         super().__init__(name)
         self.crawler_agent = crawler_agent
         self.rag_agent = rag_agent
+        self.interface_agent = interface_agent
 
-    def start(self):
+    def start(self): 
+        self._notify_interface('system_start', {
+            'component': self.name,
+            'action': 'initializing'
+        })
         # Verificar si la colección ya tiene datos antes de correr el crawler
         if hasattr(self.crawler_agent.crawler.collection, 'count'):
             try:
@@ -24,15 +29,26 @@ class CoordinatorAgent(Agent):
                 count = 0
         if count > 0:
             # Si ya hay datos, inicializar el RAG directamente
+            self._notify_interface('rag_init', {
+                'action': 'initializing_with_existing_data'
+            })
             self.rag_agent.receive({'type': 'init_collection', 'collection': self.crawler_agent.crawler.collection},
                                    self)
         else:            # Si no hay datos, correr el crawler
             crawl_result = self.crawler_agent.receive({'type': 'crawl'}, self)
+            self._notify_interface('crawler_start', {
+                'reason': 'no_existing_data'
+            })
             if crawl_result['type'] == 'crawled':
                 self.rag_agent.receive({'type': 'init_collection', 'collection': crawl_result['collection']}, self)
+                
 
     def ask(self, query):
         # Consultar al agente RAG
+        self._notify_interface('query_received', {
+            'query': query,
+            'status': 'processing'
+        })
         response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
 
         if response['type'] == 'answer':
@@ -153,3 +169,12 @@ class CoordinatorAgent(Agent):
         except Exception as e:
             print(f"Error al extraer palabras clave problemáticas: {e}")
             return []
+        
+    def _notify_interface(self, event_type, event_data):
+        """Envía notificaciones sin system_state"""
+
+        message = {
+            'event_type': event_type,
+            'event_data': event_data or {}
+        }
+        return self.interface_agent.receive(message, self)
