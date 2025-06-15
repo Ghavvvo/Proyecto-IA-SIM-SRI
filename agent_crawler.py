@@ -24,7 +24,7 @@ class CrawlerAgent(Agent):
                 return {'type': 'error', 'msg': 'No se encontraron URLs relevantes para las palabras clave proporcionadas'}
 
             # Realizar crawling con profundidad 1 en los enlaces encontrados
-            pages_processed = self.crawler.crawl_from_links(links, max_depth=1)
+            pages_processed = self.crawler.crawl_from_links(links, max_depth=5)
 
             if pages_processed > 0:
                 return {'type': 'crawled', 'collection': self.crawler.collection, 'pages_processed': pages_processed}

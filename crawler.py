@@ -48,39 +48,53 @@ class TourismCrawler:
         # Filtrar URLs de recursos estáticos
         unwanted_extensions = [
             '.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.pdf', '.svg',
-            '.mp3', '.mp4', '.avi', '.mov', '.webp', '.ico', '.xml'
+            '.mp3', '.mp4', '.avi', '.mov', '.webp', '.ico', '.xml', '.zip'
         ]
         if any(url.lower().endswith(ext) for ext in unwanted_extensions):
             return False
-
-        # Filtrar URLs no relevantes para turismo
-        unwanted_patterns = [
-            '/login', '/signin', '/signup', '/register', '/account', '/cart',
-            '/checkout', '/payment', '/admin', '/wp-admin', '/wp-login',
-            '/contact', '/legal', '/terms', '/privacy', '/cookies',
-            '/careers', '/jobs', '/author/', '/tag/', '/category/technology',
-            '/category/business', '/category/finance', '/forum', '/community',
-            '/search', '/password', '/user', '/profile', '/settings',
-            '/comment', '/feed', '/rss', '/sitemap', '/api/', '/cdn-cgi/'
-        ]
 
         # Patrones específicamente permitidos/valorados para turismo
         valuable_patterns = [
             '/destination', '/travel', '/tourism', '/tour', '/visit', '/vacation',
             '/holiday', '/hotel', '/accommodation', '/attractions', '/guide',
             '/places', '/things-to-do', '/city-guide', '/restaurant', '/review',
-            '/experience', '/itinerary', '/trip', '/explore', '/adventure'
+            '/experience', '/itinerary', '/trip', '/explore', '/adventure', '/hoteles',
+            '/vacaciones', '/destinos', '/atracciones', '/lugares', 'cuba', 'habana',
+            'varadero', '/country/', '/hotels-', 'booking.com', 'tripadvisor.com',
+            'lonelyplanet.com', 'expedia.com', 'hotels.com'
         ]
 
         # Si la URL contiene patrones específicamente valiosos, darle prioridad
         if any(pattern in url.lower() for pattern in valuable_patterns):
             return True
 
+        # Filtrar URLs no relevantes para turismo (más permisivo)
+        unwanted_patterns = [
+            '/login', '/signin', '/signup', '/register', '/account', '/cart',
+            '/checkout', '/payment', '/admin', '/wp-admin', '/wp-login',
+            '/careers', '/jobs', '/author/', '/tag/', '/category/technology',
+            '/category/business', '/category/finance', '/forum', '/community',
+            '/password', '/user', '/profile', '/settings',
+            '/comment', '/feed', '/rss', '/sitemap', '/api/', '/cdn-cgi/',
+            'javascript:', 'mailto:', 'tel:'
+        ]
+
         # Rechazar URLs con patrones no deseados
         if any(pattern in url.lower() for pattern in unwanted_patterns):
             return False
 
-        return True
+        # Permitir URLs de sitios de turismo conocidos
+        trusted_domains = [
+            'tripadvisor.com', 'booking.com', 'expedia.com', 'hotels.com',
+            'lonelyplanet.com', 'agoda.com', 'kayak.com', 'priceline.com',
+            'travelocity.com', 'orbitz.com', 'frommers.com', 'roughguides.com',
+            'nationalgeographic.com'
+        ]
+        
+        if any(domain in url.lower() for domain in trusted_domains):
+            return True
+
+        return True  # Ser más permisivo por defecto
 
     def get_links(self, url: str, soup: BeautifulSoup) -> List[str]:
         """
@@ -197,149 +211,288 @@ class TourismCrawler:
             self.log_step(f"Error extrayendo contenido: {str(e)}", url)
             return None
 
-    def log_step(self, message: str, url: Optional[str] = None, depth: Optional[int] = None):
-        """Registra y muestra un paso del crawler"""
+    def log_step(self, message: str, url: Optional[str] = None, depth: Optional[int] = None, context: str = "general"):
+        """Registra y muestra un paso del crawler con contexto mejorado"""
         step = {
             "message": message,
             "url": url,
             "depth": depth,
+            "context": context,
             "visited_count": len(self.visited_urls),
             "to_visit_count": len(self.urls_to_visit)
         }
         self.crawl_steps.append(step)
-        print(f"[Step] {message} | URL: {url} | Depth: {depth} | Visited: {len(self.visited_urls)} | To Visit: {len(self.urls_to_visit)}")
+        
+        # Formatear el mensaje según el contexto
+        if context == "keyword_search":
+            print(f"[Keyword Search] {message} | URL: {url} | Depth: {depth}")
+        else:
+            print(f"[General Crawl] {message} | URL: {url} | Depth: {depth} | Visited: {len(self.visited_urls)} | To Visit: {len(self.urls_to_visit)}")
 
-    def google_search_links(self, keywords: list, num_results: int = 10) -> list:
+    def google_search_links(self, keywords: list, num_results: int = 100) -> list:
         """
-        Busca enlaces relevantes para las palabras clave usando DuckDuckGo.
+        Busca enlaces relevantes para las palabras clave usando múltiples estrategias.
         Devuelve una lista de URLs encontradas.
         """
         import time
         import random
+        import urllib.parse
 
         links = []
-        if keywords:
-            query = '+'.join(keywords)
+        if not keywords:
+            return links
 
-            # Cabeceras más completas para simular un navegador real
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3',
-                'DNT': '1',  # Do Not Track
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            }
+        # Crear consulta de búsqueda
+        query = ' '.join(keywords)
+        encoded_query = urllib.parse.quote_plus(query)
 
-            # Intentos en caso de errores
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    # Añadir un delay aleatorio para evitar ser detectado como bot
-                    if attempt > 0:
-                        sleep_time = random.uniform(2, 5) * attempt
-                        self.log_step(f"Esperando {sleep_time:.1f} segundos antes de reintentar (intento {attempt+1}/{max_retries})", None)
-                        time.sleep(sleep_time)
+        # Cabeceras más realistas
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Cache-Control': 'max-age=0'
+        }
 
-                    # Buscar en DuckDuckGo
-                    ddg_url = f"https://duckduckgo.com/html/?q={query}&kl=wt-wt"
-                    self.log_step(f"Buscando en DuckDuckGo: '{' '.join(keywords)}'", None)
+        # Estrategia 1: DuckDuckGo
+        self.log_step(f"Buscando en DuckDuckGo: '{query}'", None)
+        links.extend(self._search_duckduckgo(encoded_query, headers))
 
-                    resp = requests.get(ddg_url, headers=headers, timeout=20)
+        # Estrategia 2: Si DuckDuckGo no funciona, usar URLs predefinidas relevantes
+        if not links:
+            self.log_step("DuckDuckGo no devolvió resultados, usando URLs predefinidas relevantes", None)
+            links.extend(self._get_fallback_urls(keywords))
 
-                    if resp.status_code == 200:
-                        soup = BeautifulSoup(resp.text, 'html.parser')
-                        # Buscar resultados en diferentes elementos según la estructura de DuckDuckGo
-                        for result in soup.select('.result__a'):
-                            href = result.get('href')
-                            if href and self.is_valid_url(href) and href not in self.visited_urls:
-                                links.append(href)
+        # Estrategia 3: Si aún no hay resultados, usar búsqueda directa en sitios conocidos
+        if not links:
+            self.log_step("Generando URLs directas para sitios de turismo conocidos", None)
+            links.extend(self._generate_direct_urls(keywords))
 
-                        # Intentar con otro selector en caso de que la estructura sea diferente
-                        if not links:
-                            for result in soup.select('a.result__url'):
-                                href = result.get('href')
-                                if href and self.is_valid_url(href) and href not in self.visited_urls:
-                                    links.append(href)
+        # Filtrar y validar URLs
+        valid_links = []
+        for link in links:
+            if self.is_valid_url(link) and link not in self.visited_urls:
+                valid_links.append(link)
 
-                        # Intentar extraer URLs desde elementos con atributo data-nrn
-                        if not links:
-                            for result in soup.select('a[data-nrn]'):
-                                href = result.get('href')
-                                if href and self.is_valid_url(href) and href not in self.visited_urls:
-                                    links.append(href)
+        # Eliminar duplicados y limitar resultados
+        valid_links = list(set(valid_links))[:num_results]
+        
+        self.log_step(f"Total de URLs válidas encontradas: {len(valid_links)}", None)
+        return valid_links
 
-                        # Extraer URLs desde cualquier enlace que parezca un resultado
-                        if not links:
-                            for result in soup.select('a'):
-                                href = result.get('href')
-                                # Filtrar enlaces que parezcan resultados de búsqueda
-                                if (href and self.is_valid_url(href) and
-                                    '/duckduckgo.com/' not in href and
-                                    'duckduckgo.com/settings' not in href and
-                                    href not in self.visited_urls):
-                                    links.append(href)
+    def _search_duckduckgo(self, encoded_query: str, headers: dict) -> list:
+        """Busca en DuckDuckGo con múltiples intentos y selectores"""
+        links = []
+        max_retries = 3
 
-                        self.log_step(f"Se encontraron {len(links)} URLs relevantes en DuckDuckGo", None)
-                        break  # Salir del bucle de intentos si todo fue bien
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    import time
+                    import random
+                    sleep_time = random.uniform(3, 7)
+                    self.log_step(f"Esperando {sleep_time:.1f}s antes del intento {attempt+1}", None)
+                    time.sleep(sleep_time)
 
-                    else:
-                        self.log_step(f"Error al buscar en DuckDuckGo: Código de estado HTTP {resp.status_code}", None)
+                # Probar diferentes URLs de DuckDuckGo
+                ddg_urls = [
+                    f"https://duckduckgo.com/html/?q={encoded_query}",
+                    f"https://duckduckgo.com/?q={encoded_query}&ia=web",
+                    f"https://html.duckduckgo.com/html/?q={encoded_query}"
+                ]
 
-                except Exception as e:
-                    self.log_step(f"Error al buscar en DuckDuckGo: {str(e)}", None)
-                    if attempt == max_retries - 1:  # Si es el último intento
-                        break
+                for ddg_url in ddg_urls:
+                    try:
+                        resp = requests.get(ddg_url, headers=headers, timeout=30)
+                        
+                        if resp.status_code == 200:
+                            soup = BeautifulSoup(resp.text, 'html.parser')
+                            
+                            # Múltiples selectores para diferentes versiones de DuckDuckGo
+                            selectors = [
+                                '.result__a',
+                                'a.result__url',
+                                '.web-result__title a',
+                                '.result .result__title a',
+                                'h2.result__title a',
+                                'a[data-testid="result-title-a"]',
+                                '.results .result a[href]'
+                            ]
+                            
+                            for selector in selectors:
+                                results = soup.select(selector)
+                                for result in results:
+                                    href = result.get('href')
+                                    if href and self._is_external_url(href):
+                                        links.append(href)
+                                
+                                if links:
+                                    break
+                            
+                            if links:
+                                break
+                                
+                    except Exception as e:
+                        self.log_step(f"Error con URL {ddg_url}: {str(e)}", None)
+                        continue
 
-        # Limitar el número de resultados
-        links = list(set(links))[:num_results]  # Eliminar duplicados y limitar resultados
+                if links:
+                    break
+
+            except Exception as e:
+                self.log_step(f"Error en intento {attempt+1}: {str(e)}", None)
+
         return links
 
-    def crawl_from_links(self, links: list, max_depth: int = 0):
+    def _is_external_url(self, url: str) -> bool:
+        """Verifica si una URL es externa (no de DuckDuckGo)"""
+        if not url:
+            return False
+        
+        excluded_domains = [
+            'duckduckgo.com',
+            'duck.co',
+            'duckduckgo.co',
+            'javascript:',
+            'mailto:',
+            '#'
+        ]
+        
+        url_lower = url.lower()
+        return not any(domain in url_lower for domain in excluded_domains)
+
+    def _get_fallback_urls(self, keywords: list) -> list:
+        """Devuelve URLs predefinidas relevantes basadas en las palabras clave"""
+        fallback_urls = []
+        
+        # Mapeo de palabras clave a URLs específicas
+        keyword_mappings = {
+            'cuba': [
+                'https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html',
+                'https://www.lonelyplanet.com/cuba',
+                'https://www.booking.com/country/cu.html',
+                'https://www.expedia.com/Cuba.d178293.Destination-Travel-Guides',
+                'https://www.frommers.com/destinations/cuba'
+            ],
+            'hoteles': [
+                'https://www.booking.com/',
+                'https://www.hotels.com/',
+                'https://www.expedia.com/Hotels',
+                'https://www.tripadvisor.com/Hotels',
+                'https://www.agoda.com/'
+            ],
+            'turismo': [
+                'https://www.tripadvisor.com/',
+                'https://www.lonelyplanet.com/',
+                'https://www.nationalgeographic.com/travel/',
+                'https://www.roughguides.com/'
+            ]
+        }
+        
+        # Buscar URLs relevantes basadas en las palabras clave
+        for keyword in keywords:
+            keyword_lower = keyword.lower()
+            for key, urls in keyword_mappings.items():
+                if key in keyword_lower or keyword_lower in key:
+                    fallback_urls.extend(urls)
+        
+        return fallback_urls
+
+    def _generate_direct_urls(self, keywords: list) -> list:
+        """Genera URLs directas para sitios conocidos de turismo"""
+        direct_urls = []
+        
+        # Sitios base conocidos
+        base_sites = [
+            'https://www.tripadvisor.com/Tourism',
+            'https://www.booking.com/searchresults.html',
+            'https://www.lonelyplanet.com/search',
+            'https://www.expedia.com/Hotel-Search'
+        ]
+        
+        # Si las palabras clave incluyen destinos específicos, crear URLs más específicas
+        if any(keyword.lower() in ['cuba', 'habana', 'varadero'] for keyword in keywords):
+            direct_urls.extend([
+                'https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html',
+                'https://www.lonelyplanet.com/cuba',
+                'https://www.booking.com/country/cu.html',
+                'https://www.hotels.com/de1426068/hotels-cuba/',
+                'https://www.expedia.com/Cuba.d178293.Destination-Travel-Guides'
+            ])
+        
+        return direct_urls
+
+    def crawl_from_links(self, links: list, max_depth: int = 2):
         """
-        Realiza crawling ÚNICAMENTE de las URLs proporcionadas sin seguir enlaces adicionales.
-        Actualiza la base de datos solo con estas URLs específicas.
-        Retorna el número de páginas procesadas.
+        Realiza crawling recursivo de las URLs proporcionadas siguiendo enlaces internos.
+        Similar al crawling general pero enfocado en URLs específicas encontradas por keywords.
+        
+        Args:
+            links: Lista de URLs iniciales para procesar
+            max_depth: Profundidad máxima de crawling recursivo (default: 3)
+        
+        Returns:
+            int: Número de páginas procesadas
         """
         if not links:
-            self.log_step("No hay nuevas URLs para procesar", None)
+            self.log_step("No hay nuevas URLs para procesar", None, context="keyword_search")
             return 0
 
-        self.log_step(f"Iniciando procesamiento de {len(links)} nuevos enlaces de Google", None)
+        # Tomar solo las primeras 5 URLs para crawling recursivo
+        initial_links = links[:5]
+        self.log_step(f"Iniciando crawling recursivo de {len(initial_links)} URLs principales (profundidad máxima: {max_depth})", None, context="keyword_search")
+        
+        # Estructuras para el crawling recursivo específico
+        keyword_visited = set()
+        keyword_to_visit = set(initial_links)
+        keyword_url_depths = {url: 0 for url in initial_links}
         pages_processed = 0
-
-        # Lista para seguir las URLs procesadas
-        processed_links = []
-
-        # Procesar solo las URLs originales sin explorar enlaces adicionales
-        for url in links:
-            # Verificar si ya visitamos esta URL
-            if url in self.visited_urls:
+        
+        # Límite de páginas para evitar crawling excesivo
+        max_pages_per_search = 50
+        
+        while keyword_to_visit and pages_processed < max_pages_per_search:
+            # Obtener la siguiente URL a visitar
+            current_url = keyword_to_visit.pop()
+            current_depth = keyword_url_depths.get(current_url, 0)
+            
+            # Verificar si ya visitamos esta URL (en cualquier contexto)
+            if current_url in keyword_visited or current_url in self.visited_urls:
                 continue
-
-            processed_links.append(url)
-            self.log_step(f"Procesando URL {len(processed_links)}/{len(links)}", url, 0)
-
+                
+            # Verificar si excedimos la profundidad máxima
+            if current_depth > max_depth:
+                continue
+            
+            self.log_step(f"Procesando URL recursiva {pages_processed+1}/{max_pages_per_search}", current_url, current_depth, context="keyword_search")
+            
             try:
                 # Realizar la solicitud HTTP
-                response = requests.get(url, timeout=15, headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                response = requests.get(current_url, timeout=15, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 })
 
                 # Verificar si la solicitud fue exitosa
                 if response.status_code != 200:
-                    self.log_step(f"Error: Código de estado HTTP {response.status_code}", url)
-                    self.visited_urls.add(url)
+                    self.log_step(f"Error HTTP {response.status_code}", current_url, current_depth, context="keyword_search")
+                    keyword_visited.add(current_url)
                     continue
 
                 # Parsear el contenido HTML
                 soup = BeautifulSoup(response.text, 'html.parser')
 
                 # Extraer contenido relevante
-                content_data = self.extract_content(url, soup)
+                content_data = self.extract_content(current_url, soup)
                 if content_data:
                     # Generar un ID único para el documento
-                    doc_id = f"kw_doc_{hash(url) % 10000000}"
+                    doc_id = f"kw_recursive_{hash(current_url) % 10000000}_{current_depth}"
 
                     # Añadir a ChromaDB
                     self.collection.add(
@@ -347,26 +500,109 @@ class TourismCrawler:
                         metadatas=[{
                             "url": content_data["url"],
                             "title": content_data["title"],
-                            "source": "keyword_search",
+                            "source": "keyword_recursive_search",
+                            "depth": current_depth,
                             "query_date": "auto_updated"
                         }],
                         ids=[doc_id]
                     )
-                    self.log_step(f"Contenido añadido a ChromaDB: {content_data['title']}", url)
+                    self.log_step(f"Contenido añadido: {content_data['title'][:50]}...", current_url, current_depth, context="keyword_search")
                     pages_processed += 1
                 else:
-                    self.log_step(f"No se pudo extraer contenido relevante", url)
+                    self.log_step(f"Contenido insuficiente o no relevante", current_url, current_depth, context="keyword_search")
+
+                # Extraer y procesar enlaces si no estamos en la profundidad máxima
+                if current_depth < max_depth:
+                    new_links = self.get_links(current_url, soup)
+                    
+                    # Filtrar enlaces para mantener relevancia
+                    relevant_links = self._filter_relevant_links(new_links, current_url)
+                    
+                    # Añadir nuevos enlaces a la cola de visitas
+                    links_added = 0
+                    for link in relevant_links:
+                        if (link not in keyword_visited and 
+                            link not in self.visited_urls and 
+                            link not in keyword_to_visit and
+                            links_added < 10):  # Limitar enlaces por página
+                            
+                            keyword_to_visit.add(link)
+                            keyword_url_depths[link] = current_depth + 1
+                            links_added += 1
+                    
+                    if links_added > 0:
+                        self.log_step(f"Añadidos {links_added} enlaces para profundidad {current_depth + 1}", current_url, current_depth, context="keyword_search")
 
                 # Marcar como visitada
-                self.visited_urls.add(url)
+                keyword_visited.add(current_url)
+                self.visited_urls.add(current_url)  # También marcar en el conjunto general
 
             except Exception as e:
-                self.log_step(f"Error procesando URL: {str(e)}", url)
-                self.visited_urls.add(url)
+                self.log_step(f"Error procesando URL: {str(e)}", current_url, current_depth, context="keyword_search")
+                keyword_visited.add(current_url)
 
         # Mostrar estadísticas finales
-        self.log_step(f"Actualización finalizada. {pages_processed} páginas procesadas de {len(links)} URLs", None)
+        self.log_step(f"Crawling recursivo finalizado. {pages_processed} páginas procesadas, {len(keyword_visited)} URLs visitadas", None, context="keyword_search")
         return pages_processed
+
+    def _filter_relevant_links(self, links: list, parent_url: str) -> list:
+        """
+        Filtra enlaces para mantener solo los más relevantes durante el crawling recursivo.
+        
+        Args:
+            links: Lista de enlaces encontrados
+            parent_url: URL padre de donde provienen los enlaces
+            
+        Returns:
+            list: Enlaces filtrados y priorizados
+        """
+        if not links:
+            return []
+        
+        from urllib.parse import urlparse
+        parent_domain = urlparse(parent_url).netloc.lower()
+        
+        # Categorizar enlaces por relevancia
+        high_priority = []
+        medium_priority = []
+        low_priority = []
+        
+        for link in links:
+            if not self.is_valid_url(link):
+                continue
+                
+            link_lower = link.lower()
+            link_domain = urlparse(link).netloc.lower()
+            
+            # Alta prioridad: mismo dominio + patrones muy relevantes
+            if (link_domain == parent_domain and 
+                any(pattern in link_lower for pattern in [
+                    '/hotel', '/accommodation', '/stay', '/resort',
+                    '/destination', '/place', '/city', '/country',
+                    '/tour', '/attraction', '/guide', '/review',
+                    '/cuba', '/habana', '/varadero', '/santiago'
+                ])):
+                high_priority.append(link)
+            
+            # Prioridad media: mismo dominio o dominios confiables
+            elif (link_domain == parent_domain or 
+                  any(domain in link_domain for domain in [
+                      'tripadvisor', 'booking', 'expedia', 'hotels',
+                      'lonelyplanet', 'frommers', 'roughguides'
+                  ])):
+                medium_priority.append(link)
+            
+            # Baja prioridad: otros enlaces válidos
+            else:
+                low_priority.append(link)
+        
+        # Combinar con límites por categoría
+        result = []
+        result.extend(high_priority[:15])      # Máximo 15 de alta prioridad
+        result.extend(medium_priority[:10])    # Máximo 10 de prioridad media
+        result.extend(low_priority[:5])        # Máximo 5 de baja prioridad
+        
+        return result[:20]  # Límite total de 20 enlaces por página
 
     def run_crawler(self):
         """
