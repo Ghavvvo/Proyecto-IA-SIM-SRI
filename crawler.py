@@ -107,6 +107,7 @@ class TourismCrawler:
     def _has_common_keywords(self, url: str, text_content: str = "") -> bool:
         """
         Verifica si una URL o su contenido tiene palabras en común con las palabras clave de la consulta.
+        Versión mejorada con expansión de palabras clave y sinónimos.
         
         Args:
             url (str): URL a verificar
@@ -121,13 +122,55 @@ class TourismCrawler:
         # Combinar URL y contenido para la verificación
         combined_text = f"{url.lower()} {text_content.lower()}"
         
-        # Verificar si alguna palabra clave está presente
-        for keyword in self.current_query_keywords:
+        # Expandir palabras clave con sinónimos y variaciones
+        expanded_keywords = self._expand_keywords(self.current_query_keywords)
+        
+        # Verificar si alguna palabra clave expandida está presente
+        for keyword in expanded_keywords:
             keyword_lower = keyword.lower().strip()
             if keyword_lower and keyword_lower in combined_text:
                 return True
         
         return False
+    
+    def _expand_keywords(self, keywords: List[str]) -> List[str]:
+        """
+        Expande las palabras clave con sinónimos y variaciones para mejorar el matching.
+        """
+        expanded = set(keywords)  # Incluir palabras originales
+        
+        # Diccionario de sinónimos y variaciones comunes
+        synonyms = {
+            'angoola': ['angola', 'angolan', 'luanda', 'african', 'africa'],
+            'hoteles': ['hotel', 'hotels', 'accommodation', 'alojamiento', 'hospedaje', 'lodging', 'resort', 'inn'],
+            'turismo': ['tourism', 'tourist', 'travel', 'trip', 'vacation', 'holiday', 'viaje', 'destination'],
+            'restaurante': ['restaurant', 'dining', 'food', 'comida', 'gastronomia', 'cuisine'],
+            'playa': ['beach', 'coast', 'coastal', 'seaside', 'shore', 'waterfront'],
+            'ciudad': ['city', 'urban', 'downtown', 'centro', 'metropolitan'],
+            'cultura': ['culture', 'cultural', 'heritage', 'history', 'historic', 'museum'],
+            'aventura': ['adventure', 'outdoor', 'activity', 'activities', 'excursion', 'tour']
+        }
+        
+        for keyword in keywords:
+            keyword_lower = keyword.lower().strip()
+            
+            # Añadir sinónimos directos
+            if keyword_lower in synonyms:
+                expanded.update(synonyms[keyword_lower])
+            
+            # Añadir variaciones (plural/singular)
+            if keyword_lower.endswith('s') and len(keyword_lower) > 3:
+                expanded.add(keyword_lower[:-1])  # Singular
+            else:
+                expanded.add(keyword_lower + 's')  # Plural
+            
+            # Añadir variaciones sin acentos
+            accent_map = str.maketrans('áéíóúñü', 'aeiounn')
+            no_accent = keyword_lower.translate(accent_map)
+            if no_accent != keyword_lower:
+                expanded.add(no_accent)
+        
+        return list(expanded)
 
     def _extract_link_text(self, a_tag) -> str:
         """
@@ -223,7 +266,7 @@ class TourismCrawler:
 
             content_text = self.clean_text(content_text)
 
-            if not title or not content_text or len(content_text) < 200:
+            if not title or not content_text or len(content_text) < 100:
                 return None
 
             max_tokens = 1500
