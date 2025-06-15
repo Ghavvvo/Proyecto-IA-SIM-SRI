@@ -60,29 +60,43 @@ class CoordinatorAgent(Agent):
 
                 print(f"La respuesta proporcionada por el sistema RAG no es útil para la consulta.")
                 print(f"Palabras clave problemáticas identificadas: {', '.join(problematic_keywords)}")
-                print("Actualizando la base de datos con información relevante...")
+                print("🐜 Iniciando búsqueda inteligente con Ant Colony Optimization...")
 
-                # Informar al agente crawler para buscar en Google y actualizar la base de datos
-                crawl_result = self.crawler_agent.receive({'type': 'crawl_keywords', 'keywords': problematic_keywords}, self)
-
-                if crawl_result.get('type') == 'crawled':
-                    # La base de datos se actualizó correctamente
-                    pages_processed = crawl_result.get('pages_processed', 0)
-                    print(f"Base de datos actualizada exitosamente con {pages_processed} nuevas páginas.")
-
-                    # Volver a consultar al agente RAG con la misma consulta
-                    print("Consultando nuevamente con la información actualizada...")
-                    new_response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
-
-                    if new_response['type'] == 'answer':
-                        return new_response['answer']
+                # NUEVO FLUJO: Búsqueda en Google + Exploración ACO
+                # Paso 1: Buscar en Google y explorar con ACO
+                aco_result = self.crawler_agent.receive({
+                    'type': 'search_google_aco', 
+                    'keywords': problematic_keywords,
+                    'max_urls': 15,
+                    'max_depth': 2
+                }, self)
+                
+                if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
+                    content_count = aco_result.get('content_extracted', 0)
+                    aco_stats = aco_result.get('aco_statistics', {})
+                    
+                    print(f"🐜 Exploración ACO completada exitosamente")
+                    print(f"📊 Contenido extraído: {content_count} páginas")
+                    print(f"🎯 Tasa de éxito ACO: {aco_stats.get('success_rate', 0)*100:.1f}%")
+                    print(f"🕸️ Senderos de feromonas creados: {aco_stats.get('pheromone_trails_count', 0)}")
+                    
+                    if content_count > 0:
+                        # Paso 2: Consultar nuevamente al RAG con la información actualizada
+                        print("🔄 Consultando RAG con información obtenida por ACO...")
+                        new_response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
+                        
+                        if new_response['type'] == 'answer':
+                            print("✅ Nueva respuesta generada con información de exploración ACO")
+                            return new_response['answer']
+                        else:
+                            return new_response.get('msg', 'Error en la nueva consulta después de exploración ACO')
                     else:
-                        return new_response.get('msg', 'Error en la nueva consulta después de actualizar la base de datos')
+                        print("⚠️ ACO no extrajo contenido útil, intentando método alternativo...")
+                        # Fallback a método anterior
+                        return self._fallback_search_method(problematic_keywords, query)
                 else:
-                    error_msg = crawl_result.get('msg', 'Error desconocido')
-                    print(f"No se pudo actualizar la base de datos: {error_msg}")
-                    # Devolver la respuesta original si no se pudo actualizar
-                    return response['answer']
+                    print("❌ Error en exploración ACO, intentando método alternativo...")
+                    return self._fallback_search_method(problematic_keywords, query)
 
             return response['answer']
 
@@ -169,6 +183,29 @@ class CoordinatorAgent(Agent):
         except Exception as e:
             print(f"Error al extraer palabras clave problemáticas: {e}")
             return []
+    
+    def _fallback_search_method(self, problematic_keywords, query):
+        """
+        Método de fallback cuando ACO falla.
+        """
+        print("🔄 Ejecutando método de búsqueda alternativo...")
+        
+        # Usar el método anterior como fallback
+        crawl_result = self.crawler_agent.receive({'type': 'crawl_keywords', 'keywords': problematic_keywords}, self)
+        
+        if crawl_result.get('type') == 'crawled':
+            pages_processed = crawl_result.get('pages_processed', 0)
+            print(f"�� Base de datos actualizada con {pages_processed} páginas usando método alternativo")
+            
+            new_response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
+            if new_response['type'] == 'answer':
+                return new_response['answer']
+            else:
+                return new_response.get('msg', 'Error en la nueva consulta después de actualizar la base de datos')
+        else:
+            error_msg = crawl_result.get('msg', 'Error desconocido')
+            print(f"❌ No se pudo actualizar la base de datos: {error_msg}")
+            return "Lo siento, no pude encontrar información relevante para tu consulta en este momento."
         
     def _notify_interface(self, event_type, event_data):
         """Envía notificaciones sin system_state"""

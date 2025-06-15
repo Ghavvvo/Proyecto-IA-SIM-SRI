@@ -141,7 +141,6 @@ class TourismCrawler:
         
         # Diccionario de sinónimos y variaciones comunes
         synonyms = {
-            'angoola': ['angola', 'angolan', 'luanda', 'african', 'africa'],
             'hoteles': ['hotel', 'hotels', 'accommodation', 'alojamiento', 'hospedaje', 'lodging', 'resort', 'inn'],
             'turismo': ['tourism', 'tourist', 'travel', 'trip', 'vacation', 'holiday', 'viaje', 'destination'],
             'restaurante': ['restaurant', 'dining', 'food', 'comida', 'gastronomia', 'cuisine'],
@@ -461,45 +460,194 @@ class TourismCrawler:
         return self.pages_added_to_db
 
     def google_search_links(self, keywords: list, num_results: int = 50) -> list:
-        """Busca enlaces relevantes para las palabras clave usando URLs predefinidas."""
-        links = []
+        """
+        Busca enlaces relevantes usando DuckDuckGo y URLs predefinidas como fallback.
+        Versión mejorada con búsqueda web real.
+        """
+        all_links = []
         if not keywords:
-            return links
+            return all_links
 
-        print(f"🔍 Buscando URLs para palabras clave: {keywords}")
+        print(f"🔍 Búsqueda mejorada para palabras clave: {keywords}")
         
-        # Usar URLs predefinidas relevantes (más confiable que web scraping)
+        # 1. Intentar búsqueda web real en DuckDuckGo
+        try:
+            web_links = self._search_duckduckgo_links(keywords, num_results_per_query=8)
+            all_links.extend(web_links)
+            print(f"🌐 Encontradas {len(web_links)} URLs via DuckDuckGo")
+        except Exception as e:
+            print(f"⚠️ Error en búsqueda DuckDuckGo: {e}")
+        
+        # 2. URLs predefinidas como fallback y complemento
+        predefined_links = self._get_predefined_urls(keywords)
+        all_links.extend(predefined_links)
+        print(f"📋 Añadidas {len(predefined_links)} URLs predefinidas")
+        
+        # 3. Limpiar duplicados y filtrar
+        unique_links = list(set(all_links))
+        valid_links = [url for url in unique_links if self.is_valid_url(url)]
+        
+        # Limitar resultados finales
+        final_links = valid_links[:num_results]
+        print(f"✅ Total de URLs únicas y válidas: {len(final_links)}")
+        
+        return final_links
+    
+    def _search_duckduckgo_links(self, keywords: list, num_results_per_query: int = 8) -> list:
+        """
+        Realiza búsquedas reales en DuckDuckGo.
+        """
+        import random
+        from urllib.parse import quote_plus
+        
+        all_urls = set()
+        
+        # Generar consultas de búsqueda
+        search_queries = self._generate_search_queries(keywords)
+        
+        # Configurar sesión para búsquedas
+        search_session = requests.Session()
+        search_session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
+        
+        for query in search_queries[:6]:  # Limitar a 6 consultas máximo
+            try:
+                print(f"  🔍 Buscando: '{query}'")
+                
+                # Preparar URL de búsqueda
+                encoded_query = quote_plus(query)
+                search_url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
+                
+                # Realizar búsqueda
+                response = search_session.get(search_url, timeout=10)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    
+                    # Extraer enlaces de resultados
+                    result_links = soup.find_all('a', class_='result__a')
+                    
+                    for link in result_links[:num_results_per_query]:
+                        href = link.get('href', '')
+                        if href and not href.startswith('/') and self._is_tourism_relevant_url(href):
+                            all_urls.add(href)
+                
+                # Pausa entre búsquedas
+                time.sleep(random.uniform(1, 2))
+                
+            except Exception as e:
+                print(f"    ❌ Error en consulta '{query}': {e}")
+                continue
+        
+        return list(all_urls)
+    
+    def _generate_search_queries(self, keywords: list) -> list:
+        """
+        Genera consultas de búsqueda efectivas.
+        """
+        queries = []
+        
+        # Términos de turismo para combinar
+        tourism_terms = ['tourism', 'travel', 'visit', 'guide', 'attractions', 'hotels']
+        
+        for keyword in keywords:
+            # Consultas básicas
+            queries.append(f"{keyword} tourism")
+            queries.append(f"{keyword} travel guide")
+            queries.append(f"visit {keyword}")
+            
+            # Consultas específicas según el tipo de keyword
+            keyword_lower = keyword.lower()
+            if any(term in keyword_lower for term in ['hotel', 'accommodation', 'hospedaje']):
+                queries.append(f"best hotels {keyword}")
+                queries.append(f"{keyword} booking")
+            elif any(term in keyword_lower for term in ['restaurant', 'food', 'comida']):
+                queries.append(f"best restaurants {keyword}")
+            else:
+                queries.append(f"{keyword} attractions")
+        
+        # Consulta combinada si hay múltiples keywords
+        if len(keywords) > 1:
+            combined = ' '.join(keywords[:2])  # Máximo 2 palabras
+            queries.append(f"{combined} tourism")
+        
+        return queries
+    
+    def _is_tourism_relevant_url(self, url: str) -> bool:
+        """
+        Verifica si una URL es relevante para turismo (para búsquedas web).
+        """
+        url_lower = url.lower()
+        
+        # Dominios conocidos de turismo
+        tourism_domains = [
+            'tripadvisor', 'booking', 'expedia', 'hotels', 'airbnb',
+            'lonelyplanet', 'frommers', 'roughguides', 'nationalgeographic',
+            'timeout', 'viator', 'getyourguide', 'agoda', 'hostelworld'
+        ]
+        
+        # Patrones relevantes
+        tourism_patterns = [
+            'tourism', 'travel', 'vacation', 'destination', 'attractions',
+            'things-to-do', 'guide', 'visit', 'hotel', 'restaurant'
+        ]
+        
+        # Verificar dominios
+        if any(domain in url_lower for domain in tourism_domains):
+            return True
+        
+        # Verificar patrones
+        if any(pattern in url_lower for pattern in tourism_patterns):
+            return True
+        
+        return False
+    
+    def _get_predefined_urls(self, keywords: list) -> list:
+        """
+        Obtiene URLs predefinidas como fallback y complemento.
+        """
         keyword_mappings = {
             'cuba': [
                 'https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html',
                 'https://www.lonelyplanet.com/cuba',
                 'https://www.booking.com/country/cu.html',
-                'https://www.expedia.com/Cuba.d178293.Destination-Travel-Guides',
-                'https://www.frommers.com/destinations/cuba'
+                'https://www.expedia.com/Cuba.d178293.Destination-Travel-Guides'
+            ],
+            'angola': [
+                'https://www.lonelyplanet.com/angola',
+                'https://www.tripadvisor.com/Tourism-g293819-Angola-Vacations.html',
+                'https://www.booking.com/country/ao.html'
+            ],
+            'angoola': [  # Variación específica
+                'https://www.lonelyplanet.com/angola',
+                'https://www.tripadvisor.com/Tourism-g293819-Angola-Vacations.html'
             ],
             'hoteles': [
                 'https://www.booking.com/',
                 'https://www.hotels.com/',
                 'https://www.expedia.com/Hotels',
-                'https://www.tripadvisor.com/Hotels',
+                'https://www.tripadvisor.com/Hotels'
+            ],
+            'hotel': [
+                'https://www.booking.com/',
+                'https://www.hotels.com/',
                 'https://www.agoda.com/'
             ],
             'turismo': [
                 'https://www.tripadvisor.com/',
                 'https://www.lonelyplanet.com/',
-                'https://www.nationalgeographic.com/travel/',
-                'https://www.roughguides.com/'
+                'https://www.nationalgeographic.com/travel/'
             ]
         }
         
-        # Buscar URLs relevantes basadas en las palabras clave
+        links = []
         for keyword in keywords:
             keyword_lower = keyword.lower()
             for key, urls in keyword_mappings.items():
                 if key in keyword_lower or keyword_lower in key:
                     links.extend(urls)
         
-        # Si no encontramos URLs específicas, usar URLs generales de turismo
+        # URLs generales si no hay coincidencias específicas
         if not links:
             links = [
                 'https://www.tripadvisor.com/',
@@ -509,11 +657,7 @@ class TourismCrawler:
                 'https://www.hotels.com/'
             ]
         
-        # Eliminar duplicados y limitar resultados
-        valid_links = list(set(links))[:num_results]
-        print(f"✅ Encontradas {len(valid_links)} URLs relevantes")
-        
-        return valid_links
+        return links
 
     def run_parallel_crawler_from_keywords(self, keywords: list, max_depth: int = 2) -> int:
         """Ejecuta crawling paralelo basado en palabras clave."""

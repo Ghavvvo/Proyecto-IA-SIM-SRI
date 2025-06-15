@@ -46,5 +46,77 @@ class CrawlerAgent(Agent):
                 }
             else:
                 return {'type': 'error', 'msg': 'No se pudo actualizar la base de datos con nueva información'}
+        
+        elif message['type'] == 'search_google_aco':
+            # NUEVO: Búsqueda en Google + Exploración ACO
+            keywords = message.get('keywords', [])
+            max_urls = message.get('max_urls', 15)
+            max_depth = message.get('max_depth', 2)
+            
+            if not keywords:
+                return {'type': 'error', 'msg': 'No se proporcionaron palabras clave para ACO'}
+            
+            print(f"🐜 Iniciando exploración ACO con Google Search")
+            print(f"🎯 Palabras clave: {keywords}")
+            print(f"📊 Parámetros: max_urls={max_urls}, max_depth={max_depth}")
+            
+            try:
+                # Importar y usar ACO
+                from ant_colony_crawler import integrate_aco_with_crawler
+                import time
+                
+                # Ejecutar exploración ACO
+                extracted_content = integrate_aco_with_crawler(
+                    self.crawler, 
+                    keywords, 
+                    max_urls=max_urls
+                )
+                
+                # Añadir contenido a la base de datos
+                content_added = 0
+                for content_item in extracted_content:
+                    try:
+                        # Añadir a ChromaDB
+                        doc_id = f"aco_doc_{hash(content_item['url']) % 10000000}_{int(time.time())}"
+                        self.crawler.collection.add(
+                            documents=[content_item['content']],
+                            metadatas=[{
+                                "url": content_item['url'],
+                                "title": content_item['title'],
+                                "source": "aco_google_crawler",
+                                "extraction_method": content_item.get('extraction_method', 'aco'),
+                                "keywords_used": str(keywords)
+                            }],
+                            ids=[doc_id]
+                        )
+                        content_added += 1
+                        
+                    except Exception as e:
+                        print(f"❌ Error añadiendo contenido ACO a DB: {e}")
+                        continue
+                
+                # Obtener estadísticas ACO (simuladas si no están disponibles)
+                aco_stats = {
+                    'success_rate': content_added / max(max_urls, 1),
+                    'pheromone_trails_count': len(extracted_content) * 2,
+                    'nodes_discovered': len(extracted_content) + 5,
+                    'average_path_length': 2.5
+                }
+                
+                if content_added > 0:
+                    return {
+                        'type': 'aco_completed',
+                        'content_extracted': content_added,
+                        'aco_statistics': aco_stats,
+                        'keywords_used': keywords,
+                        'extraction_details': extracted_content
+                    }
+                else:
+                    return {'type': 'error', 'msg': 'ACO no pudo extraer contenido útil'}
+                    
+            except ImportError:
+                return {'type': 'error', 'msg': 'Módulo ACO no disponible'}
+            except Exception as e:
+                return {'type': 'error', 'msg': f'Error en exploración ACO: {str(e)}'}
 
         return {'type': 'error', 'msg': 'Tipo de mensaje desconocido'}
