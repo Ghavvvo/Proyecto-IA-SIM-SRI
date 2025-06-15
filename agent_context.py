@@ -1,0 +1,527 @@
+from autogen import Agent
+from typing import List, Dict, Any
+import google.generativeai as genai
+from datetime import datetime
+
+class ContextAgent(Agent):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.conversation_history: List[Dict[str, Any]] = []
+        self.max_history_length = 10  # Mantener solo las últimas 10 interacciones
+        
+    def receive(self, message: Dict[str, Any], sender) -> Dict[str, Any]:
+        """
+        Procesa mensajes del coordinador para manejar el contexto de conversación.
+        
+        Args:
+            message: Diccionario con el tipo de mensaje y datos
+            sender: Agente que envía el mensaje
+            
+        Returns:
+            Diccionario con la respuesta procesada
+        """
+        if message['type'] == 'analyze_query':
+            return self._analyze_and_improve_query(message['query'])
+        elif message['type'] == 'add_interaction':
+            return self._add_interaction(message['query'], message['response'])
+        elif message['type'] == 'get_context':
+            return self._get_conversation_context()
+        elif message['type'] == 'clear_context':
+            return self._clear_context()
+        else:
+            return {'type': 'error', 'msg': 'Unknown message type'}
+    
+    def _analyze_and_improve_query(self, query: str) -> Dict[str, Any]:
+        """
+        Analiza la consulta del usuario en el contexto de la conversación
+        y genera una consulta mejorada para el sistema RAG.
+        
+        Args:
+            query: Consulta original del usuario
+            
+        Returns:
+            Diccionario con la consulta mejorada y análisis del contexto
+        """
+        try:
+            # Obtener contexto de conversación
+            context_summary = self._build_context_summary()
+            
+            # Debug: Mostrar el contexto que se está usando
+            print(f"🔍 Contexto disponible: {context_summary[:100]}...")
+            
+            # Usar Gemini para analizar y mejorar la consulta
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            # Prompt más específico y directo
+            prompt = f"""
+Eres un experto en mejora de consultas para sistemas RAG. Tu tarea es SIEMPRE mejorar la consulta del usuario basándote en el contexto conversacional.
+
+CONTEXTO PREVIO:
+{context_summary}
+
+CONSULTA ORIGINAL: "{query}"
+
+INSTRUCCIONES CRÍTICAS:
+1. SIEMPRE debes generar una consulta mejorada, incluso si es solo ligeramente diferente
+2. Si hay contexto previo, úsalo para hacer la consulta más específica
+3. Si no hay contexto, mejora la consulta haciéndola más detallada y específica
+4. Añade términos relacionados, sinónimos o especificaciones geográficas/temporales cuando sea apropiado
+
+EJEMPLOS DE MEJORAS:
+- "¿Qué restaurantes hay?" → "¿Qué restaurantes recomendados hay en la zona, incluyendo opciones de comida local y internacional?"
+- "¿Y hoteles?" → "¿Qué hoteles recomendados hay en [ubicación del contexto], considerando diferentes rangos de precio?"
+
+RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
+"""
+            
+            response = model.generate_content(prompt)
+            improved_query = response.text.strip().strip('"\'')
+            
+            # Debug: Mostrar la respuesta de Gemini
+            print(f"🤖 Respuesta de Gemini: {improved_query}")
+            
+            # Validar que la consulta mejorada sea diferente y válida
+            if not improved_query or improved_query.lower() == query.lower() or len(improved_query) < 5:
+                # Si Gemini no mejoró la consulta, aplicar mejoras básicas
+                improved_query = self._apply_basic_improvements(query, context_summary)
+                print(f"🔧 Aplicando mejoras básicas: {improved_query}")
+            
+            # Determinar si es continuación basándose en el contexto
+            is_continuation = self._is_query_continuation(query, context_summary)
+            
+            return {
+                'type': 'query_analyzed',
+                'analysis': {
+                    'improved_query': improved_query,
+                    'context_analysis': {
+                        'is_continuation': is_continuation,
+                        'related_topics': self._extract_topics_from_context(),
+                        'user_intent': self._determine_user_intent(query, improved_query),
+                        'context_relevance': 'alta' if is_continuation else 'media'
+                    },
+                    'improvements_made': self._identify_improvements(query, improved_query),
+                    'original_query': query
+                }
+            }
+                
+        except Exception as e:
+            print(f"❌ Error al analizar consulta con contexto: {e}")
+            # Fallback: aplicar mejoras básicas sin Gemini
+            improved_query = self._apply_basic_improvements(query, self._build_context_summary())
+            
+            return {
+                'type': 'query_analyzed',
+                'analysis': {
+                    'improved_query': improved_query,
+                    'context_analysis': {
+                        'is_continuation': len(self.conversation_history) > 0,
+                        'related_topics': [],
+                        'user_intent': 'Consulta con mejoras básicas',
+                        'context_relevance': 'baja'
+                    },
+                    'improvements_made': ['Mejoras básicas aplicadas'],
+                    'original_query': query
+                }
+            }
+    
+    def _add_interaction(self, query: str, response: str) -> Dict[str, Any]:
+        """
+        Añade una nueva interacción al historial de conversación.
+        
+        Args:
+            query: Consulta del usuario
+            response: Respuesta del sistema
+            
+        Returns:
+            Confirmación de que la interacción fue añadida
+        """
+        interaction = {
+            'timestamp': datetime.now().isoformat(),
+            'query': query,
+            'response': response,
+            'interaction_id': len(self.conversation_history) + 1
+        }
+        
+        self.conversation_history.append(interaction)
+        
+        # Mantener solo las últimas interacciones
+        if len(self.conversation_history) > self.max_history_length:
+            self.conversation_history = self.conversation_history[-self.max_history_length:]
+        
+        return {
+            'type': 'interaction_added',
+            'interaction_count': len(self.conversation_history)
+        }
+    
+    def _get_conversation_context(self) -> Dict[str, Any]:
+        """
+        Obtiene el contexto actual de la conversación.
+        
+        Returns:
+            Diccionario con el contexto de conversación
+        """
+        return {
+            'type': 'context_data',
+            'history': self.conversation_history,
+            'interaction_count': len(self.conversation_history),
+            'context_summary': self._build_context_summary()
+        }
+    
+    def _clear_context(self) -> Dict[str, Any]:
+        """
+        Limpia el historial de conversación.
+        
+        Returns:
+            Confirmación de que el contexto fue limpiado
+        """
+        self.conversation_history.clear()
+        return {
+            'type': 'context_cleared',
+            'message': 'Historial de conversación limpiado'
+        }
+    
+    def _build_context_summary(self) -> str:
+        """
+        Construye un resumen del contexto de conversación.
+        
+        Returns:
+            String con el resumen del contexto
+        """
+        if not self.conversation_history:
+            return "No hay conversación previa."
+        
+        summary_parts = []
+        
+        for i, interaction in enumerate(self.conversation_history[-5:], 1):  # Últimas 5 interacciones
+            summary_parts.append(f"""
+            Interacción {i}:
+            - Usuario preguntó: {interaction['query']}
+            - Sistema respondió: {interaction['response'][:200]}{'...' if len(interaction['response']) > 200 else ''}
+            """)
+        
+        return "\n".join(summary_parts)
+    
+    def _extract_improved_query_from_text(self, text: str, original_query: str) -> str:
+        """
+        Extrae la consulta mejorada del texto de respuesta cuando no es JSON válido.
+        
+        Args:
+            text: Texto de respuesta de Gemini
+            original_query: Consulta original como fallback
+            
+        Returns:
+            Consulta mejorada extraída o la original si no se puede extraer
+        """
+        try:
+            # Buscar patrones comunes de consulta mejorada
+            lines = text.split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                if any(keyword in line.lower() for keyword in ['consulta mejorada', 'improved query', 'mejor consulta']):
+                    # Extraer la parte después de los dos puntos
+                    if ':' in line:
+                        improved = line.split(':', 1)[1].strip()
+                        if improved and len(improved) > 10:  # Validar que no esté vacía
+                            return improved.strip('"\'')
+            
+            # Si no se encuentra un patrón específico, buscar la línea más larga que parezca una consulta
+            potential_queries = [line.strip() for line in lines if len(line.strip()) > 20 and '?' in line]
+            if potential_queries:
+                return potential_queries[0].strip('"\'')
+                
+        except Exception as e:
+            print(f"Error extrayendo consulta mejorada: {e}")
+        
+        return original_query
+    
+    def get_conversation_stats(self) -> Dict[str, Any]:
+        """
+        Obtiene estadísticas de la conversación actual.
+        
+        Returns:
+            Diccionario con estadísticas de conversación
+        """
+        if not self.conversation_history:
+            return {
+                'total_interactions': 0,
+                'average_query_length': 0,
+                'average_response_length': 0,
+                'most_recent_topic': None
+            }
+        
+        total_interactions = len(self.conversation_history)
+        avg_query_length = sum(len(interaction['query']) for interaction in self.conversation_history) / total_interactions
+        avg_response_length = sum(len(interaction['response']) for interaction in self.conversation_history) / total_interactions
+        
+        return {
+            'total_interactions': total_interactions,
+            'average_query_length': round(avg_query_length, 2),
+            'average_response_length': round(avg_response_length, 2),
+            'most_recent_topic': self.conversation_history[-1]['query'] if self.conversation_history else None,
+            'conversation_duration': self._calculate_conversation_duration()
+        }
+    
+    def _calculate_conversation_duration(self) -> str:
+        """
+        Calcula la duración de la conversación.
+        
+        Returns:
+            String con la duración de la conversación
+        """
+        if len(self.conversation_history) < 2:
+            return "Conversación recién iniciada"
+        
+        try:
+            first_interaction = datetime.fromisoformat(self.conversation_history[0]['timestamp'])
+            last_interaction = datetime.fromisoformat(self.conversation_history[-1]['timestamp'])
+            duration = last_interaction - first_interaction
+            
+            if duration.total_seconds() < 60:
+                return f"{int(duration.total_seconds())} segundos"
+            elif duration.total_seconds() < 3600:
+                return f"{int(duration.total_seconds() / 60)} minutos"
+            else:
+                return f"{int(duration.total_seconds() / 3600)} horas"
+                
+        except Exception:
+            return "Duración no disponible"
+    
+    def _apply_basic_improvements(self, query: str, context_summary: str) -> str:
+        """
+        Aplica mejoras básicas a la consulta cuando Gemini no está disponible o falla.
+        
+        Args:
+            query: Consulta original
+            context_summary: Resumen del contexto
+            
+        Returns:
+            Consulta con mejoras básicas aplicadas
+        """
+        improved_query = query
+        
+        # Extraer ubicaciones del contexto
+        locations = self._extract_locations_from_context(context_summary)
+        
+        # Aplicar mejoras básicas según patrones comunes
+        if query.lower().startswith(('¿y ', '¿qué ', 'y ', 'qué ')):
+            # Es una continuación, añadir contexto de ubicación si está disponible
+            if locations:
+                location = locations[0]
+                if 'restaurante' in query.lower():
+                    improved_query = f"¿Qué restaurantes recomendados hay en {location}?"
+                elif 'hotel' in query.lower():
+                    improved_query = f"¿Qué hoteles recomendados hay en {location}?"
+                elif 'lugar' in query.lower() or 'sitio' in query.lower():
+                    improved_query = f"¿Qué lugares turísticos recomendados hay en {location}?"
+                else:
+                    improved_query = f"{query} en {location}"
+        
+        # Hacer la consulta más específica añadiendo términos relacionados
+        if 'restaurante' in improved_query.lower() and 'recomendado' not in improved_query.lower():
+            improved_query = improved_query.replace('restaurante', 'restaurante recomendado')
+        
+        if 'hotel' in improved_query.lower() and 'recomendado' not in improved_query.lower():
+            improved_query = improved_query.replace('hotel', 'hotel recomendado')
+            
+        if 'lugar' in improved_query.lower() and 'turístico' not in improved_query.lower():
+            improved_query = improved_query.replace('lugar', 'lugar turístico')
+        
+        # Si la consulta es muy corta, hacerla más descriptiva
+        if len(query.split()) <= 3:
+            if 'clima' in query.lower():
+                improved_query = f"{query} y recomendaciones de vestimenta"
+            elif 'precio' in query.lower():
+                improved_query = f"{query} y opciones económicas"
+        
+        return improved_query if improved_query != query else f"{query} con información detallada"
+    
+    def _extract_locations_from_context(self, context_summary: str) -> List[str]:
+        """
+        Extrae ubicaciones mencionadas en el contexto.
+        
+        Args:
+            context_summary: Resumen del contexto
+            
+        Returns:
+            Lista de ubicaciones encontradas
+        """
+        # Lista de ciudades/lugares comunes en Perú (expandible)
+        common_locations = [
+            'Lima', 'Cusco', 'Arequipa', 'Trujillo', 'Piura', 'Iquitos', 
+            'Huancayo', 'Chiclayo', 'Ayacucho', 'Cajamarca', 'Puno',
+            'Miraflores', 'Barranco', 'San Isidro', 'Machu Picchu',
+            'Valle Sagrado', 'Ollantaytambo', 'Pisac'
+        ]
+        
+        locations = []
+        context_lower = context_summary.lower()
+        
+        for location in common_locations:
+            if location.lower() in context_lower:
+                locations.append(location)
+        
+        return locations
+    
+    def _is_query_continuation(self, query: str, context_summary: str) -> bool:
+        """
+        Determina si la consulta es una continuación de un tema previo.
+        
+        Args:
+            query: Consulta actual
+            context_summary: Resumen del contexto
+            
+        Returns:
+            True si es una continuación, False si es un tema nuevo
+        """
+        # Indicadores de continuación
+        continuation_indicators = [
+            '¿y ', 'y ', '¿qué más', 'también', 'además', 'otra', 'otro',
+            '¿dónde más', '¿cuál', '¿cuáles', 'mejor', 'recomiendan'
+        ]
+        
+        query_lower = query.lower()
+        
+        # Verificar indicadores directos
+        for indicator in continuation_indicators:
+            if query_lower.startswith(indicator):
+                return True
+        
+        # Verificar si hay contexto previo
+        if not context_summary or context_summary == "No hay conversación previa.":
+            return False
+        
+        # Verificar temas relacionados
+        if len(self.conversation_history) > 0:
+            last_query = self.conversation_history[-1]['query'].lower()
+            
+            # Temas relacionados
+            related_themes = {
+                'turismo': ['lugar', 'sitio', 'visitar', 'turístico', 'atracción'],
+                'comida': ['restaurante', 'comida', 'comer', 'gastronomía', 'plato'],
+                'alojamiento': ['hotel', 'hostal', 'alojamiento', 'dormir', 'hospedaje'],
+                'transporte': ['transporte', 'bus', 'taxi', 'avión', 'tren'],
+                'clima': ['clima', 'tiempo', 'temperatura', 'lluvia', 'sol']
+            }
+            
+            for theme, keywords in related_themes.items():
+                last_has_theme = any(keyword in last_query for keyword in keywords)
+                current_has_theme = any(keyword in query_lower for keyword in keywords)
+                
+                if last_has_theme and current_has_theme:
+                    return True
+        
+        return False
+    
+    def _extract_topics_from_context(self) -> List[str]:
+        """
+        Extrae temas principales del contexto de conversación.
+        
+        Returns:
+            Lista de temas identificados
+        """
+        if not self.conversation_history:
+            return []
+        
+        topics = set()
+        
+        for interaction in self.conversation_history[-3:]:  # Últimas 3 interacciones
+            query = interaction['query'].lower()
+            
+            # Identificar temas por palabras clave
+            if any(word in query for word in ['restaurante', 'comida', 'comer', 'gastronomía']):
+                topics.add('gastronomía')
+            
+            if any(word in query for word in ['hotel', 'hostal', 'alojamiento', 'dormir']):
+                topics.add('alojamiento')
+            
+            if any(word in query for word in ['lugar', 'sitio', 'visitar', 'turístico']):
+                topics.add('turismo')
+            
+            if any(word in query for word in ['clima', 'tiempo', 'temperatura']):
+                topics.add('clima')
+            
+            if any(word in query for word in ['transporte', 'bus', 'taxi', 'avión']):
+                topics.add('transporte')
+            
+            # Extraer ubicaciones
+            locations = self._extract_locations_from_context(query)
+            topics.update(locations)
+        
+        return list(topics)
+    
+    def _determine_user_intent(self, original_query: str, improved_query: str) -> str:
+        """
+        Determina la intención del usuario basándose en las consultas.
+        
+        Args:
+            original_query: Consulta original
+            improved_query: Consulta mejorada
+            
+        Returns:
+            Descripción de la intención del usuario
+        """
+        query_lower = original_query.lower()
+        
+        if any(word in query_lower for word in ['¿dónde', 'dónde', 'ubicación', 'dirección']):
+            return 'Búsqueda de ubicación'
+        
+        if any(word in query_lower for word in ['¿qué', 'qué', 'cuál', 'cuáles']):
+            if 'restaurante' in query_lower:
+                return 'Búsqueda de restaurantes'
+            elif 'hotel' in query_lower:
+                return 'Búsqueda de alojamiento'
+            elif 'lugar' in query_lower:
+                return 'Búsqueda de lugares turísticos'
+            else:
+                return 'Búsqueda de información general'
+        
+        if any(word in query_lower for word in ['¿cómo', 'cómo']):
+            return 'Búsqueda de instrucciones o procedimientos'
+        
+        if any(word in query_lower for word in ['¿cuánto', 'cuánto', 'precio', 'costo']):
+            return 'Consulta de precios'
+        
+        if any(word in query_lower for word in ['clima', 'tiempo', 'temperatura']):
+            return 'Consulta meteorológica'
+        
+        return 'Consulta informativa general'
+    
+    def _identify_improvements(self, original_query: str, improved_query: str) -> List[str]:
+        """
+        Identifica qué mejoras se aplicaron a la consulta.
+        
+        Args:
+            original_query: Consulta original
+            improved_query: Consulta mejorada
+            
+        Returns:
+            Lista de mejoras aplicadas
+        """
+        improvements = []
+        
+        if len(improved_query) > len(original_query):
+            improvements.append('Consulta expandida con más detalles')
+        
+        if improved_query != original_query:
+            improvements.append('Consulta contextualizada')
+        
+        # Verificar mejoras específicas
+        original_lower = original_query.lower()
+        improved_lower = improved_query.lower()
+        
+        if 'recomendado' in improved_lower and 'recomendado' not in original_lower:
+            improvements.append('Añadido filtro de recomendaciones')
+        
+        locations = self._extract_locations_from_context(improved_query)
+        if locations and not any(loc.lower() in original_lower for loc in locations):
+            improvements.append('Añadido contexto geográfico')
+        
+        if any(word in improved_lower for word in ['detallada', 'específica', 'completa']) and \
+           not any(word in original_lower for word in ['detallada', 'específica', 'completa']):
+            improvements.append('Solicitud de información más específica')
+        
+        if not improvements:
+            improvements.append('Consulta procesada')
+        
+        return improvements

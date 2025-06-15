@@ -3,11 +3,12 @@ from typing import List
 import google.generativeai as genai
 
 class CoordinatorAgent(Agent):
-    def __init__(self, name, crawler_agent, rag_agent, interface_agent):
+    def __init__(self, name, crawler_agent, rag_agent, interface_agent, context_agent):
         super().__init__(name)
         self.crawler_agent = crawler_agent
         self.rag_agent = rag_agent
         self.interface_agent = interface_agent
+        self.context_agent = context_agent
 
     def start(self): 
         self._notify_interface('system_start', {
@@ -44,16 +45,46 @@ class CoordinatorAgent(Agent):
                 
 
     def ask(self, query):
-        # Consultar al agente RAG
+        # Paso 1: Analizar y mejorar la consulta usando el contexto
+        print("🧠 Analizando consulta con contexto conversacional...")
+        context_analysis = self.context_agent.receive({'type': 'analyze_query', 'query': query}, self)
+        
+        if context_analysis['type'] == 'query_analyzed':
+            analysis = context_analysis['analysis']
+            improved_query = analysis['improved_query']
+            context_info = analysis['context_analysis']
+            
+            print(f"📝 Consulta original: {query}")
+            print(f"🔍 Consulta mejorada: {improved_query}")
+            print(f"🎯 Intención detectada: {context_info.get('user_intent', 'No detectada')}")
+            print(f"🔗 Continuación de tema: {'Sí' if context_info.get('is_continuation', False) else 'No'}")
+            
+            if analysis.get('improvements_made'):
+                print(f"✨ Mejoras aplicadas: {', '.join(analysis['improvements_made'])}")
+        else:
+            # Si hay error en el análisis, usar la consulta original
+            improved_query = query
+            print("⚠️ Error en análisis de contexto, usando consulta original")
+
+        # Paso 2: Consultar al agente RAG con la consulta mejorada
         self._notify_interface('query_received', {
-            'query': query,
+            'query': improved_query,
+            'original_query': query,
             'status': 'processing'
         })
-        response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
+        response = self.rag_agent.receive({'type': 'query', 'query': improved_query}, self)
 
         if response['type'] == 'answer':
+            # Paso 3: Guardar la interacción en el contexto
+            final_answer = response['answer']
+            self.context_agent.receive({
+                'type': 'add_interaction', 
+                'query': query, 
+                'response': final_answer
+            }, self)
+            
             # Utilizar Gemini para evaluar si la respuesta es útil
-            evaluation = self._evaluate_response_usefulness(query, response['answer'])
+            evaluation = self._evaluate_response_usefulness(query, final_answer)
             if not evaluation:
                 # Extraer palabras clave problemáticas cuando la consulta no es relevante
                 problematic_keywords = self._extract_problematic_keywords(query, response['answer'])
@@ -101,6 +132,38 @@ class CoordinatorAgent(Agent):
             return response['answer']
 
         return response.get('msg', 'Error al consultar la base de datos')
+    
+    def get_conversation_stats(self):
+        """
+        Obtiene estadísticas de la conversación actual.
+        
+        Returns:
+            Diccionario con estadísticas de conversación
+        """
+        return self.context_agent.get_conversation_stats()
+    
+    def clear_conversation_context(self):
+        """
+        Limpia el contexto de conversación.
+        
+        Returns:
+            Resultado de la operación de limpieza
+        """
+        result = self.context_agent.receive({'type': 'clear_context'}, self)
+        if result['type'] == 'context_cleared':
+            print("🧹 Contexto de conversación limpiado exitosamente")
+            return True
+        return False
+    
+    def get_conversation_context(self):
+        """
+        Obtiene el contexto actual de conversación.
+        
+        Returns:
+            Contexto de conversación actual
+        """
+        result = self.context_agent.receive({'type': 'get_context'}, self)
+        return result if result['type'] == 'context_data' else None
 
     def _evaluate_response_usefulness(self, query, answer):
         """

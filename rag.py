@@ -548,13 +548,12 @@ Información disponible (seleccionada por relevancia):
 {context_text}
 
 INSTRUCCIONES:
-- Utiliza ÚNICAMENTE la información proporcionada
-- Proporciona respuestas estructuradas y organizadas
-- Si es apropiado, presenta la información en listas o puntos
-- Menciona detalles específicos cuando estén disponibles
-- Si no hay información suficiente, indícalo claramente
-- Sé conciso pero completo en tu respuesta
-- Prioriza la información más relevante para la consulta
+- Solo usa la información proporcionada arriba
+- Responde siempre proporcionando una lista enumerada de elementos a menos que no tenga sentido proporcionar una lista
+- Siempre intenta proporcionar una respuesta con la información proporcionada arriba, si no tienes nada de información sobre el tema di claramente "No tengo suficiente información sobre este tema"
+- No inventes información que no esté en el contexto
+- Sé conciso y útil
+- Si hay información relevante, proporciona las mejores recomendaciones basadas en los datos disponibles
 
 Respuesta:"""
 
@@ -633,88 +632,6 @@ Respuesta:"""
             'genetic_optimization_enabled': False
         }
 
-
-# Función de prueba simplificada
-def test_rag_system():
-    """Función de prueba para demostrar el sistema RAG"""
-    print("🧪 PRUEBA DEL SISTEMA RAG OPTIMIZADO (SIN CHUNKS)")
-    print("=" * 60)
-    
-    # Simular colección de ChromaDB para pruebas
-    class MockCollection:
-        def __init__(self, documents):
-            self.documents = documents
-        
-        def query(self, query_texts, n_results):
-            return {'documents': [self.documents[:n_results]]}
-    
-    # Datos de prueba
-    test_documents = [
-        "Madrid es la capital de España y cuenta con numerosos museos como el Prado, el Reina Sofía y el Thyssen. La ciudad ofrece una rica vida cultural con teatros, galerías de arte y monumentos históricos como el Palacio Real.",
-        "Barcelona es famosa por la arquitectura modernista de Antoni Gaudí, incluyendo la icónica Sagrada Familia, el colorido Park Güell y la Casa Batlló. La ciudad también cuenta con hermosas playas y el barrio gótico.",
-        "Sevilla es conocida por su impresionante catedral gótica, la Giralda y el Real Alcázar. El barrio de Santa Cruz con sus calles estrechas y patios andaluces es perfecto para pasear.",
-        "Valencia ofrece la futurista Ciudad de las Artes y las Ciencias diseñada por Santiago Calatrava. Es también la cuna de la paella valenciana y cuenta con hermosas playas cercanas.",
-        "Bilbao destaca por el famoso Museo Guggenheim con su arquitectura titanio diseñada por Frank Gehry. La ciudad ha experimentado una transformación urbana notable en las últimas décadas."
-    ]
-    
-    mock_collection = MockCollection(test_documents)
-    
-    # Crear sistemas RAG
-    print("🔧 Creando sistema RAG tradicional...")
-    traditional_rag = RAGSystem(mock_collection)
-    
-    print("⚡ Creando sistema RAG mejorado (sin chunks)...")
-    enhanced_rag = EnhancedRAGSystem(mock_collection, embedding_model='TF-IDF')
-    
-    # Consultas de prueba
-    test_queries = [
-        "¿Qué museos puedo visitar en Madrid?",
-        "Cuéntame sobre la arquitectura de Gaudí en Barcelona",
-        "¿Qué ciudades españolas me recomiendas para turismo cultural?"
-    ]
-    
-    for i, query in enumerate(test_queries, 1):
-        print(f"\n{'='*60}")
-        print(f"CONSULTA {i}: {query}")
-        print('='*60)
-        
-        # Respuesta tradicional
-        print("\n🔧 SISTEMA RAG TRADICIONAL:")
-        print("-" * 30)
-        traditional_response = traditional_rag.rag_query(query)
-        print(traditional_response[:300] + "..." if len(traditional_response) > 300 else traditional_response)
-        
-        # Respuesta mejorada (sin chunks)
-        print("\n⚡ SISTEMA RAG MEJORADO (SIN CHUNKS):")
-        print("-" * 30)
-        enhanced_result = enhanced_rag.rag_query_enhanced(query, top_k=5)
-        print(enhanced_result['response'][:300] + "..." if len(enhanced_result['response']) > 300 else enhanced_result['response'])
-        
-        # Mostrar métricas
-        metrics = enhanced_result['metrics']
-        print(f"\n📊 MÉTRICAS:")
-        print(f"• Documentos totales: {metrics['total_documents']}")
-        print(f"• Documentos seleccionados: {metrics['documents_selected']}")
-        print(f"• Relevancia promedio: {metrics['avg_relevance']:.3f}")
-        print(f"• Relevancia máxima: {metrics['max_relevance']:.3f}")
-        print(f"• Similitud coseno: {'✅' if metrics['cosine_similarity_used'] else '❌'}")
-    
-    # Mostrar estadísticas del sistema
-    print(f"\n{'='*60}")
-    print("📊 ESTADÍSTICAS DEL SISTEMA:")
-    stats = enhanced_rag.get_system_stats()
-    for key, value in stats.items():
-        print(f"• {key}: {value}")
-    
-    print(f"\n{'='*60}")
-    print("🎉 PRUEBA COMPLETADA")
-    print("💡 El sistema RAG optimizado utiliza:")
-    print("   • Documentos completos (sin fragmentación)")
-    print("   • Cálculo de distancia coseno para relevancia")
-    print("   • Métricas detalladas de rendimiento")
-    print("   • Preprocesamiento de texto mejorado")
-    print("   • Compatibilidad con múltiples modelos de embedding")
-    print(f"{'='*60}")
 
 
 if __name__ == "__main__":
