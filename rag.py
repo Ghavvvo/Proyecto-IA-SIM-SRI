@@ -49,7 +49,8 @@ Información disponible en la base de datos:
 
 INSTRUCCIONES IMPORTANTES:
 - Solo usa la información proporcionada arriba
-- Si la información no es suficiente para responder la consulta, di claramente "No tengo suficiente información sobre este tema"
+- Responde siempre proporcionando una lista de elementos a menos que no tenga sentido proporcionar una lista
+- Siempre intenta proporcionar una respuesta con la información proporcionada arriba, si no tienes nada de información sobre el tema di claramente "No tengo suficiente información sobre este tema"
 - No inventes información que no esté en el contexto
 - Sé conciso y útil
 - Si hay información relevante, proporciona las mejores recomendaciones basadas en los datos disponibles
