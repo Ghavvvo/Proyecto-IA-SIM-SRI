@@ -2,7 +2,7 @@ from autogen import Agent
 from crawler import TourismCrawler
 
 class CrawlerAgent(Agent):
-    def __init__(self, name, starting_urls, max_pages=200, max_depth=2, num_threads=10):
+    def __init__(self, name, starting_urls, max_pages=100, max_depth=2, num_threads=10):
         super().__init__(name)
         # Crear crawler con soporte para paralelismo mejorado
         self.crawler = TourismCrawler(

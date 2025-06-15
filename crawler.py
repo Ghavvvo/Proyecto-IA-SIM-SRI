@@ -13,7 +13,7 @@ import queue
 
 
 class TourismCrawler:
-    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data", max_pages: int = 200, max_depth: int = 3, num_threads: int = 10):
+    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data", max_pages: int = 100, max_depth: int = 3, num_threads: int = 10):
         self.starting_urls = starting_urls
         self.visited_urls = set()
         self.urls_to_visit = queue.Queue()
@@ -34,6 +34,9 @@ class TourismCrawler:
         self.max_pages = max_pages
         self.max_depth = max_depth
         self.num_threads = num_threads
+        
+        # Palabras clave de la consulta actual (para filtrar URLs)
+        self.current_query_keywords = []
 
         # Inicializar URLs en la cola
         for url in starting_urls:
@@ -43,11 +46,13 @@ class TourismCrawler:
         self.visited_lock = threading.Lock()
         self.collection_lock = threading.Lock()
         self.stats_lock = threading.Lock()
+        self.queue_lock = threading.Lock()  # Para controlar el acceso a la cola
         
         # Estadísticas
         self.pages_processed = 0
         self.pages_added_to_db = 0
         self.errors_count = 0
+        self.urls_filtered_out = 0  # URLs filtradas por no tener palabras en común
         
         # Control de parada
         self.stop_crawling = threading.Event()
@@ -99,6 +104,53 @@ class TourismCrawler:
 
         return True
 
+    def _has_common_keywords(self, url: str, text_content: str = "") -> bool:
+        """
+        Verifica si una URL o su contenido tiene palabras en común con las palabras clave de la consulta.
+        
+        Args:
+            url (str): URL a verificar
+            text_content (str): Contenido de texto adicional para verificar (opcional)
+            
+        Returns:
+            bool: True si tiene palabras en común, False en caso contrario
+        """
+        if not self.current_query_keywords:
+            return True  # Si no hay palabras clave definidas, permitir todas las URLs
+        
+        # Combinar URL y contenido para la verificación
+        combined_text = f"{url.lower()} {text_content.lower()}"
+        
+        # Verificar si alguna palabra clave está presente
+        for keyword in self.current_query_keywords:
+            keyword_lower = keyword.lower().strip()
+            if keyword_lower and keyword_lower in combined_text:
+                return True
+        
+        return False
+
+    def _extract_link_text(self, a_tag) -> str:
+        """
+        Extrae el texto del enlace y elementos cercanos para análisis de relevancia.
+        
+        Args:
+            a_tag: Elemento <a> de BeautifulSoup
+            
+        Returns:
+            str: Texto combinado del enlace y contexto
+        """
+        link_text = a_tag.get_text(strip=True)
+        
+        # Obtener texto del título si existe
+        title_text = a_tag.get('title', '')
+        
+        # Obtener texto del elemento padre para contexto adicional
+        parent_text = ""
+        if a_tag.parent:
+            parent_text = a_tag.parent.get_text(strip=True)[:100]  # Limitar a 100 caracteres
+        
+        return f"{link_text} {title_text} {parent_text}"
+
     def get_links(self, url: str, soup: BeautifulSoup) -> List[str]:
         """Extrae enlaces de la página y los filtra para obtener solo URLs relevantes de turismo"""
         links = []
@@ -111,7 +163,14 @@ class TourismCrawler:
 
             absolute_url = urljoin(base_url, href)
             if self.is_valid_url(absolute_url):
-                links.append(absolute_url)
+                # Verificar si la URL tiene palabras en común con la consulta
+                link_text = self._extract_link_text(a_tag)
+                if self._has_common_keywords(absolute_url, link_text):
+                    links.append(absolute_url)
+                else:
+                    # Incrementar contador de URLs filtradas
+                    with self.stats_lock:
+                        self.urls_filtered_out += 1
 
         return list(set(links))
 
@@ -349,6 +408,9 @@ class TourismCrawler:
         print(f"   • Páginas añadidas a DB: {self.pages_added_to_db}")
         print(f"   • Errores: {self.errors_count}")
         print(f"   • URLs visitadas: {len(self.visited_urls)}")
+        if self.current_query_keywords:
+            print(f"   • URLs filtradas por palabras clave: {self.urls_filtered_out}")
+            print(f"   • Palabras clave utilizadas: {self.current_query_keywords}")
         print(f"   • Tiempo total: {elapsed_time:.2f} segundos")
         print(f"   • Velocidad promedio: {avg_rate:.2f} páginas/segundo")
         print(f"   • Hilos utilizados: {self.num_threads}")
@@ -413,6 +475,13 @@ class TourismCrawler:
     def run_parallel_crawler_from_keywords(self, keywords: list, max_depth: int = 2) -> int:
         """Ejecuta crawling paralelo basado en palabras clave."""
         print(f"🔍 Iniciando búsqueda paralela por palabras clave: {keywords}")
+        
+        # Establecer las palabras clave para filtrar URLs
+        self.current_query_keywords = keywords
+        print(f"🎯 Filtrado de URLs activado para palabras clave: {keywords}")
+        
+        # Resetear estadísticas de filtrado
+        self.urls_filtered_out = 0
         
         # Buscar URLs iniciales
         initial_urls = self.google_search_links(keywords, num_results=20)
