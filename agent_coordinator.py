@@ -3,12 +3,13 @@ from typing import List
 import google.generativeai as genai
 
 class CoordinatorAgent(Agent):
-    def __init__(self, name, crawler_agent, rag_agent, interface_agent, context_agent):
+    def __init__(self, name, crawler_agent, rag_agent, interface_agent, context_agent, route_agent):
         super().__init__(name)
         self.crawler_agent = crawler_agent
         self.rag_agent = rag_agent
         self.interface_agent = interface_agent
         self.context_agent = context_agent
+        self.route_agent = route_agent
 
     def start(self): 
         self._notify_interface('system_start', {
@@ -45,6 +46,11 @@ class CoordinatorAgent(Agent):
                 
 
     def ask(self, query):
+        # Paso 0: Manejar solicitudes directas de rutas
+        direct_route_response = self._handle_direct_route_request(query)
+        if direct_route_response:
+            return direct_route_response
+        
         # Paso 1: Analizar y mejorar la consulta usando el contexto
         print("🧠 Analizando consulta con contexto conversacional...")
         context_analysis = self.context_agent.receive({'type': 'analyze_query', 'query': query}, self)
@@ -118,7 +124,7 @@ class CoordinatorAgent(Agent):
                         
                         if new_response['type'] == 'answer':
                             print("✅ Nueva respuesta generada con información de exploración ACO")
-                            return new_response['answer']
+                            final_answer = new_response['answer']
                         else:
                             return new_response.get('msg', 'Error en la nueva consulta después de exploración ACO')
                     else:
@@ -129,7 +135,10 @@ class CoordinatorAgent(Agent):
                     print("❌ Error en exploración ACO, intentando método alternativo...")
                     return self._fallback_search_method(problematic_keywords, query)
 
-            return response['answer']
+            # Manejar sugerencia de ruta si es relevante
+            final_answer = self._suggest_route_if_relevant(query, final_answer)
+            
+            return final_answer
 
         return response.get('msg', 'Error al consultar la base de datos')
     
@@ -278,3 +287,87 @@ class CoordinatorAgent(Agent):
             'event_data': event_data or {}
         }
         return self.interface_agent.receive(message, self)
+
+    def _suggest_route_if_relevant(self, query: str, current_answer: str) -> str:
+        """Sugiere una ruta optimizada si es relevante para la consulta"""
+        # Paso 1: Detectar si debemos ofrecer ruta
+        offer_decision = self.context_agent.receive({
+            'type': 'should_offer_route',
+            'query': query,
+            'response': current_answer
+        }, self)
+        
+        should_offer = False
+        if offer_decision['type'] == 'route_offer_decision':
+            should_offer = offer_decision['should_offer']
+        
+        if not should_offer:
+            return current_answer
+        
+        # Paso 2: Extraer lugares relevantes
+        extraction_result = self.context_agent.receive({
+            'type': 'extract_relevant_places',
+            'response': current_answer
+        }, self)
+        
+        places = []
+        if extraction_result['type'] == 'extracted_places':
+            places = extraction_result['places']
+        
+        # Necesitamos al menos 2 lugares para generar una ruta
+        if len(places) < 2:
+            return current_answer
+        
+        # Paso 3: Confirmar con el usuario
+        print(current_answer)
+        print("\n¿Desea generar una ruta optimizada para visitar estos lugares? (sí/no)")
+        user_response = input("> ").strip().lower()
+        
+        if user_response not in ['sí', 'si', 's', 'yes', 'y']:
+            return current_answer
+        
+        # Paso 4: Generar y mostrar ruta
+        route_result = self.route_agent.receive({
+            'type': 'optimize_route',
+            'places': places
+        }, self)
+        
+        if route_result['type'] != 'route_result':
+            return current_answer
+        
+        # Paso 5: Formatear y añadir la ruta a la respuesta
+        route_str = self._format_route(route_result)
+        return current_answer + f"\n\n{route_str}"
+
+    def _format_route(self, route_result):
+        """Formatea los resultados de la ruta para mostrar al usuario"""
+        return (
+            "🗺️ Ruta optimizada:\n" +
+            "\n".join([f"{i+1}. {place}" for i, place in enumerate(route_result['order'])]) +
+            f"\n\n📏 Distancia total: {route_result['total_distance_km']} km" +
+            f"\n⏱️ Tiempo estimado: {route_result['total_distance_km']/5:.1f} horas (caminando)"
+        )
+    
+    def _handle_direct_route_request(self, query):
+        """Maneja solicitudes directas de rutas turísticas"""
+        if any(keyword in query.lower() for keyword in ['ruta para visitar', 'recorrido para visitar']):
+            extraction_result = self.context_agent.receive({
+                'type': 'extract_relevant_places',
+                'response': query
+            }, self)
+            
+            places = []
+            if extraction_result['type'] == 'extracted_places':
+                places = extraction_result['places']
+            
+            if len(places) >= 2:
+                route_result = self.route_agent.receive({
+                    'type': 'optimize_route',
+                    'places': places
+                }, self)
+                
+                if route_result['type'] == 'route_result':
+                    return self._format_route(route_result)
+            else:
+                return "Por favor, proporcione al menos dos lugares para generar una ruta."
+        return None

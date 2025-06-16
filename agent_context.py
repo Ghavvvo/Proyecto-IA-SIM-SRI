@@ -28,6 +28,10 @@ class ContextAgent(Agent):
             return self._get_conversation_context()
         elif message['type'] == 'clear_context':
             return self._clear_context()
+        elif message['type'] == 'should_offer_route':
+            return self._should_offer_route(message['query'], message['response'])       
+        elif message['type'] == 'extract_relevant_places':
+            return self._extract_relevant_places(message['response'])
         else:
             return {'type': 'error', 'msg': 'Unknown message type'}
     
@@ -525,3 +529,130 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             improvements.append('Consulta procesada')
         
         return improvements
+    
+    def _should_offer_route(self, query: str, response: str) -> Dict[str, Any]:
+        """
+        Determina si se debe ofrecer generar una ruta basado en la consulta y respuesta.
+        
+        Args:
+            query: Consulta original del usuario
+            response: Respuesta generada por el sistema
+            
+        Returns:
+            Dict con tipo y booleano indicando si se debe ofrecer ruta
+        """
+        # Usar Gemini para analizar si se debe ofrecer ruta
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"""
+        Eres un experto en análisis de conversaciones para un sistema de guía turístico. 
+        Determina si la siguiente respuesta del sistema a una consulta del usuario contiene una lista de lugares de interés que podrían ser visitados en una ruta turística.
+
+        CONSULTA DEL USUARIO:
+        {query}
+
+        RESPUESTA DEL SISTEMA:
+        {response}
+
+        INSTRUCCIONES:
+        - Responde SOLO con 'true' o 'false' (en minúsculas) sin comillas ni explicaciones.
+        - Responde 'true' si la respuesta contiene una lista de lugares (mínimo 2) que un turista podría visitar en un recorrido.
+        - También responde 'true' si la consulta del usuario explícitamente pidió una ruta, itinerario u orden de visita.
+        - Responde 'false' si la respuesta no menciona lugares o si solo menciona un lugar.
+        - Responde 'false' si la respuesta es una negativa (ej: "no encontré información") o si no es relevante para planificar una visita.
+            """
+            result = model.generate_content(prompt)
+            decision = result.text.strip().lower()
+            should_offer = (decision == 'true')
+            
+            return {
+                'type': 'route_offer_decision',
+                'should_offer': should_offer
+            }
+        except Exception as e:
+            print(f"Error al determinar oferta de ruta: {e}")
+            # En caso de error, usar heurística básica
+            basic_decision = self._basic_should_offer_route(query, response)
+            return {
+                'type': 'route_offer_decision',
+                'should_offer': basic_decision
+            }
+
+    def _basic_should_offer_route(self, query: str, response: str) -> bool:
+        """Heurística básica para ofrecer ruta (fallback)"""
+        # Caso 1: El usuario pidió explícitamente una ruta
+        route_keywords = ['ruta', 'recorrido', 'itinerario', 'orden de visita', 'visitar en orden']
+        if any(keyword in query.lower() for keyword in route_keywords):
+            return True
+        
+        # Caso 2: La respuesta contiene encabezados de listas
+        place_indicators = ['lugares:', 'sitios:', 'puntos de interés:', 'recomendaciones:', 'atracciones:']
+        if any(indicator in response.lower() for indicator in place_indicators):
+            return True
+            
+        # Caso 3: Contar líneas con marcadores de lista (optimizado)
+        markers = ['- ', '* ', '• ', '1.', '2.', '3.', '4.', '5.']
+        lines = response.split('\n')
+        count = 0
+        
+        for line in lines:
+            # Verificar si la línea comienza con algún marcador
+            if any(line.startswith(marker) for marker in markers):
+                count += 1
+                if count > 2:  # Cortar el bucle al alcanzar el mínimo
+                    return True
+        return False
+
+    def _extract_relevant_places(self, response: str) -> Dict[str, Any]:
+        """
+        Extrae los lugares relevantes de una respuesta usando Gemini.
+        
+        Args:
+            response: Respuesta del sistema
+            
+        Returns:
+            Dict con lista de lugares relevantes
+        """
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"""
+        Eres un experto en extracción de lugares turísticos. Extrae SOLO los nombres de los lugares turísticos relevantes mencionados en el siguiente texto. 
+
+        INSTRUCCIONES:
+        - Extrae únicamente los nombres de lugares que sean destinos, atracciones o puntos de interés turístico.
+        - Ignora lugares mencionados de manera incidental (ej: como referencia o en contexto histórico).
+        - Si un lugar se repite, inclúyelo solo una vez.
+        - Devuelve una lista separada por comas, sin numeración ni otros textos.
+        - Si no hay lugares relevantes, devuelve una cadena vacía.
+
+        TEXTO:
+        {response}
+
+        LISTA DE LUGARES:
+        """
+            result = model.generate_content(prompt)
+            places_str = result.text.strip()
+            
+            # Procesar la cadena de lugares
+            if not places_str:
+                return {'type': 'extracted_places', 'places': []}
+                
+            # Limpieza y eliminación de duplicados
+            places = []
+            seen = set()
+            for place in places_str.split(','):
+                cleaned_place = place.strip()
+                if cleaned_place and cleaned_place not in seen:
+                    seen.add(cleaned_place)
+                    places.append(cleaned_place)
+                    
+            return {
+                'type': 'extracted_places',
+                'places': places
+            }
+        except Exception as e:
+            print(f"Error al extraer lugares: {e}")
+            return {
+                'type': 'extracted_places',
+                'places': []
+            }

@@ -3,6 +3,7 @@ from agent_rag import RAGAgent
 from agent_coordinator import CoordinatorAgent
 from agent_interface import InterfaceAgent
 from agent_context import ContextAgent
+from agent_route import RouteAgent
 from urls import starting_urls
 
 if __name__ == "__main__":
@@ -20,7 +21,8 @@ if __name__ == "__main__":
     rag_agent = RAGAgent("rag_agent")
     interface_agent = InterfaceAgent("interface_agent")
     context_agent = ContextAgent("context_agent")
-    coordinator = CoordinatorAgent("coordinator", crawler_agent, rag_agent, interface_agent, context_agent)
+    route_agent = RouteAgent("route_agent")
+    coordinator = CoordinatorAgent("coordinator", crawler_agent, rag_agent, interface_agent, context_agent, route_agent)
 
     # Iniciar el sistema multiagente
     print("⚡ Iniciando sistema multiagente de turismo con crawler paralelo...")
