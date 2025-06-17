@@ -8,6 +8,7 @@ class ContextAgent(Agent):
         super().__init__(name)
         self.conversation_history: List[Dict[str, Any]] = []
         self.max_history_length = 10  # Mantener solo las últimas 10 interacciones
+        self.last_relevant_places = []
         
     def receive(self, message: Dict[str, Any], sender) -> Dict[str, Any]:
         """
@@ -32,6 +33,16 @@ class ContextAgent(Agent):
             return self._should_offer_route(message['query'], message['response'])       
         elif message['type'] == 'extract_relevant_places':
             return self._extract_relevant_places(message['response'])
+        elif message['type'] == 'store_relevant_places':
+            self.last_relevant_places = message['places']
+            return {'type': 'places_stored'}
+        elif message['type'] == 'get_relevant_places_from_context':
+            return {'type': 'extracted_places', 'places': self.last_relevant_places}
+        elif message['type'] == 'get_last_response':
+            return self._get_last_system_response()
+        elif message['type'] == 'add_route_to_answer':
+            self.add_route_to_answer()
+            return{'type': 'route_added'}
         else:
             return {'type': 'error', 'msg': 'Unknown message type'}
     
@@ -580,26 +591,22 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
 
     def _basic_should_offer_route(self, query: str, response: str) -> bool:
         """Heurística básica para ofrecer ruta (fallback)"""
-        # Caso 1: El usuario pidió explícitamente una ruta
         route_keywords = ['ruta', 'recorrido', 'itinerario', 'orden de visita', 'visitar en orden']
         if any(keyword in query.lower() for keyword in route_keywords):
             return True
         
-        # Caso 2: La respuesta contiene encabezados de listas
         place_indicators = ['lugares:', 'sitios:', 'puntos de interés:', 'recomendaciones:', 'atracciones:']
         if any(indicator in response.lower() for indicator in place_indicators):
             return True
             
-        # Caso 3: Contar líneas con marcadores de lista (optimizado)
         markers = ['- ', '* ', '• ', '1.', '2.', '3.', '4.', '5.']
         lines = response.split('\n')
         count = 0
         
         for line in lines:
-            # Verificar si la línea comienza con algún marcador
             if any(line.startswith(marker) for marker in markers):
                 count += 1
-                if count > 2:  # Cortar el bucle al alcanzar el mínimo
+                if count > 2: 
                     return True
         return False
 
@@ -655,4 +662,33 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             return {
                 'type': 'extracted_places',
                 'places': []
+            }
+
+    def _get_last_system_response(self) -> str:
+        if self.conversation_history:
+            return self.conversation_history[-1]['response']
+        return ""
+    
+    def add_route_to_answer(self) -> Dict[str, Any]:
+        if not self.conversation_history:
+            return {'type': 'error', 'msg': 'No hay conversación para añadir oferta de ruta'}
+        
+        last_entry = self.conversation_history[-1]
+        last_response = last_entry['response']
+        
+        route_offer = (
+            "\n\n¿Desea que optimice una ruta para visitarlos? "
+            "Simplemente responda 'sí' para generarla."
+        )
+        
+        if route_offer not in last_response:
+            last_entry['response'] += route_offer
+            return {
+                'type': 'route_offer_added', 
+                'message': 'Oferta de ruta añadida a la última respuesta.'
+            }
+        else:
+            return {
+                'type': 'route_offer_already_present', 
+                'message': 'La oferta de ruta ya estaba presente.'
             }
