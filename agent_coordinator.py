@@ -407,15 +407,44 @@ class CoordinatorAgent(Agent):
 
 
     def _format_route(self, route_result):
-        """Formatea los resultados de la ruta para mostrar al usuario"""
+        """Formatea los resultados de la ruta usando Gemini para un estilo de guía turístico"""
         if route_result['type'] != 'route_result':
             return "No se pudo generar la ruta."
+
+        try:
+            places = route_result['order']
+            total_distance = route_result['total_distance_km']
+            
+            prompt = f"""
+            Eres un guía turístico experto. Describe la siguiente ruta optimizada de manera natural y útil:
+            
+            Lugares a visitar (en orden):
+            {", ".join(places)}
+            
+            Distancia total: {total_distance} km
+            Tiempo estimado caminando: {total_distance/5:.1f} horas
+            
+            Instrucciones:
+            1. Comienza con un saludo entusiasta
+            2. Si hay lugares en diferentes ciudades, sugiere dividir la ruta en varios días
+            3. Para cada lugar, sugiere un tiempo de visita razonable (ej: 1-2 horas para museos, 2-3 horas para parques grandes)
+            4. Incluye consejos prácticos (calzado cómodo, horarios, transporte entre ciudades)
+            5. Mantén un tono amigable y motivador
+            6. Destaca experiencias únicas en cada lugar
+            7. Termina con una recomendación general y buena energía
+            
+            """
+            
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt)
+            return response.text.strip()
         
-        route_str = "🗺️ Ruta optimizada:\n"
-        for i, place in enumerate(route_result['order']):
-            route_str += f"{i+1}. {place}\n"
-        
-        route_str += f"\n📏 Distancia total: {route_result['total_distance_km']} km"
-        route_str += f"\n⏱️ Tiempo estimado: {route_result['total_distance_km']/5:.1f} horas (caminando)"
-        
-        return route_str
+        except Exception as e:
+            # Fallback en caso de error
+            print(f"Error al generar descripción con Gemini: {e}")
+            route_str = "🗺️ **Ruta optimizada**:\n"
+            for i, place in enumerate(places):
+                route_str += f"{i+1}. {place}\n"
+            route_str += f"\n📏 Distancia total: {total_distance} km"
+            route_str += f"\n⏱️ Tiempo estimado: {total_distance/5:.1f} horas"
+            return route_str
