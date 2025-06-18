@@ -524,57 +524,168 @@ class TourismCrawler:
 
     def google_search_links(self, keywords: list, num_results: int = 50) -> list:
         """
-        Busca enlaces relevantes usando DuckDuckGo y URLs predefinidas como fallback.
-        Versión mejorada con búsqueda web real.
+        Busca enlaces relevantes usando múltiples motores de búsqueda.
+        Se enfoca únicamente en la consulta del usuario sin enriquecimiento.
         """
-        all_links = []
         if not keywords:
-            return all_links
+            return []
 
-        print(f"🔍 Búsqueda mejorada para palabras clave: {keywords}")
+        print(f"🔍 Búsqueda para palabras clave del usuario: {keywords}")
         
-        # 1. Intentar búsqueda web real en DuckDuckGo
-        try:
-            web_links = self._search_duckduckgo_links(keywords, num_results_per_query=8)
-            all_links.extend(web_links)
-            print(f"🌐 Encontradas {len(web_links)} URLs via DuckDuckGo")
-        except Exception as e:
-            print(f"⚠️ Error en búsqueda DuckDuckGo: {e}")
+        # Intentar con diferentes motores de búsqueda
+        search_engines = [
+            ("DuckDuckGo", self._search_duckduckgo_links),
+            ("Bing", self._search_bing_links),
+            ("Searx", self._search_searx_links),
+            ("Búsqueda directa", self._fallback_direct_search)
+        ]
         
-        # 2. URLs predefinidas como fallback y complemento
-        predefined_links = self._get_predefined_urls(keywords)
-        all_links.extend(predefined_links)
-        print(f"📋 Añadidas {len(predefined_links)} URLs predefinidas")
+        for engine_name, search_function in search_engines:
+            print(f"\n🔎 Intentando con {engine_name}...")
+            try:
+                web_links = search_function(keywords, num_results_per_query=num_results)
+                if web_links:
+                    print(f"🌐 Encontradas {len(web_links)} URLs via {engine_name}")
+                    return web_links[:num_results]
+                else:
+                    print(f"⚠️ {engine_name}: No se encontraron resultados")
+            except Exception as e:
+                print(f"❌ Error con {engine_name}: {e}")
+                continue
         
-        # 3. Limpiar duplicados y filtrar
-        unique_links = list(set(all_links))
-        valid_links = [url for url in unique_links if self.is_valid_url(url)]
+        # Si ningún motor funciona
+        print("\n❌ No se pudieron obtener resultados de ningún motor de búsqueda")
+        print(f"   - Palabras clave utilizadas: {keywords}")
+        print("   - Todos los motores de búsqueda fallaron o están bloqueados")
+        return []
+    
+    def _direct_keyword_search(self, keywords: list) -> list:
+        """
+        Búsqueda directa construyendo URLs basadas en palabras clave.
+        """
+        direct_urls = []
         
-        # Limitar resultados finales
-        final_links = valid_links[:num_results]
-        print(f"✅ Total de URLs únicas y válidas: {len(final_links)}")
+        # Plantillas de URLs para búsqueda directa
+        url_templates = [
+            "https://www.tripadvisor.com/Search?q={keyword}",
+            "https://www.booking.com/searchresults.html?ss={keyword}",
+            "https://www.expedia.com/Hotel-Search?destination={keyword}",
+            "https://www.hotels.com/search.do?q={keyword}",
+            "https://www.lonelyplanet.com/search?q={keyword}",
+            "https://www.viator.com/searchResults/all?text={keyword}",
+            "https://www.getyourguide.com/s/?q={keyword}",
+            "https://www.airbnb.com/s/{keyword}/homes"
+        ]
         
-        return final_links
+        # Para cada palabra clave, generar URLs directas
+        for keyword in keywords[:3]:  # Limitar a 3 keywords
+            keyword_encoded = keyword.replace(' ', '+')
+            
+            for template in url_templates:
+                try:
+                    url = template.format(keyword=keyword_encoded)
+                    direct_urls.append(url)
+                except:
+                    continue
+        
+        # Agregar algunas URLs de búsqueda específicas según el tipo de keyword
+        for keyword in keywords:
+            keyword_lower = keyword.lower()
+            
+            # Si es un país o ciudad, agregar URLs específicas
+            if any(term in keyword_lower for term in ['cuba', 'habana', 'havana', 'varadero']):
+                direct_urls.extend([
+                    "https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html",
+                    "https://www.lonelyplanet.com/cuba",
+                    "https://www.booking.com/country/cu.html"
+                ])
+            elif any(term in keyword_lower for term in ['panama', 'panamá']):
+                direct_urls.extend([
+                    "https://www.tripadvisor.com/Tourism-g294479-Panama-Vacations.html",
+                    "https://www.lonelyplanet.com/panama",
+                    "https://www.booking.com/country/pa.html"
+                ])
+            elif any(term in keyword_lower for term in ['angola', 'luanda']):
+                direct_urls.extend([
+                    "https://www.tripadvisor.com/Tourism-g293819-Angola-Vacations.html",
+                    "https://www.lonelyplanet.com/angola",
+                    "https://www.booking.com/country/ao.html"
+                ])
+        
+        return list(set(direct_urls))  # Eliminar duplicados
     
     def _search_duckduckgo_links(self, keywords: list, num_results_per_query: int = 8) -> list:
         """
-        Realiza búsquedas reales en DuckDuckGo.
+        Realiza búsquedas usando la librería duckduckgo_search que maneja mejor los CAPTCHAs.
+        """
+        all_urls = set()
+        
+        try:
+            # Intentar usar la librería duckduckgo_search si está disponible
+            from duckduckgo_search import DDGS
+            
+            print("  🦆 Usando DuckDuckGo Search API...")
+            
+            # Crear instancia del buscador
+            with DDGS() as ddgs:
+                # Buscar con todas las palabras clave juntas
+                query = ' '.join(keywords)
+                print(f"  🔍 Buscando: '{query}'")
+                
+                try:
+                    # Realizar búsqueda
+                    results = list(ddgs.text(
+                        query, 
+                        max_results=num_results_per_query,
+                        safesearch='off',
+                        region='wt-wt'  # Mundial
+                    ))
+                    
+                    # Extraer URLs de los resultados
+                    for result in results:
+                        if 'href' in result:
+                            all_urls.add(result['href'])
+                    
+                    print(f"    ✓ Encontrados {len(all_urls)} resultados")
+                    
+                except Exception as e:
+                    print(f"    ❌ Error en búsqueda: {e}")
+            
+            return list(all_urls)
+            
+        except ImportError:
+            print("  ⚠️ Librería duckduckgo_search no disponible, usando método alternativo...")
+            # Fallback al método anterior mejorado
+            return self._search_with_requests(keywords, num_results_per_query)
+    
+    def _search_with_requests(self, keywords: list, num_results_per_query: int = 8) -> list:
+        """
+        Método de búsqueda alternativo usando requests directamente.
         """
         import random
         from urllib.parse import quote_plus
         
         all_urls = set()
         
-        # Generar consultas de búsqueda
-        search_queries = self._generate_search_queries(keywords)
+        # Usar directamente las palabras clave del usuario
+        search_queries = [' '.join(keywords)]  # Búsqueda con todas las palabras
+        # También buscar cada palabra individualmente si hay múltiples
+        if len(keywords) > 1:
+            search_queries.extend(keywords[:2])  # Solo las primeras 2 palabras individuales
         
         # Configurar sesión para búsquedas
         search_session = requests.Session()
         search_session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         })
         
-        for query in search_queries[:6]:  # Limitar a 6 consultas máximo
+        for query in search_queries[:5]:  # Limitar consultas
             try:
                 print(f"  🔍 Buscando: '{query}'")
                 
@@ -582,27 +693,347 @@ class TourismCrawler:
                 encoded_query = quote_plus(query)
                 search_url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
                 
-                # Realizar búsqueda
-                response = search_session.get(search_url, timeout=10)
-                if response.status_code == 200:
+                # Realizar búsqueda con timeout más largo
+                response = search_session.get(search_url, timeout=30, allow_redirects=True)
+                
+                # Manejar diferentes códigos de respuesta
+                if response.status_code in [200, 202, 301, 302]:
+                    # Si es una redirección, seguirla
+                    if response.status_code in [301, 302] and 'location' in response.headers:
+                        redirect_url = response.headers['location']
+                        response = search_session.get(redirect_url, timeout=30)
+                    
                     soup = BeautifulSoup(response.text, 'html.parser')
                     
-                    # Extraer enlaces de resultados
-                    result_links = soup.find_all('a', class_='result__a')
+                    # Debug: ver qué contiene la respuesta
+                    if len(response.text) < 1000:
+                        print(f"    ⚠️ Respuesta muy corta: {len(response.text)} caracteres")
                     
-                    for link in result_links[:num_results_per_query]:
+                    # Buscar específicamente los resultados de DuckDuckGo
+                    results_found = 0
+                    
+                    # Método 1: Buscar enlaces en divs con clase 'result'
+                    result_divs = soup.find_all('div', class_='result')
+                    print(f"    📦 Encontrados {len(result_divs)} divs de resultados")
+                    
+                    for div in result_divs:
+                        # Buscar el enlace principal del resultado
+                        link = div.find('a', class_='result__a')
+                        if link and link.get('href'):
+                            href = link['href']
+                            # Procesar URL si es necesario
+                            if 'duckduckgo.com/l/?uddg=' in href:
+                                try:
+                                    from urllib.parse import parse_qs, urlparse, unquote
+                                    params = parse_qs(urlparse(href).query)
+                                    if 'uddg' in params:
+                                        href = unquote(params['uddg'][0])
+                                except:
+                                    continue
+                            
+                            if href and href.startswith('http'):
+                                all_urls.add(href)
+                                results_found += 1
+                    
+                    # Método 2: Si no hay resultados, buscar todos los enlaces
+                    if results_found == 0:
+                        all_links = soup.find_all('a', href=True)
+                        print(f"    🔗 Total de enlaces en la página: {len(all_links)}")
+                    
+                    for link in all_links:
                         href = link.get('href', '')
-                        if href and not href.startswith('/') and self._is_tourism_relevant_url(href):
+                        
+                        # Procesar URLs de redirección de DuckDuckGo
+                        if 'duckduckgo.com/l/?uddg=' in href:
+                            try:
+                                from urllib.parse import parse_qs, urlparse, unquote
+                                parsed = urlparse(href)
+                                params = parse_qs(parsed.query)
+                                if 'uddg' in params:
+                                    href = unquote(params['uddg'][0])
+                            except:
+                                continue
+                        
+                        # Verificar si es una URL válida
+                        if (href and 
+                            href.startswith('http') and 
+                            'duckduckgo.com' not in href and
+                            len(href) > 15):
+                            
+                            # No filtrar por relevancia turística, dejar que el usuario decida
                             all_urls.add(href)
+                            results_found += 1
+                            
+                            if results_found >= num_results_per_query:
+                                break
+                    
+                    print(f"    ✓ Encontrados {results_found} resultados")
+                else:
+                    print(f"    ⚠️ Respuesta HTTP {response.status_code}")
                 
                 # Pausa entre búsquedas
-                time.sleep(random.uniform(1, 2))
+                time.sleep(random.uniform(1.5, 2.5))
                 
             except Exception as e:
                 print(f"    ❌ Error en consulta '{query}': {e}")
                 continue
         
         return list(all_urls)
+    
+    def _search_bing_links(self, keywords: list, num_results_per_query: int = 10) -> list:
+        """
+        Realiza búsquedas en Bing con mejor extracción de resultados.
+        """
+        from urllib.parse import quote_plus
+        import re
+        
+        all_urls = set()
+        query = ' '.join(keywords)
+        
+        try:
+            # URL de búsqueda de Bing
+            encoded_query = quote_plus(query)
+            search_url = f"https://www.bing.com/search?q={encoded_query}&count={num_results_per_query}"
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+                'Cache-Control': 'max-age=0'
+            }
+            
+            response = requests.get(search_url, headers=headers, timeout=15)
+            
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Método 1: Buscar en los resultados principales de Bing
+                # Los resultados están en elementos <li> con clase "b_algo"
+                for li in soup.find_all('li', class_='b_algo'):
+                    h2 = li.find('h2')
+                    if h2:
+                        link = h2.find('a', href=True)
+                        if link and link['href'].startswith('http'):
+                            all_urls.add(link['href'])
+                
+                # Método 2: Buscar en divs con id "b_results"
+                results_div = soup.find('div', id='b_results')
+                if results_div:
+                    for link in results_div.find_all('a', href=True):
+                        href = link['href']
+                        if (href.startswith('http') and 
+                            'bing.com' not in href and 
+                            'microsoft.com' not in href and
+                            'microsofttranslator' not in href and
+                            len(href) > 20):
+                            all_urls.add(href)
+                            if len(all_urls) >= num_results_per_query:
+                                break
+                
+                # Método 3: Buscar con regex para URLs
+                if len(all_urls) < 5:
+                    # Buscar patrones de URL en el texto
+                    url_pattern = re.compile(r'https?://[^\s<>"{}|\\^`\[\]]+')
+                    potential_urls = url_pattern.findall(str(soup))
+                    for url in potential_urls:
+                        if ('bing.com' not in url and 
+                            'microsoft.com' not in url and
+                            len(url) > 30 and
+                            url.count('/') >= 3):  # URLs reales tienen varias barras
+                            all_urls.add(url)
+                            if len(all_urls) >= num_results_per_query:
+                                break
+                
+                print(f"    ✓ Encontrados {len(all_urls)} resultados en Bing")
+            else:
+                print(f"    ⚠️ Bing respondió con código {response.status_code}")
+                
+        except Exception as e:
+            print(f"    ❌ Error en búsqueda Bing: {e}")
+        
+        return list(all_urls)[:num_results_per_query]
+    
+    def _search_searx_links(self, keywords: list, num_results_per_query: int = 10) -> list:
+        """
+        Realiza búsquedas usando instancias públicas de Searx.
+        """
+        from urllib.parse import quote_plus
+        
+        all_urls = set()
+        query = ' '.join(keywords)
+        
+        # Lista de instancias públicas de Searx
+        searx_instances = [
+            "https://searx.be",
+            "https://searx.info",
+            "https://searx.xyz",
+            "https://searx.ninja"
+        ]
+        
+        for instance in searx_instances:
+            try:
+                encoded_query = quote_plus(query)
+                search_url = f"{instance}/search?q={encoded_query}&format=json"
+                
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (compatible; TourismCrawler/1.0)',
+                    'Accept': 'application/json'
+                }
+                
+                response = requests.get(search_url, headers=headers, timeout=10)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    results = data.get('results', [])
+                    
+                    for result in results[:num_results_per_query]:
+                        if 'url' in result:
+                            all_urls.add(result['url'])
+                    
+                    if all_urls:
+                        print(f"    ✓ Encontrados {len(all_urls)} resultados en {instance}")
+                        break  # Si encontramos resultados, no probar más instancias
+                        
+            except Exception as e:
+                continue  # Probar siguiente instancia
+        
+        if not all_urls:
+            print("    ⚠️ No se encontraron resultados en ninguna instancia de Searx")
+        
+        return list(all_urls)
+    
+    def _fallback_direct_search(self, keywords: list, num_results_per_query: int = 10) -> list:
+        """
+        Método de respaldo que construye URLs directamente basándose en las palabras clave.
+        """
+        direct_urls = []
+        
+        # Sitios web populares de turismo
+        tourism_sites = {
+            'tripadvisor': 'https://www.tripadvisor.com/Search?q={}',
+            'booking': 'https://www.booking.com/searchresults.html?ss={}',
+            'expedia': 'https://www.expedia.com/Hotel-Search?destination={}',
+            'hotels': 'https://www.hotels.com/search.do?q={}',
+            'airbnb': 'https://www.airbnb.com/s/{}/homes',
+            'lonelyplanet': 'https://www.lonelyplanet.com/search?q={}',
+            'viator': 'https://www.viator.com/searchResults/all?text={}',
+            'kayak': 'https://www.kayak.com/hotels/{}'
+        }
+        
+        # Generar URLs para cada palabra clave
+        for keyword in keywords:
+            keyword_encoded = keyword.replace(' ', '+')
+            for site_name, url_template in tourism_sites.items():
+                try:
+                    url = url_template.format(keyword_encoded)
+                    direct_urls.append(url)
+                except:
+                    continue
+        
+        # Agregar algunas URLs específicas basadas en las palabras clave
+        query = ' '.join(keywords).lower()
+        
+        # Detectar países/ciudades específicos y agregar URLs relevantes
+        location_urls = {
+            'panama': [
+                'https://www.visitpanama.com/',
+                'https://www.tripadvisor.com/Tourism-g294479-Panama-Vacations.html'
+            ],
+            'cuba': [
+                'https://www.cuba.travel/',
+                'https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html'
+            ],
+            'angola': [
+                'https://www.tripadvisor.com/Tourism-g293819-Angola-Vacations.html',
+                'https://www.lonelyplanet.com/angola'
+            ],
+            'caribbean': [
+                'https://www.caribbean.com/',
+                'https://www.tripadvisor.com/Tourism-g147237-Caribbean-Vacations.html'
+            ],
+            'havana': [
+                'https://www.tripadvisor.com/Tourism-g147271-Havana_Cuba-Vacations.html',
+                'https://www.lonelyplanet.com/cuba/havana'
+            ]
+        }
+        
+        for location, urls in location_urls.items():
+            if location in query:
+                direct_urls.extend(urls)
+        
+        # Eliminar duplicados y limitar resultados
+        unique_urls = list(dict.fromkeys(direct_urls))  # Preservar orden
+        
+        print(f"    ✓ Generadas {len(unique_urls)} URLs directas")
+        return unique_urls[:num_results_per_query]
+    
+    def _alternative_search(self, keywords: list) -> set:
+        """
+        Método alternativo de búsqueda usando Google Search (via SerpAPI simulado o scraping básico)
+        """
+        from urllib.parse import quote_plus
+        alternative_urls = set()
+        
+        try:
+            # Intentar con búsqueda en Google
+            for keyword in keywords[:3]:  # Limitar a 3 keywords
+                try:
+                    query = f"{keyword} tourism travel guide"
+                    encoded_query = quote_plus(query)
+                    
+                    # Usar un proxy de búsqueda o API alternativa
+                    search_url = f"https://www.google.com/search?q={encoded_query}&num=10"
+                    
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Accept-Encoding': 'gzip, deflate',
+                        'Connection': 'keep-alive',
+                    }
+                    
+                    response = requests.get(search_url, headers=headers, timeout=10)
+                    
+                    if response.status_code == 200:
+                        # Extraer URLs del HTML de Google (método básico)
+                        import re
+                        # Buscar patrones de URL en el HTML
+                        url_pattern = r'href="(https?://[^"]+)"'
+                        found_urls = re.findall(url_pattern, response.text)
+                        
+                        for url in found_urls:
+                            # Filtrar URLs de Google y otras no deseadas
+                            if ('google.com' not in url and 
+                                'googleusercontent' not in url and
+                                self._is_tourism_relevant_url(url)):
+                                alternative_urls.add(url)
+                                if len(alternative_urls) >= 15:
+                                    break
+                    
+                    time.sleep(2)  # Pausa entre búsquedas
+                    
+                except Exception as e:
+                    print(f"    Error en búsqueda alternativa para '{keyword}': {e}")
+                    continue
+                    
+        except Exception as e:
+            print(f"  Error general en búsqueda alternativa: {e}")
+        
+        # Si aún no hay resultados, usar URLs predefinidas basadas en keywords
+        if len(alternative_urls) < 5:
+            print("  Complementando con URLs predefinidas...")
+            predefined = self._get_predefined_urls(keywords)
+            alternative_urls.update(predefined[:10])
+        
+        return alternative_urls
     
     def _generate_search_queries(self, keywords: list) -> list:
         """
@@ -639,6 +1070,7 @@ class TourismCrawler:
     def _is_tourism_relevant_url(self, url: str) -> bool:
         """
         Verifica si una URL es relevante para turismo (para búsquedas web).
+        Versión mejorada con criterios más flexibles.
         """
         url_lower = url.lower()
         
@@ -646,13 +1078,20 @@ class TourismCrawler:
         tourism_domains = [
             'tripadvisor', 'booking', 'expedia', 'hotels', 'airbnb',
             'lonelyplanet', 'frommers', 'roughguides', 'nationalgeographic',
-            'timeout', 'viator', 'getyourguide', 'agoda', 'hostelworld'
+            'timeout', 'viator', 'getyourguide', 'agoda', 'hostelworld',
+            'kayak', 'trivago', 'travelocity', 'orbitz', 'priceline',
+            'marriott', 'hilton', 'hyatt', 'ihg', 'accor'
         ]
         
-        # Patrones relevantes
+        # Patrones relevantes expandidos
         tourism_patterns = [
             'tourism', 'travel', 'vacation', 'destination', 'attractions',
-            'things-to-do', 'guide', 'visit', 'hotel', 'restaurant'
+            'things-to-do', 'guide', 'visit', 'hotel', 'restaurant',
+            'turismo', 'viaje', 'vacaciones', 'destino', 'atracciones',
+            'hoteles', 'restaurante', 'hospedaje', 'alojamiento',
+            'resort', 'lodge', 'inn', 'hostel', 'accommodation',
+            'sightseeing', 'tour', 'excursion', 'adventure', 'explore',
+            'beach', 'playa', 'museum', 'museo', 'park', 'parque'
         ]
         
         # Verificar dominios
@@ -661,6 +1100,22 @@ class TourismCrawler:
         
         # Verificar patrones
         if any(pattern in url_lower for pattern in tourism_patterns):
+            return True
+        
+        # Verificar si contiene palabras clave de la consulta actual
+        if self.current_query_keywords:
+            for keyword in self.current_query_keywords:
+                if keyword.lower() in url_lower:
+                    return True
+        
+        # Ser más permisivo con URLs que parecen ser de contenido
+        # (no son recursos estáticos ni páginas de sistema)
+        unwanted_extensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.pdf']
+        unwanted_patterns = ['/login', '/signin', '/register', '/api/', '/cdn-cgi/']
+        
+        if not any(ext in url_lower for ext in unwanted_extensions) and \
+           not any(pattern in url_lower for pattern in unwanted_patterns):
+            # Si la URL parece ser contenido regular, darle una oportunidad
             return True
         
         return False
