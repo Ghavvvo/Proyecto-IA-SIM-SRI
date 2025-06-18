@@ -79,12 +79,12 @@ CONSULTA ORIGINAL: "{query}"
 INSTRUCCIONES CRÍTICAS:
 1. SIEMPRE debes generar una consulta mejorada, incluso si es solo ligeramente diferente
 2. Si hay contexto previo, úsalo para hacer la consulta más específica
-3. Si no hay contexto, mejora la consulta haciéndola más detallada y específica
-4. Añade términos relacionados, sinónimos o especificaciones geográficas/temporales cuando sea apropiado
-
+3. Si no hay contexto, mejora la consulta con el formato óptimo para una búsqueda en DuckDuckGo
+4. Sé conciso, no añadas elementos que no aparecen en la consulta original
+5. Asegúrate de que la consulta mejorada contenga toda la información necesaria para una búsqueda efectiva sin contexto adicional
 EJEMPLOS DE MEJORAS:
-- "¿Qué restaurantes hay?" → "¿Qué restaurantes recomendados hay en la zona, incluyendo opciones de comida local y internacional?"
-- "¿Y hoteles?" → "¿Qué hoteles recomendados hay en [ubicación del contexto], considerando diferentes rangos de precio?"
+- "¿Qué restaurantes hay en Cuba que me puedan interesar para pasar mis vacaciones?" → "¿Restaurantes en Cuba?"
+- "¿Y hoteles?" → "¿Hoteles en [ubicación del contexto]?"
 
 RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
 """

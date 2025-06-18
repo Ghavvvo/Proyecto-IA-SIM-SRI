@@ -376,6 +376,18 @@ class TourismCrawler:
                                     paises_nombres = [p.get('nombre', '') for p in processed_data['paises']]
                                     metadata['paises'] = ', '.join(paises_nombres)
                                 
+                                # IMPRIMIR INFORMACIÓN DEL CHUNK
+                                print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
+                                print(f"   📌 ID: {doc_id}")
+                                print(f"   🔗 URL: {content_data['url']}")
+                                print(f"   📄 Título: {content_data['title']}...")
+                                print(f"   📏 Tamaño del texto: {len(structured_text)} caracteres")
+                                print(f"   🏷️ Procesado por: Gemini")
+                                if 'paises' in metadata:
+                                    print(f"   🌍 Países: {metadata['paises']}")
+                                print(f"   📊 Metadata: {len(metadata)} campos")
+                                print(f"   ✅ Chunk guardado exitosamente\n")
+                                
                                 self.collection.add(
                                     documents=[structured_text],
                                     metadatas=[metadata],
@@ -522,15 +534,26 @@ class TourismCrawler:
         
         return self.pages_added_to_db
 
-    def google_search_links(self, keywords: list, num_results: int = 50) -> list:
+    def google_search_links(self, keywords: list, num_results: int = 50, improved_query: str = None) -> list:
         """
         Busca enlaces relevantes usando múltiples motores de búsqueda.
-        Se enfoca únicamente en la consulta del usuario sin enriquecimiento.
+        
+        Args:
+            keywords: Lista de palabras clave para la búsqueda
+            num_results: Número de resultados deseados
+            improved_query: Consulta mejorada por el agente de contexto (opcional)
         """
-        if not keywords:
+        if not keywords and not improved_query:
             return []
 
-        print(f"🔍 Búsqueda para palabras clave del usuario: {keywords}")
+        # Si hay una consulta mejorada, usarla preferentemente
+        if improved_query:
+            print(f"🔍 Búsqueda con consulta mejorada: '{improved_query}'")
+            # Convertir la consulta mejorada en lista para compatibilidad
+            search_keywords = [improved_query]
+        else:
+            print(f"🔍 Búsqueda para palabras clave del usuario: {keywords}")
+            search_keywords = keywords
         
         # Intentar con diferentes motores de búsqueda
         search_engines = [
@@ -543,7 +566,7 @@ class TourismCrawler:
         for engine_name, search_function in search_engines:
             print(f"\n🔎 Intentando con {engine_name}...")
             try:
-                web_links = search_function(keywords, num_results_per_query=num_results)
+                web_links = search_function(search_keywords, num_results_per_query=num_results)
                 if web_links:
                     print(f"🌐 Encontradas {len(web_links)} URLs via {engine_name}")
                     return web_links[:num_results]
@@ -555,7 +578,7 @@ class TourismCrawler:
         
         # Si ningún motor funciona
         print("\n❌ No se pudieron obtener resultados de ningún motor de búsqueda")
-        print(f"   - Palabras clave utilizadas: {keywords}")
+        print(f"   - Palabras clave utilizadas: {search_keywords}")
         print("   - Todos los motores de búsqueda fallaron o están bloqueados")
         return []
     
@@ -1177,9 +1200,11 @@ class TourismCrawler:
         
         return links
 
-    def run_parallel_crawler_from_keywords(self, keywords: list, max_depth: int = 2) -> int:
+    def run_parallel_crawler_from_keywords(self, keywords: list, max_depth: int = 2, improved_query: str = None) -> int:
         """Ejecuta crawling paralelo basado en palabras clave."""
         print(f"🔍 Iniciando búsqueda paralela por palabras clave: {keywords}")
+        if improved_query:
+            print(f"🔍 Con consulta mejorada: '{improved_query}'")
         
         # Establecer las palabras clave para filtrar URLs
         self.current_query_keywords = keywords
@@ -1188,8 +1213,8 @@ class TourismCrawler:
         # Resetear estadísticas de filtrado
         self.urls_filtered_out = 0
         
-        # Buscar URLs iniciales
-        initial_urls = self.google_search_links(keywords, num_results=20)
+        # Buscar URLs iniciales con la consulta mejorada si está disponible
+        initial_urls = self.google_search_links(keywords, num_results=20, improved_query=improved_query)
         
         if not initial_urls:
             print("❌ No se encontraron URLs iniciales")
@@ -1248,6 +1273,18 @@ class TourismCrawler:
         """Guarda el contenido original sin procesar con Gemini"""
         with self.collection_lock:
             doc_id = f"parallel_doc_{hash(content_data['url']) % 10000000}_{depth}_{int(time.time())}"
+            
+            # IMPRIMIR INFORMACIÓN DEL CHUNK
+            print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
+            print(f"   📌 ID: {doc_id}")
+            print(f"   🔗 URL: {content_data['url']}")
+            print(f"   📄 Título: {content_data['title']}...")
+            print(f"   📏 Tamaño del texto: {len(content_data['content'])} caracteres")
+            print(f"   🏷️ Procesado por: Crawler (sin Gemini)")
+            print(f"   📊 Profundidad: {depth}")
+            print(f"   🧵 Thread ID: {thread_id}")
+            print(f"   ✅ Chunk guardado exitosamente\n")
+            
             self.collection.add(
                 documents=[content_data["content"]],
                 metadatas=[{
