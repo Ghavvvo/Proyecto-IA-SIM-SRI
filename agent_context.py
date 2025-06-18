@@ -625,12 +625,20 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             prompt = f"""
         Eres un experto en extracción de lugares turísticos. Extrae SOLO los nombres de los lugares turísticos relevantes mencionados en el siguiente texto. 
 
-        INSTRUCCIONES:
-        - Extrae únicamente los nombres de lugares que sean destinos, atracciones o puntos de interés turístico.
-        - Ignora lugares mencionados de manera incidental (ej: como referencia o en contexto histórico).
-        - Si un lugar se repite, inclúyelo solo una vez.
-        - Devuelve una lista separada por comas, sin numeración ni otros textos.
-        - Si no hay lugares relevantes, devuelve una cadena vacía.
+        INSTRUCCIONES CRÍTICAS:
+        - Para CADA lugar turístico, crea UNA SOLA CADENA COMPLETA que incluya:
+        1- El nombre principal del lugar
+        2- Toda la información contextual disponible (ciudad, región, país) asociada específicamente a ESE lugar
+        - Separa CADA lugar completo con punto y coma (;)
+        - NUNCA separes el nombre de un lugar de su ubicación con punto y coma
+        - Si un lugar no tiene ubicación explícita, inclúyelo solo con su nombre
+        - Ignora lugares mencionados incidentalmente (ejemplos o contexto histórico)
+        - Si un lugar se repite, inclúyelo solo una vez
+        - Devuelve SOLO la lista sin numeración, encabezados ni texto adicional
+        - Si no hay lugares, devuelve cadena vacía
+
+        FORMATO CORRECTO:
+        "Lugar 1, Ciudad, País; Lugar 2, Ciudad; Lugar 3"
 
         TEXTO:
         {response}
@@ -647,7 +655,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             # Limpieza y eliminación de duplicados
             places = []
             seen = set()
-            for place in places_str.split(','):
+            for place in places_str.split(';'):
                 cleaned_place = place.strip()
                 if cleaned_place and cleaned_place not in seen:
                     seen.add(cleaned_place)

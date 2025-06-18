@@ -1,6 +1,7 @@
 from autogen import Agent
 import random
 import time
+import google.generativeai as genai
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from deap import base, creator, tools, algorithms
@@ -141,18 +142,49 @@ class RouteAgent(Agent):
         }
     
     def _get_coordinates(self, place: str) -> Tuple[float, float]:
-        """Obtiene coordenadas con caché"""
+        """Obtiene coordenadas con caché y usando Gemini como respaldo"""
         if place in self.coords_cache:
             return self.coords_cache[place]
         
-        location = self.geolocator.geocode(place, exactly_one=True)
-        if not location:
-            raise ValueError(f"Lugar no encontrado: {place}")
+        try:
+            location = self.geolocator.geocode(place, exactly_one=True)
+            if location:
+                coords = (location.latitude, location.longitude)
+                self.coords_cache[place] = coords
+                self.api_counter += 1
+                return coords
+        except Exception:
+            pass 
         
-        coords = (location.latitude, location.longitude)
-        self.coords_cache[place] = coords
-        self.api_counter += 1
-        return coords
+        try:
+            original_name = self._get_original_name_with_gemini(place)
+            if original_name and original_name != place:
+                location = self.geolocator.geocode(original_name, exactly_one=True)
+                if location:
+                    coords = (location.latitude, location.longitude)
+                    self.coords_cache[place] = coords
+                    self.coords_cache[original_name] = coords
+                    self.api_counter += 1
+                    return coords
+        except Exception:
+            pass  
+        
+        raise ValueError(f"Lugar no encontrado: {place}")
+    
+    def _get_original_name_with_gemini(self, place: str) -> Optional[str]:
+        """Obtiene el nombre local original usando Gemini"""
+        try:
+            prompt = (
+                f"Dado el nombre turístico '{place}', ¿cuál es su nombre local oficial? "
+                "Responde SOLAMENTE con el nombre exacto en su idioma original, "
+                "sin comentarios, comillas ni puntuación adicional."
+            )
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt)
+            if response.text:
+                return response.text.strip()
+        except Exception:
+            return None
     
     def _create_distance_matrix(self, places: List[str]) -> List[List[float]]:
         """Crea matriz de distancias entre todos los lugares"""

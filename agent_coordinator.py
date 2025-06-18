@@ -338,7 +338,6 @@ class CoordinatorAgent(Agent):
         """Determina si la consulta es una confirmación de ruta basada en contexto"""
         # Obtener el último mensaje del sistema
         last_response = self.context_agent.receive({'type': 'get_last_response'}, self)
-        print(f"Last_response: {last_response}")
         # Verificar si el último mensaje contenía una sugerencia de ruta
         if not last_response or "optimice una ruta" not in last_response:
             return False
