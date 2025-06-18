@@ -104,6 +104,7 @@ class CoordinatorAgent(Agent):
                 aco_result = self.crawler_agent.receive({
                     'type': 'search_google_aco', 
                     'keywords': problematic_keywords,
+                    'improved_query': improved_query,  # Pasar la consulta mejorada
                     'max_urls': 15,
                     'max_depth': 2
                 }, self)
@@ -135,10 +136,10 @@ class CoordinatorAgent(Agent):
                     else:
                         print("⚠️ ACO no extrajo contenido útil, intentando método alternativo...")
                         # Fallback a método anterior
-                        return self._fallback_search_method(problematic_keywords, query)
+                        return self._fallback_search_method(problematic_keywords, query, improved_query)
                 else:
                     print("❌ Error en exploración ACO, intentando método alternativo...")
-                    return self._fallback_search_method(problematic_keywords, query)
+                    return self._fallback_search_method(problematic_keywords, query, improved_query)
 
             # Manejar sugerencia de ruta si es relevante            
             return self._handle_route_suggestion(query, final_answer)
@@ -259,14 +260,18 @@ class CoordinatorAgent(Agent):
             print(f"Error al extraer palabras clave problemáticas: {e}")
             return []
     
-    def _fallback_search_method(self, problematic_keywords, query):
+    def _fallback_search_method(self, problematic_keywords, query, improved_query):
         """
         Método de fallback cuando ACO falla.
         """
         print("🔄 Ejecutando método de búsqueda alternativo...")
         
-        # Usar el método anterior como fallback
-        crawl_result = self.crawler_agent.receive({'type': 'crawl_keywords', 'keywords': problematic_keywords}, self)
+        # Usar el método anterior como fallback con consulta mejorada
+        crawl_result = self.crawler_agent.receive({
+            'type': 'crawl_keywords', 
+            'keywords': problematic_keywords,
+            'improved_query': improved_query
+        }, self)
         
         if crawl_result.get('type') == 'crawled':
             pages_processed = crawl_result.get('pages_processed', 0)

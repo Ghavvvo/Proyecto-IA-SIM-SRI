@@ -631,9 +631,3 @@ Respuesta:"""
             'chunking_enabled': False,
             'genetic_optimization_enabled': False
         }
-
-
-
-if __name__ == "__main__":
-    # Ejecutar prueba del sistema optimizado
-    test_rag_system()

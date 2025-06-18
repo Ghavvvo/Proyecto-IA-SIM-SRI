@@ -27,14 +27,22 @@ class CrawlerAgent(Agent):
         elif message['type'] == 'crawl_keywords':
             # Extraer palabras clave del mensaje
             keywords = message.get('keywords', [])
+            improved_query = message.get('improved_query', None)
+            
             if not keywords:
                 return {'type': 'error', 'msg': 'No se proporcionaron palabras clave para la búsqueda'}
 
             print(f"🔍 Iniciando búsqueda paralela por palabras clave: {keywords}")
+            if improved_query:
+                print(f"🔍 Con consulta mejorada: '{improved_query}'")
             print(f"⚡ Usando {self.crawler.num_threads} hilos en paralelo")
             
-            # Usar el método paralelo para crawling basado en keywords
-            pages_processed = self.crawler.run_parallel_crawler_from_keywords(keywords, max_depth=3)
+            # Usar el método paralelo para crawling basado en keywords con consulta mejorada
+            pages_processed = self.crawler.run_parallel_crawler_from_keywords(
+                keywords, 
+                max_depth=3,
+                improved_query=improved_query
+            )
 
             if pages_processed > 0:
                 return {
@@ -50,6 +58,7 @@ class CrawlerAgent(Agent):
         elif message['type'] == 'search_google_aco':
             # NUEVO: Búsqueda en Google + Exploración ACO
             keywords = message.get('keywords', [])
+            improved_query = message.get('improved_query', None)
             max_urls = message.get('max_urls', 15)
             max_depth = message.get('max_depth', 2)
             
@@ -58,6 +67,8 @@ class CrawlerAgent(Agent):
             
             print(f"🐜 Iniciando exploración ACO con Google Search")
             print(f"🎯 Palabras clave: {keywords}")
+            if improved_query:
+                print(f"🔍 Con consulta mejorada: '{improved_query}'")
             print(f"📊 Parámetros: max_urls={max_urls}, max_depth={max_depth}")
             
             try:
@@ -65,11 +76,12 @@ class CrawlerAgent(Agent):
                 from ant_colony_crawler import integrate_aco_with_crawler
                 import time
                 
-                # Ejecutar exploración ACO
+                # Ejecutar exploración ACO con consulta mejorada
                 extracted_content = integrate_aco_with_crawler(
                     self.crawler, 
                     keywords, 
-                    max_urls=max_urls
+                    max_urls=max_urls,
+                    improved_query=improved_query
                 )
                 
                 # Añadir contenido a la base de datos
@@ -78,6 +90,17 @@ class CrawlerAgent(Agent):
                     try:
                         # Añadir a ChromaDB
                         doc_id = f"aco_doc_{hash(content_item['url']) % 10000000}_{int(time.time())}"
+                        
+                        # IMPRIMIR INFORMACIÓN DEL CHUNK
+                        print(f"\n📝 GUARDANDO CHUNK EN CHROMADB (ACO):")
+                        print(f"   📌 ID: {doc_id}")
+                        print(f"   🔗 URL: {content_item['url']}")
+                        print(f"   📄 Título: {content_item['title']}...")
+                        print(f"   📏 Tamaño del texto: {len(content_item['content'])} caracteres")
+                        print(f"   🏷️ Método: ACO (Ant Colony Optimization)")
+                        print(f"   🔍 Palabras clave: {keywords}")
+                        print(f"   ✅ Chunk guardado exitosamente\n")
+                        
                         self.crawler.collection.add(
                             documents=[content_item['content']],
                             metadatas=[{

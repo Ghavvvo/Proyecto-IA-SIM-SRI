@@ -525,11 +525,19 @@ def extract_content_from_url(url: str, keywords: List[str]) -> Optional[Dict]:
         return None
 
 
-def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15) -> List[Dict]:
+def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15, improved_query: str = None) -> List[Dict]:
     """
     Integra ACO con el crawler existente para búsqueda optimizada
+    
+    Args:
+        crawler: Instancia del crawler
+        keywords: Lista de palabras clave para la búsqueda
+        max_urls: Número máximo de URLs a procesar
+        improved_query: Consulta mejorada por el agente de contexto (opcional)
     """
     print(f"🐜 Integrando ACO con crawler para palabras clave: {keywords}")
+    if improved_query:
+        print(f"🔍 Con consulta mejorada: '{improved_query}'")
     
     # Configurar ACO
     aco = AntColonyOptimizer(
@@ -541,8 +549,8 @@ def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15)
         max_depth=2
     )
     
-    # Obtener URLs iniciales usando el método del crawler
-    initial_urls = crawler.google_search_links(keywords, num_results=10)
+    # Obtener URLs iniciales usando el método del crawler con consulta mejorada
+    initial_urls = crawler.google_search_links(keywords, num_results=10, improved_query=improved_query)
     
     if not initial_urls:
         print("❌ No se encontraron URLs iniciales para ACO")
