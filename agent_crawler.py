@@ -2,16 +2,16 @@ from autogen import Agent
 from crawler import TourismCrawler
 
 class CrawlerAgent(Agent):
-    def __init__(self, name, starting_urls, max_pages=100, max_depth=2, num_threads=10):
+    def __init__(self, name, starting_urls, max_pages=100, max_depth=2, num_threads=10, enable_gemini_processing=True):
         super().__init__(name)
-        # Crear crawler con soporte para paralelismo mejorado
+        # Crear crawler con soporte para paralelismo mejorado y procesamiento Gemini
         self.crawler = TourismCrawler(
             starting_urls=starting_urls, 
             max_pages=max_pages, 
             max_depth=max_depth,
-            num_threads=num_threads  # 10 hilos por defecto
+            num_threads=num_threads,  # 10 hilos por defecto
+            enable_gemini_processing=enable_gemini_processing  # Procesar con Gemini por defecto
         )
-
     def receive(self, message, sender):
         if message['type'] == 'crawl':
             print(f"🚀 Iniciando crawler paralelo con {self.crawler.num_threads} hilos...")

@@ -524,7 +524,6 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         # Verificar mejoras específicas
         original_lower = original_query.lower()
         improved_lower = improved_query.lower()
-        
         if 'recomendado' in improved_lower and 'recomendado' not in original_lower:
             improvements.append('Añadido filtro de recomendaciones')
         

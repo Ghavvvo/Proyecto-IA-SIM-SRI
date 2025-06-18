@@ -10,10 +10,11 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, Future
 import time
 import queue
+import json
 
 
 class TourismCrawler:
-    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data", max_pages: int = 100, max_depth: int = 3, num_threads: int = 10):
+    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data", max_pages: int = 100, max_depth: int = 3, num_threads: int = 10, enable_gemini_processing: bool = True):
         self.starting_urls = starting_urls
         self.visited_urls = set()
         self.urls_to_visit = queue.Queue()
@@ -56,6 +57,22 @@ class TourismCrawler:
         
         # Control de parada
         self.stop_crawling = threading.Event()
+        
+        # Procesamiento con Gemini
+        self.enable_gemini_processing = enable_gemini_processing
+        self.processor_agent = None
+        if self.enable_gemini_processing:
+            try:
+                from agent_processor import ProcessorAgent
+                self.processor_agent = ProcessorAgent()
+                print("✅ Procesamiento con Gemini habilitado")
+            except Exception as e:
+                print(f"⚠️ No se pudo habilitar el procesamiento con Gemini: {e}")
+                self.enable_gemini_processing = False
+        
+        # Estadísticas de procesamiento
+        self.gemini_processed = 0
+        self.gemini_errors = 0
 
     def is_valid_url(self, url: str) -> bool:
         """Determina si una URL es válida para el crawler de turismo."""
@@ -324,25 +341,65 @@ class TourismCrawler:
             content_data = self.extract_content(url, soup)
             
             if content_data:
-                # Añadir a ChromaDB (thread-safe)
-                with self.collection_lock:
-                    doc_id = f"parallel_doc_{hash(url) % 10000000}_{depth}_{int(time.time())}"
-                    self.collection.add(
-                        documents=[content_data["content"]],
-                        metadatas=[{
-                            "url": content_data["url"],
-                            "title": content_data["title"],
-                            "source": "parallel_tourism_crawler",
-                            "depth": depth,
-                            "thread_id": str(thread_id)
-                        }],
-                        ids=[doc_id]
-                    )
-                
-                with self.stats_lock:
-                    self.pages_added_to_db += 1
-                
-                print(f"[Thread-{thread_id}] ✓ Contenido añadido: {content_data['title'][:50]}...")
+                # Procesar con Gemini si está habilitado
+                if self.enable_gemini_processing and self.processor_agent:
+                    try:
+                        # Procesar contenido con Gemini
+                        processor_response = self.processor_agent.receive({
+                            'type': 'process_content',
+                            'content_data': content_data
+                        }, self)
+                        
+                        if processor_response.get('success') and processor_response.get('data'):
+                            processed_data = processor_response['data']
+                            
+                            # Guardar el contenido procesado estructurado
+                            with self.collection_lock:
+                                # Convertir el JSON estructurado a texto para embeddings
+                                structured_text = self._format_structured_data(processed_data)
+                                
+                                doc_id = f"gemini_doc_{hash(url) % 10000000}_{depth}_{int(time.time())}"
+                                
+                                # Guardar con metadata enriquecida
+                                metadata = {
+                                    "url": content_data["url"],
+                                    "title": content_data["title"],
+                                    "source": "parallel_tourism_crawler",
+                                    "depth": depth,
+                                    "thread_id": str(thread_id),
+                                    "processed_by_gemini": True,
+                                    "structured_data": json.dumps(processed_data, ensure_ascii=False)
+                                }
+                                
+                                # Añadir información de países si existe
+                                if 'paises' in processed_data and processed_data['paises']:
+                                    paises_nombres = [p.get('nombre', '') for p in processed_data['paises']]
+                                    metadata['paises'] = ', '.join(paises_nombres)
+                                
+                                self.collection.add(
+                                    documents=[structured_text],
+                                    metadatas=[metadata],
+                                    ids=[doc_id]
+                                )
+                            
+                            with self.stats_lock:
+                                self.pages_added_to_db += 1
+                                self.gemini_processed += 1
+                            
+                            print(f"[Thread-{thread_id}] ✅ Contenido procesado con Gemini: {content_data['title'][:50]}...")
+                        else:
+                            # Si falla el procesamiento, guardar el contenido original
+                            self._save_original_content(content_data, depth, thread_id)
+                            
+                    except Exception as e:
+                        print(f"[Thread-{thread_id}] ⚠️ Error en procesamiento Gemini: {e}")
+                        with self.stats_lock:
+                            self.gemini_errors += 1
+                        # Guardar contenido original como fallback
+                        self._save_original_content(content_data, depth, thread_id)
+                else:
+                    # Si Gemini no está habilitado, guardar contenido original
+                    self._save_original_content(content_data, depth, thread_id)
                 
                 # Extraer enlaces si no estamos en la profundidad máxima
                 new_links = []
@@ -453,6 +510,12 @@ class TourismCrawler:
         if self.current_query_keywords:
             print(f"   • URLs filtradas por palabras clave: {self.urls_filtered_out}")
             print(f"   • Palabras clave utilizadas: {self.current_query_keywords}")
+        if self.enable_gemini_processing:
+            print(f"   • Páginas procesadas con Gemini: {self.gemini_processed}")
+            print(f"   • Errores de procesamiento Gemini: {self.gemini_errors}")
+            if self.processor_agent:
+                stats = self.processor_agent.get_stats()
+                print(f"   • Tasa de éxito Gemini: {stats['success_rate']:.2%}")
         print(f"   • Tiempo total: {elapsed_time:.2f} segundos")
         print(f"   • Velocidad promedio: {avg_rate:.2f} páginas/segundo")
         print(f"   • Hilos utilizados: {self.num_threads}")
@@ -725,3 +788,91 @@ class TourismCrawler:
         """Método de compatibilidad - redirige al crawler paralelo"""
         print("⚠️ Usando crawler paralelo en lugar del método secuencial legacy")
         return self.run_parallel_crawler()
+    
+    def _save_original_content(self, content_data: Dict, depth: int, thread_id: int):
+        """Guarda el contenido original sin procesar con Gemini"""
+        with self.collection_lock:
+            doc_id = f"parallel_doc_{hash(content_data['url']) % 10000000}_{depth}_{int(time.time())}"
+            self.collection.add(
+                documents=[content_data["content"]],
+                metadatas=[{
+                    "url": content_data["url"],
+                    "title": content_data["title"],
+                    "source": "parallel_tourism_crawler",
+                    "depth": depth,
+                    "thread_id": str(thread_id),
+                    "processed_by_gemini": False
+                }],
+                ids=[doc_id]
+            )
+        
+        with self.stats_lock:
+            self.pages_added_to_db += 1
+        
+        print(f"[Thread-{thread_id}] ✓ Contenido añadido (sin Gemini): {content_data['title'][:50]}...")
+    
+    def _format_structured_data(self, processed_data: Dict) -> str:
+        """
+        Convierte los datos estructurados en un texto formateado para embeddings
+        """
+        formatted_text = []
+        
+        # Información de la fuente
+        if 'source_title' in processed_data:
+            formatted_text.append(f"Título: {processed_data['source_title']}")
+        
+        # Procesar información por países
+        if 'paises' in processed_data:
+            for pais in processed_data['paises']:
+                pais_text = []
+                
+                if 'nombre' in pais:
+                    pais_text.append(f"\nPaís: {pais['nombre']}")
+                
+                # Hoteles
+                if 'hoteles' in pais and pais['hoteles']:
+                    pais_text.append("\nHoteles:")
+                    for hotel in pais['hoteles']:
+                        hotel_info = []
+                        if 'nombre' in hotel:
+                            hotel_info.append(f"- {hotel['nombre']}")
+                        if 'localidad' in hotel:
+                            hotel_info.append(f"en {hotel['localidad']}")
+                        if 'clasificacion' in hotel:
+                            hotel_info.append(f"({hotel['clasificacion']})")
+                        if 'precio_promedio' in hotel:
+                            hotel_info.append(f"Precio: {hotel['precio_promedio']}")
+                        pais_text.append(' '.join(hotel_info))
+                
+                # Lugares turísticos
+                if 'lugares_turisticos' in pais and pais['lugares_turisticos']:
+                    pais_text.append("\nLugares turísticos:")
+                    for lugar in pais['lugares_turisticos']:
+                        lugar_info = []
+                        if 'nombre' in lugar:
+                            lugar_info.append(f"- {lugar['nombre']}")
+                        if 'localidad' in lugar:
+                            lugar_info.append(f"en {lugar['localidad']}")
+                        if 'tipo' in lugar:
+                            lugar_info.append(f"({lugar['tipo']})")
+                        if 'precio_entrada' in lugar:
+                            lugar_info.append(f"Entrada: {lugar['precio_entrada']}")
+                        pais_text.append(' '.join(lugar_info))
+                
+                # Información adicional
+                if 'precio_promedio_visita' in pais:
+                    pais_text.append(f"\nPrecio promedio de visita: {pais['precio_promedio_visita']}")
+                if 'mejor_epoca' in pais:
+                    pais_text.append(f"Mejor época para visitar: {pais['mejor_epoca']}")
+                if 'informacion_adicional' in pais:
+                    pais_text.append(f"Información adicional: {pais['informacion_adicional']}")
+                
+                formatted_text.extend(pais_text)
+        
+        # Si no hay información de países, incluir cualquier otra información
+        if not formatted_text and isinstance(processed_data, dict):
+            for key, value in processed_data.items():
+                if key not in ['source_url', 'source_title', 'processed_by'] and value:
+                    formatted_text.append(f"{key}: {value}")
+        
+        return '\n'.join(formatted_text) if formatted_text else "Sin información estructurada disponible"
