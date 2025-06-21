@@ -70,9 +70,36 @@ class TourismCrawler:
                 print(f"⚠️ No se pudo habilitar el procesamiento con Gemini: {e}")
                 self.enable_gemini_processing = False
         
+        # Procesamiento con GLiNER
+        self.enable_gliner_processing = False
+        self.gliner_agent = None
+        
         # Estadísticas de procesamiento
         self.gemini_processed = 0
         self.gemini_errors = 0
+        self.gliner_processed = 0
+        self.gliner_errors = 0
+    
+    def enable_gliner(self):
+        """Habilita el procesamiento con GLiNER"""
+        if not self.enable_gliner_processing:
+            try:
+                from agent_gliner import GLiNERAgent
+                self.gliner_agent = GLiNERAgent()
+                self.enable_gliner_processing = True
+                print("✅ Procesamiento con GLiNER habilitado")
+                return True
+            except Exception as e:
+                print(f"⚠️ No se pudo habilitar el procesamiento con GLiNER: {e}")
+                self.enable_gliner_processing = False
+                return False
+        return True
+    
+    def disable_gemini(self):
+        """Deshabilita el procesamiento con Gemini"""
+        self.enable_gemini_processing = False
+        self.processor_agent = None
+        print("❌ Procesamiento con Gemini deshabilitado")
 
     def is_valid_url(self, url: str) -> bool:
         """Determina si una URL es válida para el crawler de turismo."""
@@ -341,8 +368,85 @@ class TourismCrawler:
             content_data = self.extract_content(url, soup)
             
             if content_data:
-                # Procesar con Gemini si está habilitado
-                if self.enable_gemini_processing and self.processor_agent:
+                # Procesar con GLiNER si está habilitado
+                if self.enable_gliner_processing and self.gliner_agent:
+                    try:
+                        # Procesar contenido con GLiNER
+                        gliner_response = self.gliner_agent.receive({
+                            'type': 'process_content',
+                            'content_data': content_data
+                        }, self)
+                        
+                        if gliner_response.get('success') and gliner_response.get('data'):
+                            processed_data = gliner_response['data']
+                            
+                            # Guardar el contenido procesado con entidades extraídas
+                            with self.collection_lock:
+                                # Convertir los datos estructurados a texto para embeddings
+                                structured_text = self._format_gliner_data(processed_data)
+                                
+                                doc_id = f"gliner_doc_{hash(url) % 10000000}_{depth}_{int(time.time())}"
+                                
+                                # Guardar con metadata enriquecida
+                                metadata = {
+                                    "url": content_data["url"],
+                                    "title": content_data["title"],
+                                    "source": "parallel_tourism_crawler",
+                                    "depth": depth,
+                                    "thread_id": str(thread_id),
+                                    "processed_by_gliner": True,
+                                    "entities_data": json.dumps(processed_data, ensure_ascii=False)
+                                }
+                                
+                                # Añadir información de entidades principales
+                                if 'entities' in processed_data:
+                                    entities = processed_data['entities']
+                                    if 'countries' in entities and entities['countries']:
+                                        metadata['countries'] = ', '.join(entities['countries'])
+                                    if 'cities' in entities and entities['cities']:
+                                        metadata['cities'] = ', '.join(entities['cities'])
+                                    if 'hotels' in entities and entities['hotels']:
+                                        hotel_names = [h['name'] for h in entities['hotels']]
+                                        metadata['hotels'] = ', '.join(hotel_names[:5])
+                                
+                                # IMPRIMIR INFORMACIÓN DEL CHUNK
+                                print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
+                                print(f"   📌 ID: {doc_id}")
+                                print(f"   🔗 URL: {content_data['url']}")
+                                print(f"   📄 Título: {content_data['title']}...")
+                                print(f"   📏 Tamaño del texto: {len(structured_text)} caracteres")
+                                print(f"   🏷️ Procesado por: GLiNER")
+                                if 'countries' in metadata:
+                                    print(f"   🌍 Países: {metadata['countries']}")
+                                if 'cities' in metadata:
+                                    print(f"   🏙️ Ciudades: {metadata['cities']}")
+                                print(f"   📊 Metadata: {len(metadata)} campos")
+                                print(f"   ✅ Chunk guardado exitosamente\n")
+                                
+                                self.collection.add(
+                                    documents=[structured_text],
+                                    metadatas=[metadata],
+                                    ids=[doc_id]
+                                )
+                            
+                            with self.stats_lock:
+                                self.pages_added_to_db += 1
+                                self.gliner_processed += 1
+                            
+                            print(f"[Thread-{thread_id}] ✅ Contenido procesado con GLiNER: {content_data['title'][:50]}...")
+                        else:
+                            # Si falla el procesamiento, guardar el contenido original
+                            self._save_original_content(content_data, depth, thread_id)
+                            
+                    except Exception as e:
+                        print(f"[Thread-{thread_id}] ⚠️ Error en procesamiento GLiNER: {e}")
+                        with self.stats_lock:
+                            self.gliner_errors += 1
+                        # Guardar contenido original como fallback
+                        self._save_original_content(content_data, depth, thread_id)
+                
+                # Procesar con Gemini si está habilitado y GLiNER no está activo
+                elif self.enable_gemini_processing and self.processor_agent:
                     try:
                         # Procesar contenido con Gemini
                         processor_response = self.processor_agent.receive({
@@ -528,6 +632,12 @@ class TourismCrawler:
             if self.processor_agent:
                 stats = self.processor_agent.get_stats()
                 print(f"   • Tasa de éxito Gemini: {stats['success_rate']:.2%}")
+        if self.enable_gliner_processing:
+            print(f"   • Páginas procesadas con GLiNER: {self.gliner_processed}")
+            print(f"   • Errores de procesamiento GLiNER: {self.gliner_errors}")
+            if self.gliner_agent:
+                stats = self.gliner_agent.get_stats()
+                print(f"   • Tasa de éxito GLiNER: {stats['success_rate']:.2%}")
         print(f"   • Tiempo total: {elapsed_time:.2f} segundos")
         print(f"   • Velocidad promedio: {avg_rate:.2f} páginas/segundo")
         print(f"   • Hilos utilizados: {self.num_threads}")
@@ -1368,3 +1478,117 @@ class TourismCrawler:
                     formatted_text.append(f"{key}: {value}")
         
         return '\n'.join(formatted_text) if formatted_text else "Sin información estructurada disponible"
+    
+    def _format_gliner_data(self, processed_data: Dict) -> str:
+        """
+        Convierte los datos extraídos por GLiNER en un texto formateado para embeddings
+        """
+        formatted_text = []
+        
+        # Información de la fuente
+        if 'source_title' in processed_data:
+            formatted_text.append(f"Título: {processed_data['source_title']}")
+        
+        # Resumen si existe
+        if 'summary' in processed_data:
+            formatted_text.append(f"\nResumen: {processed_data['summary']}")
+        
+        # Procesar entidades extraídas
+        if 'entities' in processed_data:
+            entities = processed_data['entities']
+            
+            # Países
+            if 'countries' in entities and entities['countries']:
+                formatted_text.append(f"\nPaíses: {', '.join(entities['countries'])}")
+            
+            # Ciudades
+            if 'cities' in entities and entities['cities']:
+                formatted_text.append(f"Ciudades: {', '.join(entities['cities'])}")
+            
+            # Destinos
+            if 'destinations' in entities and entities['destinations']:
+                dest_text = []
+                for dest in entities['destinations']:
+                    dest_info = f"{dest['name']}"
+                    if 'type' in dest:
+                        dest_info += f" ({dest['type']})"
+                    dest_text.append(dest_info)
+                formatted_text.append(f"\nDestinos turísticos: {', '.join(dest_text)}")
+            
+            # Hoteles
+            if 'hotels' in entities and entities['hotels']:
+                hotel_text = []
+                for hotel in entities['hotels']:
+                    hotel_info = f"{hotel['name']}"
+                    if 'type' in hotel:
+                        hotel_info += f" ({hotel['type']})"
+                    hotel_text.append(hotel_info)
+                formatted_text.append(f"\nHoteles y alojamientos: {', '.join(hotel_text)}")
+            
+            # Atracciones
+            if 'attractions' in entities and entities['attractions']:
+                attr_text = []
+                for attr in entities['attractions']:
+                    attr_info = f"{attr['name']}"
+                    if 'type' in attr:
+                        attr_info += f" ({attr['type']})"
+                    attr_text.append(attr_info)
+                formatted_text.append(f"\nAtracciones turísticas: {', '.join(attr_text)}")
+            
+            # Restaurantes
+            if 'restaurants' in entities and entities['restaurants']:
+                rest_text = []
+                for rest in entities['restaurants']:
+                    rest_info = f"{rest['name']}"
+                    if 'type' in rest:
+                        rest_info += f" ({rest['type']})"
+                    rest_text.append(rest_info)
+                formatted_text.append(f"\nRestaurantes: {', '.join(rest_text)}")
+            
+            # Precios
+            if 'prices' in entities and entities['prices']:
+                price_text = []
+                for price in entities['prices']:
+                    price_text.append(price['text'])
+                formatted_text.append(f"\nInformación de precios: {', '.join(price_text)}")
+            
+            # Actividades
+            if 'activities' in entities and entities['activities']:
+                act_text = []
+                for act in entities['activities']:
+                    act_info = f"{act['name']}"
+                    if 'type' in act:
+                        act_info += f" ({act['type']})"
+                    act_text.append(act_info)
+                formatted_text.append(f"\nActividades: {', '.join(act_text)}")
+            
+            # Transporte
+            if 'transport' in entities and entities['transport']:
+                trans_text = []
+                for trans in entities['transport']:
+                    trans_info = f"{trans['name']}"
+                    if 'type' in trans:
+                        trans_info += f" ({trans['type']})"
+                    trans_text.append(trans_info)
+                formatted_text.append(f"\nTransporte: {', '.join(trans_text)}")
+            
+            # Organizaciones
+            if 'organizations' in entities and entities['organizations']:
+                org_text = []
+                for org in entities['organizations']:
+                    org_info = f"{org['name']}"
+                    if 'type' in org:
+                        org_info += f" ({org['type']})"
+                    org_text.append(org_info)
+                formatted_text.append(f"\nOrganizaciones turísticas: {', '.join(org_text)}")
+        
+        # Incluir entidades crudas si no hay texto formateado
+        if not formatted_text and 'raw_entities' in processed_data:
+            raw_entities = processed_data['raw_entities']
+            if raw_entities:
+                entity_texts = []
+                for entity in raw_entities[:20]:  # Limitar a 20 entidades
+                    entity_texts.append(f"{entity['text']} ({entity['type']})")
+                formatted_text.append(f"Entidades encontradas: {', '.join(entity_texts)}")
+        
+        return '\n'.join(formatted_text) if formatted_text else "Sin entidades relevantes encontradas"
