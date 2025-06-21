@@ -76,12 +76,13 @@ class CrawlerAgent(Agent):
                 from ant_colony_crawler import integrate_aco_with_crawler
                 import time
                 
-                # Ejecutar exploración ACO con consulta mejorada
+                # Ejecutar exploración ACO con consulta mejorada y profundidad
                 extracted_content = integrate_aco_with_crawler(
                     self.crawler, 
                     keywords, 
                     max_urls=max_urls,
-                    improved_query=improved_query
+                    improved_query=improved_query,
+                    max_depth=max_depth
                 )
                 
                 # Añadir contenido a la base de datos

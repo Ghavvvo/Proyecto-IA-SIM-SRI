@@ -525,7 +525,7 @@ def extract_content_from_url(url: str, keywords: List[str]) -> Optional[Dict]:
         return None
 
 
-def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15, improved_query: str = None) -> List[Dict]:
+def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15, improved_query: str = None, max_depth: int = 2) -> List[Dict]:
     """
     Integra ACO con el crawler existente para búsqueda optimizada
     
@@ -534,19 +534,21 @@ def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15,
         keywords: Lista de palabras clave para la búsqueda
         max_urls: Número máximo de URLs a procesar
         improved_query: Consulta mejorada por el agente de contexto (opcional)
+        max_depth: Profundidad máxima de exploración (se incrementa en cada iteración)
     """
     print(f"🐜 Integrando ACO con crawler para palabras clave: {keywords}")
     if improved_query:
         print(f"🔍 Con consulta mejorada: '{improved_query}'")
+    print(f"🔢 Profundidad de exploración: {max_depth}")
     
-    # Configurar ACO
+    # Configurar ACO con profundidad dinámica
     aco = AntColonyOptimizer(
         num_ants=8,
         alpha=1.0,
         beta=2.0,
         rho=0.1,
         max_iterations=3,
-        max_depth=2
+        max_depth=max_depth  # Usar profundidad dinámica
     )
     
     # Obtener URLs iniciales usando el método del crawler con consulta mejorada
