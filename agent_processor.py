@@ -9,7 +9,7 @@ from autogen import Agent
 import re
 
 # Configuración de Gemini
-GEMINI_API_KEY = "AIzaSyDmW-QXAeksN6hacpCMVpTQnOEAD8MLG00"
+GEMINI_API_KEY = "AIzaSyCuiFY0aCJEaOndmd_jEHZIabbA23TWn6E"
 genai.configure(api_key=GEMINI_API_KEY)
 
 
