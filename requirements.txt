@@ -1,4 +1,4 @@
-protobuf~=5.29.5
+protobuf~=4.25.3
 requests~=2.32.3
 chromadb~=1.0.12
 tiktoken~=0.9.0
@@ -12,3 +12,8 @@ torch>=2.0.0
 transformers>=4.30.0
 python-dotenv~=1.0.0
 google-generativeai~=0.3.0
+geopy~=2.4.1
+deap~=1.4.3
+mistralai~=1.8.2
+scikit-fuzzy~=0.5.0
+matplotlib~=3.10.3

@@ -1,7 +1,9 @@
 from autogen import Agent
 from typing import List, Dict, Any
-import google.generativeai as genai
 from datetime import datetime
+
+from mistral_utils import GenerativeModel
+
 
 class ContextAgent(Agent):
     def __init__(self, name: str):
@@ -65,8 +67,8 @@ class ContextAgent(Agent):
             print(f"🔍 Contexto disponible: {context_summary[:100]}...")
             
             # Usar Gemini para analizar y mejorar la consulta
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
+            model = GenerativeModel('mistral-large-latest')
+
             # Prompt más específico y directo
             prompt = f"""
 Eres un experto en mejora de consultas para sistemas RAG. Tu tarea es SIEMPRE mejorar la consulta del usuario basándote en el contexto conversacional.
@@ -94,7 +96,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             
             # Debug: Mostrar la respuesta de Gemini
             print(f"🤖 Respuesta de Gemini: {improved_query}")
-            
+
             # Validar que la consulta mejorada sea diferente y válida
             if not improved_query or improved_query.lower() == query.lower() or len(improved_query) < 5:
                 # Si Gemini no mejoró la consulta, aplicar mejoras básicas
@@ -305,7 +307,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
     def _apply_basic_improvements(self, query: str, context_summary: str) -> str:
         """
         Aplica mejoras básicas a la consulta cuando Gemini no está disponible o falla.
-        
+
         Args:
             query: Consulta original
             context_summary: Resumen del contexto
@@ -418,69 +420,69 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
                 'transporte': ['transporte', 'bus', 'taxi', 'avión', 'tren'],
                 'clima': ['clima', 'tiempo', 'temperatura', 'lluvia', 'sol']
             }
-            
+
             for theme, keywords in related_themes.items():
                 last_has_theme = any(keyword in last_query for keyword in keywords)
                 current_has_theme = any(keyword in query_lower for keyword in keywords)
-                
+
                 if last_has_theme and current_has_theme:
                     return True
-        
+
         return False
-    
+
     def _extract_topics_from_context(self) -> List[str]:
         """
         Extrae temas principales del contexto de conversación.
-        
+
         Returns:
             Lista de temas identificados
         """
         if not self.conversation_history:
             return []
-        
+
         topics = set()
-        
+
         for interaction in self.conversation_history[-3:]:  # Últimas 3 interacciones
             query = interaction['query'].lower()
-            
+
             # Identificar temas por palabras clave
             if any(word in query for word in ['restaurante', 'comida', 'comer', 'gastronomía']):
                 topics.add('gastronomía')
-            
+
             if any(word in query for word in ['hotel', 'hostal', 'alojamiento', 'dormir']):
                 topics.add('alojamiento')
-            
+
             if any(word in query for word in ['lugar', 'sitio', 'visitar', 'turístico']):
                 topics.add('turismo')
-            
+
             if any(word in query for word in ['clima', 'tiempo', 'temperatura']):
                 topics.add('clima')
-            
+
             if any(word in query for word in ['transporte', 'bus', 'taxi', 'avión']):
                 topics.add('transporte')
-            
+
             # Extraer ubicaciones
             locations = self._extract_locations_from_context(query)
             topics.update(locations)
-        
+
         return list(topics)
-    
+
     def _determine_user_intent(self, original_query: str, improved_query: str) -> str:
         """
         Determina la intención del usuario basándose en las consultas.
-        
+
         Args:
             original_query: Consulta original
             improved_query: Consulta mejorada
-            
+
         Returns:
             Descripción de la intención del usuario
         """
         query_lower = original_query.lower()
-        
+
         if any(word in query_lower for word in ['¿dónde', 'dónde', 'ubicación', 'dirección']):
             return 'Búsqueda de ubicación'
-        
+
         if any(word in query_lower for word in ['¿qué', 'qué', 'cuál', 'cuáles']):
             if 'restaurante' in query_lower:
                 return 'Búsqueda de restaurantes'
@@ -490,72 +492,72 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
                 return 'Búsqueda de lugares turísticos'
             else:
                 return 'Búsqueda de información general'
-        
+
         if any(word in query_lower for word in ['¿cómo', 'cómo']):
             return 'Búsqueda de instrucciones o procedimientos'
-        
+
         if any(word in query_lower for word in ['¿cuánto', 'cuánto', 'precio', 'costo']):
             return 'Consulta de precios'
-        
+
         if any(word in query_lower for word in ['clima', 'tiempo', 'temperatura']):
             return 'Consulta meteorológica'
-        
+
         return 'Consulta informativa general'
-    
+
     def _identify_improvements(self, original_query: str, improved_query: str) -> List[str]:
         """
         Identifica qué mejoras se aplicaron a la consulta.
-        
+
         Args:
             original_query: Consulta original
             improved_query: Consulta mejorada
-            
+
         Returns:
             Lista de mejoras aplicadas
         """
         improvements = []
-        
+
         if len(improved_query) > len(original_query):
             improvements.append('Consulta expandida con más detalles')
-        
+
         if improved_query != original_query:
             improvements.append('Consulta contextualizada')
-        
+
         # Verificar mejoras específicas
         original_lower = original_query.lower()
         improved_lower = improved_query.lower()
         if 'recomendado' in improved_lower and 'recomendado' not in original_lower:
             improvements.append('Añadido filtro de recomendaciones')
-        
+
         locations = self._extract_locations_from_context(improved_query)
         if locations and not any(loc.lower() in original_lower for loc in locations):
             improvements.append('Añadido contexto geográfico')
-        
+
         if any(word in improved_lower for word in ['detallada', 'específica', 'completa']) and \
            not any(word in original_lower for word in ['detallada', 'específica', 'completa']):
             improvements.append('Solicitud de información más específica')
-        
+
         if not improvements:
             improvements.append('Consulta procesada')
-        
+
         return improvements
-    
+
     def _should_offer_route(self, query: str, response: str) -> Dict[str, Any]:
         """
         Determina si se debe ofrecer generar una ruta basado en la consulta y respuesta.
-        
+
         Args:
             query: Consulta original del usuario
             response: Respuesta generada por el sistema
-            
+
         Returns:
             Dict con tipo y booleano indicando si se debe ofrecer ruta
         """
         # Usar Gemini para analizar si se debe ofrecer ruta
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = GenerativeModel("mistral-large-latest")
             prompt = f"""
-        Eres un experto en análisis de conversaciones para un sistema de guía turístico. 
+        Eres un experto en análisis de conversaciones para un sistema de guía turístico.
         Determina si la siguiente respuesta del sistema a una consulta del usuario contiene una lista de lugares de interés que podrían ser visitados en una ruta turística.
 
         CONSULTA DEL USUARIO:
@@ -574,7 +576,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             result = model.generate_content(prompt)
             decision = result.text.strip().lower()
             should_offer = (decision == 'true')
-            
+
             return {
                 'type': 'route_offer_decision',
                 'should_offer': should_offer
@@ -593,36 +595,36 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         route_keywords = ['ruta', 'recorrido', 'itinerario', 'orden de visita', 'visitar en orden']
         if any(keyword in query.lower() for keyword in route_keywords):
             return True
-        
+
         place_indicators = ['lugares:', 'sitios:', 'puntos de interés:', 'recomendaciones:', 'atracciones:']
         if any(indicator in response.lower() for indicator in place_indicators):
             return True
-            
+
         markers = ['- ', '* ', '• ', '1.', '2.', '3.', '4.', '5.']
         lines = response.split('\n')
         count = 0
-        
+
         for line in lines:
             if any(line.startswith(marker) for marker in markers):
                 count += 1
-                if count > 2: 
+                if count > 2:
                     return True
         return False
 
     def _extract_relevant_places(self, response: str) -> Dict[str, Any]:
         """
         Extrae los lugares relevantes de una respuesta usando Gemini.
-        
+
         Args:
             response: Respuesta del sistema
-            
+
         Returns:
             Dict con lista de lugares relevantes
         """
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = GenerativeModel("mistral-large-latest")
             prompt = f"""
-        Eres un experto en extracción de lugares turísticos. Extrae SOLO los nombres de los lugares turísticos relevantes mencionados en el siguiente texto. 
+        Eres un experto en extracción de lugares turísticos. Extrae SOLO los nombres de los lugares turísticos relevantes mencionados en el siguiente texto.
 
         INSTRUCCIONES CRÍTICAS:
         - Para CADA lugar turístico, crea UNA SOLA CADENA COMPLETA que incluya:
@@ -646,11 +648,11 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         """
             result = model.generate_content(prompt)
             places_str = result.text.strip()
-            
+
             # Procesar la cadena de lugares
             if not places_str:
                 return {'type': 'extracted_places', 'places': []}
-                
+
             # Limpieza y eliminación de duplicados
             places = []
             seen = set()
@@ -659,7 +661,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
                 if cleaned_place and cleaned_place not in seen:
                     seen.add(cleaned_place)
                     places.append(cleaned_place)
-                    
+
             return {
                 'type': 'extracted_places',
                 'places': places
@@ -675,27 +677,27 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         if self.conversation_history:
             return self.conversation_history[-1]['response']
         return ""
-    
+
     def add_route_to_answer(self) -> Dict[str, Any]:
         if not self.conversation_history:
             return {'type': 'error', 'msg': 'No hay conversación para añadir oferta de ruta'}
-        
+
         last_entry = self.conversation_history[-1]
         last_response = last_entry['response']
-        
+
         route_offer = (
             "\n\n¿Desea que optimice una ruta para visitarlos? "
             "Simplemente responda 'sí' para generarla."
         )
-        
+
         if route_offer not in last_response:
             last_entry['response'] += route_offer
             return {
-                'type': 'route_offer_added', 
+                'type': 'route_offer_added',
                 'message': 'Oferta de ruta añadida a la última respuesta.'
             }
         else:
             return {
-                'type': 'route_offer_already_present', 
+                'type': 'route_offer_already_present',
                 'message': 'La oferta de ruta ya estaba presente.'
             }
