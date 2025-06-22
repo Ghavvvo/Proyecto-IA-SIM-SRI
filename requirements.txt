@@ -1,14 +1,22 @@
-protobuf~=5.29.5
-requests~=2.32.3
-chromadb~=1.0.12
-tiktoken~=0.9.0
-beautifulsoup4~=4.13.4
-autogen~=0.9.2
-numpy~=2.2.6
-scikit-learn~=1.6.1
-sentence-transformers~=4.1.0
-gliner>=0.2.0
-torch>=2.0.0
-transformers>=4.30.0
-python-dotenv~=1.0.0
-google-generativeai~=0.3.0
+# Bibliotecas principales utilizadas en el proyecto
+python-dotenv==1.0.0
+chromadb==1.0.12
+autogen-agentchat==0.6.1
+google-generativeai==0.3.0
+beautifulsoup4==4.13.4
+requests==2.32.3
+numpy>=1.21.0
+scikit-learn==1.6.1
+tiktoken==0.9.0
+
+# Dependencias necesarias para las bibliotecas principales
+pyyaml==6.0.2  # Requerido por chromadb
+kubernetes>=28.1.0  # Requerido por chromadb
+pillow==11.2.1  # Requerido por sentence-transformers (dependencia de chromadb)
+scipy==1.15.3  # Requerido por sentence-transformers y scikit-learn
+wrapt==1.17.2  # Requerido por opentelemetry (dependencia de chromadb)
+protobuf==5.29.3  # Requerido por google-generativeai y chromadb
+sympy  # Requerido por onnxruntime (dependencia de chromadb)
+
+# Opcional - solo si se usa agent_gliner.py
+# gliner

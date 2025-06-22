@@ -8,6 +8,15 @@ from agent_tourist_guide import TouristGuideAgent
 from urls import starting_urls
 from dotenv import load_dotenv
 
+# Suprimir warning de flaml.automl
+import warnings
+
+# Suprimir warning de flaml.automl
+import warnings
+warnings.filterwarnings('ignore', message='flaml.automl is not available')
+
+warnings.filterwarnings('ignore', message='flaml.automl is not available')
+
 if __name__ == "__main__":
     # Cargar variables de entorno
     load_dotenv()
