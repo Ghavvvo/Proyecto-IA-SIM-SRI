@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor, Future
 import time
 import queue
 import json
+import os
+from datetime import datetime
 
 
 class TourismCrawler:
@@ -475,10 +477,22 @@ class TourismCrawler:
                                     "structured_data": json.dumps(processed_data, ensure_ascii=False)
                                 }
                                 
-                                # Añadir información de países si existe
-                                if 'paises' in processed_data and processed_data['paises']:
-                                    paises_nombres = [p.get('nombre', '') for p in processed_data['paises']]
-                                    metadata['paises'] = ', '.join(paises_nombres)
+                                # Añadir información estructurada a los metadatos
+                                if 'pais' in processed_data:
+                                    metadata['pais'] = processed_data['pais']
+                                if 'ciudad' in processed_data:
+                                    metadata['ciudad'] = processed_data['ciudad']
+                                
+                                # Extraer tipos de lugares únicos
+                                if 'lugares' in processed_data and processed_data['lugares']:
+                                    tipos_lugares = list(set([lugar.get('tipo', '') for lugar in processed_data['lugares'] if lugar.get('tipo')]))
+                                    if tipos_lugares:
+                                        metadata['tipos_lugares'] = ', '.join(tipos_lugares)
+                                    
+                                    # Extraer nombres de lugares importantes (primeros 5)
+                                    nombres_lugares = [lugar.get('nombre', '') for lugar in processed_data['lugares'][:5] if lugar.get('nombre')]
+                                    if nombres_lugares:
+                                        metadata['lugares_principales'] = ', '.join(nombres_lugares)
                                 
                                 # IMPRIMIR INFORMACIÓN DEL CHUNK
                                 print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
@@ -1423,55 +1437,104 @@ class TourismCrawler:
         if 'source_title' in processed_data:
             formatted_text.append(f"Título: {processed_data['source_title']}")
         
-        # Procesar información por países
-        if 'paises' in processed_data:
-            for pais in processed_data['paises']:
-                pais_text = []
-                
-                if 'nombre' in pais:
-                    pais_text.append(f"\nPaís: {pais['nombre']}")
-                
-                # Hoteles
-                if 'hoteles' in pais and pais['hoteles']:
-                    pais_text.append("\nHoteles:")
-                    for hotel in pais['hoteles']:
-                        hotel_info = []
-                        if 'nombre' in hotel:
-                            hotel_info.append(f"- {hotel['nombre']}")
-                        if 'localidad' in hotel:
-                            hotel_info.append(f"en {hotel['localidad']}")
-                        if 'clasificacion' in hotel:
-                            hotel_info.append(f"({hotel['clasificacion']})")
-                        if 'precio_promedio' in hotel:
-                            hotel_info.append(f"Precio: {hotel['precio_promedio']}")
-                        pais_text.append(' '.join(hotel_info))
-                
-                # Lugares turísticos
-                if 'lugares_turisticos' in pais and pais['lugares_turisticos']:
-                    pais_text.append("\nLugares turísticos:")
-                    for lugar in pais['lugares_turisticos']:
-                        lugar_info = []
-                        if 'nombre' in lugar:
-                            lugar_info.append(f"- {lugar['nombre']}")
-                        if 'localidad' in lugar:
-                            lugar_info.append(f"en {lugar['localidad']}")
-                        if 'tipo' in lugar:
-                            lugar_info.append(f"({lugar['tipo']})")
-                        if 'precio_entrada' in lugar:
-                            lugar_info.append(f"Entrada: {lugar['precio_entrada']}")
-                        pais_text.append(' '.join(lugar_info))
-                
-                # Información adicional
-                if 'precio_promedio_visita' in pais:
-                    pais_text.append(f"\nPrecio promedio de visita: {pais['precio_promedio_visita']}")
-                if 'mejor_epoca' in pais:
-                    pais_text.append(f"Mejor época para visitar: {pais['mejor_epoca']}")
-                if 'informacion_adicional' in pais:
-                    pais_text.append(f"Información adicional: {pais['informacion_adicional']}")
-                
-                formatted_text.extend(pais_text)
+        # País y ciudad
+        if 'pais' in processed_data:
+            formatted_text.append(f"\nPaís: {processed_data['pais']}")
+        if 'ciudad' in processed_data:
+            formatted_text.append(f"Ciudad: {processed_data['ciudad']}")
         
-        # Si no hay información de países, incluir cualquier otra información
+        # Procesar lugares
+        if 'lugares' in processed_data and processed_data['lugares']:
+            formatted_text.append("\nLugares:")
+            for lugar in processed_data['lugares']:
+                lugar_info = []
+                
+                # Nombre y tipo
+                if 'nombre' in lugar:
+                    lugar_info.append(f"\n- {lugar['nombre']}")
+                if 'tipo' in lugar:
+                    lugar_info.append(f"  Tipo: {lugar['tipo']}")
+                if 'subtipo' in lugar:
+                    lugar_info.append(f" - {lugar['subtipo']}")
+                
+                # Ubicación
+                if 'ubicacion' in lugar:
+                    ubicacion = lugar['ubicacion']
+                    if 'zona' in ubicacion:
+                        lugar_info.append(f"  Zona: {ubicacion['zona']}")
+                    if 'direccion' in ubicacion:
+                        lugar_info.append(f"  Dirección: {ubicacion['direccion']}")
+                
+                # Descripción
+                if 'descripcion' in lugar:
+                    lugar_info.append(f"  Descripción: {lugar['descripcion']}")
+                
+                # Precios
+                if 'precios' in lugar:
+                    precios = lugar['precios']
+                    precio_info = []
+                    if 'rango_precio' in precios:
+                        precio_info.append(f"Rango: {precios['rango_precio']}")
+                    if 'precio_promedio' in precios:
+                        precio_info.append(f"Promedio: {precios['precio_promedio']}")
+                    if 'precio_desde' in precios:
+                        precio_info.append(f"Desde: {precios['precio_desde']}")
+                    if precio_info:
+                        lugar_info.append(f"  Precios: {', '.join(precio_info)}")
+                
+                # Calificación
+                if 'calificacion' in lugar:
+                    calif = lugar['calificacion']
+                    if 'puntuacion' in calif:
+                        lugar_info.append(f"  Calificación: {calif['puntuacion']}/{calif.get('escala', '5')}")
+                
+                # Servicios
+                if 'servicios' in lugar and lugar['servicios']:
+                    lugar_info.append(f"  Servicios: {', '.join(lugar['servicios'])}")
+                
+                formatted_text.extend(lugar_info)
+        
+        # Información general
+        if 'informacion_general' in processed_data:
+            info = processed_data['informacion_general']
+            formatted_text.append("\nInformación General:")
+            
+            if 'clima' in info:
+                formatted_text.append(f"- Clima: {info['clima']}")
+            if 'mejor_epoca_visita' in info:
+                formatted_text.append(f"- Mejor época para visitar: {info['mejor_epoca_visita']}")
+            if 'presupuesto_diario' in info:
+                formatted_text.append(f"- Presupuesto diario: {info['presupuesto_diario']}")
+            if 'duracion_recomendada' in info:
+                formatted_text.append(f"- Duración recomendada: {info['duracion_recomendada']}")
+            if 'tips_viajeros' in info and info['tips_viajeros']:
+                formatted_text.append(f"- Tips: {', '.join(info['tips_viajeros'])}")
+        
+        # Actividades populares
+        if 'actividades_populares' in processed_data and processed_data['actividades_populares']:
+            formatted_text.append("\nActividades Populares:")
+            for actividad in processed_data['actividades_populares']:
+                if 'nombre' in actividad:
+                    act_info = [f"- {actividad['nombre']}"]
+                    if 'precio' in actividad:
+                        act_info.append(f"(Precio: {actividad['precio']})")
+                    if 'duracion' in actividad:
+                        act_info.append(f"(Duración: {actividad['duracion']})")
+                    formatted_text.append(' '.join(act_info))
+        
+        # Gastronomía
+        if 'gastronomia' in processed_data:
+            gastro = processed_data['gastronomia']
+            if 'platos_tipicos' in gastro and gastro['platos_tipicos']:
+                formatted_text.append(f"\nPlatos típicos: {', '.join(gastro['platos_tipicos'])}")
+            if 'bebidas_tipicas' in gastro and gastro['bebidas_tipicas']:
+                formatted_text.append(f"Bebidas típicas: {', '.join(gastro['bebidas_tipicas'])}")
+        
+        # Si es contenido no turístico
+        if 'tipo_contenido' in processed_data and processed_data['tipo_contenido'] == 'no_turistico':
+            return "Contenido no relacionado con turismo"
+        
+        # Si no hay información estructurada, incluir cualquier otra información
         if not formatted_text and isinstance(processed_data, dict):
             for key, value in processed_data.items():
                 if key not in ['source_url', 'source_title', 'processed_by'] and value:

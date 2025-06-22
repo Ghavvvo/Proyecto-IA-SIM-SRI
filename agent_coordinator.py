@@ -127,14 +127,71 @@ class CoordinatorAgent(Agent):
                 print("🐜 Iniciando búsqueda inteligente con Ant Colony Optimization...")
 
                 # NUEVO FLUJO: Búsqueda en Google + Exploración ACO
-                # Paso 1: Buscar en Google y explorar con ACO
-                aco_result = self.crawler_agent.receive({
-                    'type': 'search_google_aco', 
-                    'keywords': problematic_keywords,
-                    'improved_query': improved_query,  # Pasar la consulta mejorada
-                    'max_urls': 15,
-                    'max_depth': 2
-                }, self)
+                # Crear búsquedas específicas si hay múltiples palabras clave
+                if len(problematic_keywords) > 1:
+                    # Detectar si hay un destino en las palabras clave
+                    destination = None
+                    interests = []
+                    
+                    # Intentar identificar destino vs intereses
+                    for keyword in problematic_keywords:
+                        # Palabras que típicamente son destinos
+                        if any(place in keyword.lower() for place in ['cuba', 'habana', 'varadero', 'panama', 'angola', 'méxico', 'argentina', 'españa']):
+                            destination = keyword
+                        else:
+                            interests.append(keyword)
+                    
+                    # Si no se detectó destino pero hay múltiples keywords, usar el primero como destino
+                    if not destination and len(problematic_keywords) > 1:
+                        destination = problematic_keywords[0]
+                        interests = problematic_keywords[1:]
+                    elif not interests and destination:
+                        interests = problematic_keywords
+                    
+                    # Crear búsquedas específicas
+                    search_queries = self._create_specific_search_queries(destination, interests)
+                    
+                    print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
+                    for i, query in enumerate(search_queries, 1):
+                        print(f"   {i}. {query}")
+                    
+                    total_content_extracted = 0
+                    
+                    # Realizar búsqueda separada para cada consulta
+                    for search_query in search_queries:
+                        print(f"\n🔍 Buscando: '{search_query}'")
+                        
+                        aco_result = self.crawler_agent.receive({
+                            'type': 'search_google_aco',
+                            'keywords': [search_query],
+                            'improved_query': search_query,
+                            'max_urls': 5,  # Menos URLs por búsqueda
+                            'max_depth': 2
+                        }, self)
+                        
+                        if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
+                            content_count = aco_result.get('content_extracted', 0)
+                            total_content_extracted += content_count
+                            print(f"   ✅ Extraídas {content_count} páginas")
+                    
+                    # Usar el total para el flujo siguiente
+                    if total_content_extracted > 0:
+                        aco_result = {
+                            'type': 'aco_completed',
+                            'content_extracted': total_content_extracted,
+                            'aco_statistics': {'success_rate': 0.8}
+                        }
+                    else:
+                        aco_result = {'type': 'error'}
+                else:
+                    # Si solo hay una palabra clave, búsqueda normal
+                    aco_result = self.crawler_agent.receive({
+                        'type': 'search_google_aco', 
+                        'keywords': problematic_keywords,
+                        'improved_query': improved_query,
+                        'max_urls': 15,
+                        'max_depth': 2
+                    }, self)
                 
                 if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
                     content_count = aco_result.get('content_extracted', 0)
@@ -577,29 +634,48 @@ class CoordinatorAgent(Agent):
     def _execute_aco_search_with_preferences(self, preferences: dict) -> str:
         """
         Ejecuta búsqueda ACO con las preferencias recopiladas
+        IMPORTANTE: Realiza búsquedas separadas por cada interés del usuario
         """
         # Obtener palabras clave estructuradas
         structured_prefs = self.tourist_guide_agent.get_structured_preferences()
         
-        keywords = structured_prefs['keywords']
-        improved_query = structured_prefs['improved_query']
+        destination = preferences.get('destination', '')
+        interests = preferences.get('interests', [])
         
-        print(f"🐜 Iniciando búsqueda ACO con profundidad {self.planning_state['aco_depth']}")
-        print(f"🔍 Palabras clave: {keywords}")
-        print(f"📝 Consulta mejorada: {improved_query}")
+        print(f"🎯 Destino: {destination}")
+        print(f"🎯 Intereses: {interests}")
         
-        # Ejecutar búsqueda ACO con profundidad incremental
-        aco_result = self.crawler_agent.receive({
-            'type': 'search_google_aco',
-            'keywords': keywords,
-            'improved_query': improved_query,
-            'max_urls': 10 + (self.planning_state['iterations'] * 5),  # Incrementar URLs con cada iteración
-            'max_depth': self.planning_state['aco_depth']
-        }, self)
+        # Crear búsquedas específicas para cada interés
+        search_queries = self._create_specific_search_queries(destination, interests)
         
-        if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
-            content_count = aco_result.get('content_extracted', 0)
-            print(f"✅ ACO extrajo {content_count} páginas con profundidad {self.planning_state['aco_depth']}")
+        print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
+        for i, query in enumerate(search_queries, 1):
+            print(f"   {i}. {query}")
+        
+        total_content_extracted = 0
+        
+        # Realizar búsqueda separada para cada consulta
+        for query in search_queries:
+            print(f"\n🔍 Buscando: '{query}'")
+            
+            # Ejecutar búsqueda ACO para esta consulta específica
+            aco_result = self.crawler_agent.receive({
+                'type': 'search_google_aco',
+                'keywords': [query],  # Usar la consulta completa como keyword
+                'improved_query': query,
+                'max_urls': 8,  # Menos URLs por búsqueda ya que haremos varias
+                'max_depth': self.planning_state['aco_depth']
+            }, self)
+            
+            if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
+                content_count = aco_result.get('content_extracted', 0)
+                total_content_extracted += content_count
+                print(f"   ✅ Extraídas {content_count} páginas para '{query}'")
+            else:
+                print(f"   ⚠️ No se encontraron resultados para '{query}'")
+        
+        if total_content_extracted > 0:
+            print(f"\n✅ Total de páginas extraídas: {total_content_extracted}")
             
             # Incrementar profundidad para próxima iteración
             self.planning_state['aco_depth'] += 1
@@ -613,6 +689,7 @@ class CoordinatorAgent(Agent):
     def _generate_travel_itinerary(self, preferences: dict, structured_prefs: dict) -> str:
         """
         Genera un itinerario de viaje basado en las preferencias y la información recopilada
+        IMPORTANTE: Usa información de la BD local y optimiza rutas con RouteAgent
         """
         # Validar que preferences no sea None
         if not preferences:
@@ -623,6 +700,7 @@ class CoordinatorAgent(Agent):
         
         destination = preferences.get('destination', 'tu destino')
         interests = preferences.get('interests', [])
+        duration = preferences.get('duration', 'No especificada')
         
         # Construir consulta para el itinerario
         itinerary_query = f"Crear itinerario turístico para {destination}"
@@ -630,12 +708,73 @@ class CoordinatorAgent(Agent):
             itinerary_query += f" incluyendo {', '.join(interests)}"
         
         # Consultar al RAG con la información actualizada
-        print("📅 Generando itinerario personalizado...")
+        print("📅 Generando itinerario personalizado desde la base de datos...")
         response = self.rag_agent.receive({'type': 'query', 'query': itinerary_query}, self)
         
         if response['type'] == 'answer':
+            # Extraer lugares del itinerario para optimizar rutas
+            print("🗺️ Extrayendo lugares para optimizar rutas...")
+            extraction_result = self.context_agent.receive({
+                'type': 'extract_relevant_places',
+                'response': response['answer']
+            }, self)
+            
+            optimized_routes = {}
+            if extraction_result['type'] == 'extracted_places' and len(extraction_result['places']) >= 2:
+                places = extraction_result['places']
+                print(f"📍 Lugares identificados: {', '.join(places)}")
+                
+                # Optimizar rutas usando el RouteAgent
+                print("🚀 Optimizando rutas con el agente de rutas...")
+                
+                # Estimar días necesarios
+                days_info = self._estimate_days_needed(len(places), duration)
+                
+                if days_info['days'] > 1:
+                    # Dividir lugares por días
+                    places_per_day = self._distribute_places_by_days(places, days_info['days'])
+                    
+                    for day_num, day_places in enumerate(places_per_day, 1):
+                        if len(day_places) >= 2:
+                            route_result = self.route_agent.receive({
+                                'type': 'optimize_route',
+                                'places': day_places
+                            }, self)
+                            
+                            if route_result['type'] == 'route_result':
+                                optimized_routes[f'day_{day_num}'] = {
+                                    'places': route_result['order'],
+                                    'distance_km': route_result['total_distance_km']
+                                }
+                else:
+                    # Un solo día, optimizar todos los lugares
+                    route_result = self.route_agent.receive({
+                        'type': 'optimize_route',
+                        'places': places
+                    }, self)
+                    
+                    if route_result['type'] == 'route_result':
+                        optimized_routes['day_1'] = {
+                            'places': route_result['order'],
+                            'distance_km': route_result['total_distance_km']
+                        }
+                
+                print(f"✅ Rutas optimizadas para {len(optimized_routes)} día(s)")
+            
             # Formatear la respuesta como itinerario
-            itinerary = self._format_as_itinerary(response['answer'], preferences)
+            if optimized_routes:
+                # Si hay rutas optimizadas, usar el formato con rutas
+                itinerary = self._format_as_itinerary_with_routes(
+                    response['answer'], 
+                    preferences, 
+                    optimized_routes
+                )
+            else:
+                # Si no hay rutas, usar el formato simple
+                itinerary = self._format_as_itinerary(
+                    response['answer'], 
+                    preferences
+                )
             
             # Guardar en contexto
             self.context_agent.receive({
@@ -650,8 +789,7 @@ class CoordinatorAgent(Agent):
             self.planning_state['aco_depth'] = 1
             self.planning_state['iterations'] = 0
             
-            # Ofrecer optimización de ruta si hay lugares específicos
-            return self._add_route_optimization_offer(itinerary, destination)
+            return itinerary
         else:
             return "No pude generar un itinerario con la información disponible. Por favor, intenta hacer consultas específicas sobre tu destino."
     
@@ -659,6 +797,8 @@ class CoordinatorAgent(Agent):
         """
         Formatea la respuesta como un itinerario estructurado
         """
+        
+        print("------------------------------\n"+raw_response+"\n------------------------------") 
         try:
             model = genai.GenerativeModel('gemini-1.5-flash')
             
@@ -700,6 +840,10 @@ class CoordinatorAgent(Agent):
             
             🎯 RESUMEN:
             [Resumen del itinerario y mensaje motivador]
+            
+            IMPORTANTE:
+            Responde solo con la información disponible proporcionada. 
+            Nunca añadas destinos que no aparecen en la información disponible.
             """
             
             response = model.generate_content(prompt)
@@ -977,3 +1121,206 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         except Exception as e:
             print(f"Error extrayendo palabras clave del tema: {e}")
             return []
+    
+    def _create_specific_search_queries(self, destination: str, interests: List[str]) -> List[str]:
+        """
+        Crea consultas de búsqueda específicas para cada combinación de destino + interés
+        
+        Args:
+            destination: Destino del viaje
+            interests: Lista de intereses del usuario
+            
+        Returns:
+            Lista de consultas de búsqueda específicas
+        """
+        search_queries = []
+        
+        # Mapeo de intereses a términos de búsqueda más específicos
+        interest_mapping = {
+            'accommodation': ['mejores hoteles', 'alojamiento recomendado', 'donde hospedarse'],
+            'hotels': ['mejores hoteles', 'hoteles recomendados', 'alojamiento'],
+            'beaches': ['mejores playas', 'playas más bonitas', 'playas turísticas'],
+            'museums': ['museos importantes', 'mejores museos', 'museos que visitar'],
+            'restaurants': ['mejores restaurantes', 'donde comer', 'gastronomía local'],
+            'activities': ['actividades turísticas', 'qué hacer', 'atracciones principales'],
+            'shopping': ['centros comerciales', 'donde comprar', 'mejores tiendas'],
+            'nightlife': ['vida nocturna', 'bares y discotecas', 'entretenimiento nocturno'],
+            'nature': ['parques naturales', 'naturaleza', 'ecoturismo'],
+            'culture': ['sitios culturales', 'patrimonio cultural', 'lugares históricos']
+        }
+        
+        # Si hay destino, crear consultas específicas para cada interés
+        if destination:
+            for interest in interests:
+                # Obtener términos de búsqueda para este interés
+                search_terms = interest_mapping.get(interest.lower(), [interest])
+                
+                # Crear múltiples consultas para cada interés
+                for term in search_terms:
+                    query = f"{term} en {destination}"
+                    search_queries.append(query)
+                
+                # También agregar una consulta simple
+                if interest not in interest_mapping:
+                    search_queries.append(f"{interest} en {destination}")
+        
+        # Si no hay destino pero hay intereses, buscar por intereses generales
+        elif interests:
+            for interest in interests:
+                search_terms = interest_mapping.get(interest.lower(), [interest])
+                for term in search_terms:
+                    search_queries.append(f"{term} turismo")
+        
+        # Agregar consulta general si hay destino
+        if destination:
+            search_queries.append(f"guía turística {destination}")
+            search_queries.append(f"qué visitar en {destination}")
+        
+        # Eliminar duplicados manteniendo el orden
+        seen = set()
+        unique_queries = []
+        for query in search_queries:
+            if query not in seen:
+                seen.add(query)
+                unique_queries.append(query)
+        
+        # Limitar a un máximo razonable de consultas
+        return unique_queries[:10]
+    
+    def _estimate_days_needed(self, num_places: int, duration_str: str) -> dict:
+        """
+        Estima el número de días necesarios basado en la cantidad de lugares y duración especificada
+        """
+        # Intentar extraer días de la duración especificada
+        import re
+        days = 1  # Por defecto un día
+        
+        if duration_str and duration_str != 'No especificada':
+            # Buscar números en la duración
+            numbers = re.findall(r'\d+', duration_str.lower())
+            if numbers:
+                days = int(numbers[0])
+            elif 'semana' in duration_str.lower():
+                days = 7
+            elif 'fin de semana' in duration_str.lower():
+                days = 2
+        
+        # Si no hay duración especificada, estimar basado en lugares
+        if duration_str == 'No especificada':
+            # Aproximadamente 3-4 lugares por día
+            days = max(1, (num_places + 2) // 3)
+        
+        return {'days': days, 'places_per_day': max(1, num_places // days)}
+    
+    def _distribute_places_by_days(self, places: List[str], days: int) -> List[List[str]]:
+        """
+        Distribuye los lugares equitativamente entre los días disponibles
+        """
+        if days <= 1:
+            return [places]
+        
+        places_per_day = len(places) // days
+        remainder = len(places) % days
+        
+        distribution = []
+        start_idx = 0
+        
+        for day in range(days):
+            # Agregar un lugar extra a los primeros días si hay remainder
+            end_idx = start_idx + places_per_day + (1 if day < remainder else 0)
+            distribution.append(places[start_idx:end_idx])
+            start_idx = end_idx
+        
+        return distribution
+    
+    def _format_as_itinerary_with_routes(self, raw_response: str, preferences: dict, optimized_routes: dict) -> str:
+        """
+        Formatea la respuesta como un itinerario estructurado con rutas optimizadas
+        """
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            # Preparar información de rutas optimizadas
+            routes_info = ""
+            for day_key, route_data in optimized_routes.items():
+                day_num = day_key.replace('day_', '')
+                places_order = " → ".join(route_data['places'])
+                distance = route_data['distance_km']
+                routes_info += f"\nDía {day_num}: {places_order} (Distancia total: {distance:.1f} km)"
+            
+            prompt = f"""
+            Eres un experto planificador de viajes. Crea un itinerario de viaje estructurado y atractivo.
+            
+            Información disponible de la base de datos:
+            {raw_response}
+            
+            Rutas optimizadas por día:
+            {routes_info}
+            
+            Preferencias del viajero:
+            - Destino: {preferences.get('destination')}
+            - Intereses: {', '.join(preferences.get('interests', []))}
+            - Duración: {preferences.get('duration', 'No especificada')}
+            - Presupuesto: {preferences.get('budget', 'No especificado')}
+            
+            INSTRUCCIONES IMPORTANTES:
+            1. USA EXACTAMENTE el orden de lugares proporcionado en las rutas optimizadas
+            2. Para cada día, sigue el orden de visita indicado con las flechas (→)
+            3. Incluye horarios sugeridos para cada lugar
+            4. Añade tiempos de desplazamiento entre lugares basados en las distancias
+            5. Incluye recomendaciones de restaurantes para almuerzo y cena
+            6. Añade consejos prácticos (transporte, entradas, mejores horarios)
+            7. Usa emojis para hacer el itinerario más visual
+            8. Mantén un tono entusiasta y personalizado
+            
+            Formato deseado:
+            🌟 ITINERARIO OPTIMIZADO PARA [DESTINO]
+            
+            📅 DÍA 1: [Título descriptivo del día]
+            📍 Ruta del día: [Lugar 1] → [Lugar 2] → [Lugar 3]
+            📏 Distancia total: X.X km
+            
+            🕐 9:00 - [Lugar 1]
+            [Descripción y tiempo sugerido de visita]
+            
+            🚶 Desplazamiento (X minutos)
+            
+            🕑 11:00 - [Lugar 2]
+            [Descripción y tiempo sugerido de visita]
+            
+            🍽️ 13:00 - Almuerzo en [Restaurante recomendado cerca]
+            
+            [Continuar con el resto del día...]
+            
+            💡 CONSEJOS DEL DÍA:
+            - [Consejo específico para este día]
+            
+            [Repetir formato para cada día]
+            
+            🎯 RESUMEN GENERAL:
+            - Distancia total del viaje: X km
+            - Lugares visitados: X
+            - [Mensaje motivador final]
+            
+            IMPORTANTE: Usa SOLO la información proporcionada. No inventes lugares ni añadas destinos que no aparecen en los datos.
+            """
+            
+            response = model.generate_content(prompt)
+            return response.text.strip()
+            
+        except Exception as e:
+            print(f"Error formateando itinerario con rutas: {e}")
+            # Fallback con formato básico pero incluyendo rutas
+            fallback = f"🌟 ITINERARIO PARA {preferences.get('destination', 'TU DESTINO').upper()}\n\n"
+            
+            for day_key, route_data in optimized_routes.items():
+                day_num = day_key.replace('day_', '')
+                fallback += f"📅 DÍA {day_num}:\n"
+                fallback += f"📍 Ruta optimizada: {' → '.join(route_data['places'])}\n"
+                fallback += f"📏 Distancia: {route_data['distance_km']:.1f} km\n\n"
+            
+            fallback += f"\n{raw_response}\n\n"
+            fallback += f"💡 Recomendaciones basadas en tus intereses: {', '.join(preferences.get('interests', []))}\n\n"
+            fallback += "¡Disfruta tu viaje!"
+            
+            return fallback

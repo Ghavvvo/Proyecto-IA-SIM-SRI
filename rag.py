@@ -44,11 +44,15 @@ class RAGSystem:
     def generate(self, query: str, context: List[str]) -> str:
         """
         Genera una respuesta basada en la consulta y el contexto recuperado.
+        
+        IMPORTANTE: Este método SOLO usa información de la base de datos local.
+        No consulta fuentes externas ni inventa información.
+        
         Args:
             query (str): Consulta del usuario.
-            context (List[str]): Fragmentos relevantes recuperados.
+            context (List[str]): Fragmentos relevantes recuperados de la BD local.
         Returns:
-            str: Respuesta generada por el modelo.
+            str: Respuesta generada por el modelo basada ÚNICAMENTE en la BD.
         """
         # Combinar el contexto en un solo texto
         context_text = "\n".join(context)
@@ -57,16 +61,16 @@ class RAGSystem:
 
 Consulta del usuario: {query}
 
-Información disponible en la base de datos:
+Información disponible en la base de datos LOCAL:
 {context_text}
 
 INSTRUCCIONES IMPORTANTES:
-- Solo usa la información proporcionada arriba
+- Solo usa la información proporcionada arriba (que viene de la base de datos local)
+- NO inventes ni agregues información que no esté explícitamente en el contexto
 - Responde siempre proporcionando una lista enumerada de elementos a menos que no tenga sentido proporcionar una lista
-- Siempre intenta proporcionar una respuesta con la información proporcionada arriba, si no tienes nada de información sobre el tema di claramente "No tengo suficiente información sobre este tema"
-- No inventes información que no esté en el contexto
+- Si no tienes información suficiente, di claramente "No tengo suficiente información sobre este tema en la base de datos"
 - Sé conciso y útil
-- Si hay información relevante, proporciona las mejores recomendaciones basadas en los datos disponibles
+- Si hay información relevante, proporciona las mejores recomendaciones basadas SOLO en los datos disponibles
 
 Respuesta:"""
 
