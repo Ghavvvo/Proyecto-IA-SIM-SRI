@@ -1,12 +1,14 @@
 from autogen import Agent
-import google.generativeai as genai
 import textwrap
 from datetime import datetime
+
+from mistral_utils import GenerativeModel
+
 
 class InterfaceAgent(Agent):
     def __init__(self, name):
         super().__init__(name)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.model = GenerativeModel("mistral-large-latest")
         self.conversation_context = []
     
     def receive(self, message, sender):

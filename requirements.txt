@@ -1,4 +1,4 @@
-# Core dependencies
+protobuf~=5.29.5
 requests~=2.32.3
 beautifulsoup4~=4.12.3
 urllib3~=2.2.0
@@ -41,3 +41,9 @@ asyncio~=3.4.3
 
 # Logging and debugging
 colorama~=0.4.6
+google-generativeai~=0.3.0
+geopy~=2.4.1
+deap~=1.4.3
+mistralai~=1.8.2
+scikit-fuzzy~=0.5.0
+matplotlib~=3.10.3
