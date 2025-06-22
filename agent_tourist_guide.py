@@ -3,11 +3,11 @@ Agente Guía Turístico - Especializado en recopilar preferencias de viaje
 """
 
 from autogen import Agent
+import google.generativeai as genai
 import json
 from typing import Dict, List, Optional
 from datetime import datetime
 import os
-from mistral_utils import GenerativeModel, configure
 
 class TouristGuideAgent(Agent):
     """
@@ -19,12 +19,12 @@ class TouristGuideAgent(Agent):
         super().__init__(name)
         
         # Configurar Gemini
-        api_key = os.getenv('MISTRAL_API_KEY')
+        api_key = os.getenv('GOOGLE_API_KEY')
         if not api_key:
             raise ValueError("GOOGLE_API_KEY no está configurada en las variables de entorno")
-
-        configure(api_key=api_key)
-        self.model = GenerativeModel('mistral-large-latest')
+        
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         
         # Estado de la conversación
         self.conversation_state = {

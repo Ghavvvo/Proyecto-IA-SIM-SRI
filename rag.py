@@ -1,13 +1,11 @@
 from typing import List, Dict, Any, Optional, Tuple
+import google.generativeai as genai
 import numpy as np
 import random
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import re
 import warnings
-
-from mistral_utils import configure, GenerativeModel
-
 warnings.filterwarnings('ignore')
 
 # Intentar importar dependencias opcionales
@@ -19,13 +17,14 @@ except ImportError:
     print("⚠️ sentence-transformers no disponible. Usando TF-IDF como fallback.")
 
 # Configuración de la API de Gemini
-configure(api_key="your_mistral_api_key")
+GEMINI_API_KEY = "AIzaSyDmW-QXAeksN6hacpCMVpTQnOEAD8MLG00"
+genai.configure(api_key=GEMINI_API_KEY)
 
 class RAGSystem:
     def __init__(self, chroma_collection):
         self.collection = chroma_collection
         # Crear instancia del modelo generativo
-        self.model = GenerativeModel('mistral-large-latest')
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     def retrieve(self, query: str, top_k: int = 20) -> List[str]:
         """

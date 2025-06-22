@@ -2,15 +2,15 @@
 Agente procesador que utiliza Gemini para estructurar la información turística
 antes de guardarla en ChromaDB
 """
+import google.generativeai as genai
 import json
 from typing import Dict, List, Optional
 from autogen import Agent
 import re
-from mistral_utils import GenerativeModel, configure
 
-
-# Configure Mistral
-configure(api_key="y4Eg7tBRan7PQuvyI8btxYEaSdVP45kI")
+# Configuración de Gemini
+GEMINI_API_KEY = "AIzaSyDmW-QXAeksN6hacpCMVpTQnOEAD8MLG00"
+genai.configure(api_key=GEMINI_API_KEY)
 
 
 class ProcessorAgent(Agent):
@@ -21,7 +21,7 @@ class ProcessorAgent(Agent):
     
     def __init__(self, name: str = "ProcessorAgent"):
         super().__init__(name)
-        self.model = GenerativeModel('mistral-large-latest')
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         self.processed_count = 0
         self.errors_count = 0
         
@@ -46,7 +46,7 @@ class ProcessorAgent(Agent):
             processed_results = []
             
             print(f"🤖 Procesando {len(contents)} páginas con Gemini...")
-
+            
             for content_data in contents:
                 result = self._process_single_content(content_data)
                 if result:
@@ -81,13 +81,13 @@ class ProcessorAgent(Agent):
             
             # Parsear la respuesta JSON
             structured_data = self._parse_gemini_response(response.text)
-
+            
             if structured_data:
                 # Añadir metadatos
                 structured_data['source_url'] = url
                 structured_data['source_title'] = title
                 structured_data['processed_by'] = 'gemini'
-
+                
                 self.processed_count += 1
                 print(f"✅ Procesado: {title[:50]}...")
                 
