@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional, Tuple
-import google.generativeai as genai
+from gemini_config import GeminiClient, gemini_generate
 import numpy as np
 import random
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -16,15 +16,11 @@ except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
     print("⚠️ sentence-transformers no disponible. Usando TF-IDF como fallback.")
 
-# Configuración de la API de Gemini
-GEMINI_API_KEY = "AIzaSyDmW-QXAeksN6hacpCMVpTQnOEAD8MLG00"
-genai.configure(api_key=GEMINI_API_KEY)
-
 class RAGSystem:
     def __init__(self, chroma_collection):
         self.collection = chroma_collection
-        # Crear instancia del modelo generativo
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Crear instancia del cliente Gemini
+        self.gemini_client = GeminiClient(model_name="flash")
 
     def retrieve(self, query: str, top_k: int = 20) -> List[str]:
         """
@@ -75,8 +71,8 @@ INSTRUCCIONES IMPORTANTES:
 Respuesta:"""
 
         try:
-            response = self.model.generate_content(prompt)
-            return response.text
+            response = self.gemini_client.generate(prompt)
+            return response
         except Exception as e:
             print(f"Error al generar contenido: {e}")
             return "Error al procesar la consulta. Por favor, intenta nuevamente."
@@ -562,8 +558,8 @@ INSTRUCCIONES:
 Respuesta:"""
 
         try:
-            response = self.model.generate_content(prompt)
-            return response.text
+            response = self.gemini_client.generate(prompt)
+            return response
         except Exception as e:
             print(f"Error al generar contenido: {e}")
             return "Error al procesar la consulta. Por favor, intenta nuevamente."

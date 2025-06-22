@@ -1,12 +1,12 @@
 from autogen import Agent
-import google.generativeai as genai
+from gemini_config import GeminiClient
 import textwrap
 from datetime import datetime
 
 class InterfaceAgent(Agent):
     def __init__(self, name):
         super().__init__(name)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.gemini_client = GeminiClient(model_name="flash")
         self.conversation_context = []
     
     def receive(self, message, sender):
@@ -46,8 +46,8 @@ class InterfaceAgent(Agent):
         """Genera una respuesta completamente dinámica usando el modelo generativo"""
         try:
             prompt = self._build_dynamic_prompt(message)
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
+            response = self.gemini_client.generate(prompt)
+            return response.strip()
         except Exception as e:
             print(f"Error generando mensaje: {e}")
             return "Estamos procesando su solicitud. Un momento, por favor."

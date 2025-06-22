@@ -8,6 +8,7 @@ requests==2.32.3
 numpy>=1.21.0
 scikit-learn==1.6.1
 tiktoken==0.9.0
+duckduckgo-search==3.5.0  # Requerido para búsquedas web
 
 # Dependencias necesarias para las bibliotecas principales
 pyyaml==6.0.2  # Requerido por chromadb

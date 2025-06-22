@@ -2,15 +2,11 @@
 Agente procesador que utiliza Gemini para estructurar la información turística
 antes de guardarla en ChromaDB
 """
-import google.generativeai as genai
+from gemini_config import GeminiClient, gemini_json
 import json
 from typing import Dict, List, Optional
 from autogen import Agent
 import re
-
-# Configuración de Gemini
-GEMINI_API_KEY = "AIzaSyDmW-QXAeksN6hacpCMVpTQnOEAD8MLG00"
-genai.configure(api_key=GEMINI_API_KEY)
 
 
 class ProcessorAgent(Agent):
@@ -21,7 +17,7 @@ class ProcessorAgent(Agent):
     
     def __init__(self, name: str = "ProcessorAgent"):
         super().__init__(name)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.gemini_client = GeminiClient(model_name="flash")
         self.processed_count = 0
         self.errors_count = 0
         
@@ -76,11 +72,8 @@ class ProcessorAgent(Agent):
             # Crear prompt para Gemini
             prompt = self._create_extraction_prompt(content, title, url)
             
-            # Generar respuesta con Gemini
-            response = self.model.generate_content(prompt)
-            
-            # Parsear la respuesta JSON
-            structured_data = self._parse_gemini_response(response.text)
+            # Generar respuesta JSON con Gemini
+            structured_data = self.gemini_client.generate_json(prompt)
             
             if structured_data:
                 # Añadir metadatos

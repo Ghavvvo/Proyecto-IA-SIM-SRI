@@ -1,6 +1,6 @@
 from autogen import Agent
 from typing import List, Dict, Any
-import google.generativeai as genai
+from gemini_config import GeminiClient, gemini_generate
 from datetime import datetime
 
 class ContextAgent(Agent):

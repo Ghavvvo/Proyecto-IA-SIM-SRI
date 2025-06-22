@@ -3,7 +3,7 @@ Agente Guía Turístico - Especializado en recopilar preferencias de viaje
 """
 
 from autogen import Agent
-import google.generativeai as genai
+from gemini_config import GeminiClient, gemini_json
 import json
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -18,13 +18,8 @@ class TouristGuideAgent(Agent):
     def __init__(self, name: str):
         super().__init__(name)
         
-        # Configurar Gemini
-        api_key = os.getenv('GOOGLE_API_KEY')
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY no está configurada en las variables de entorno")
-        
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # Usar cliente Gemini centralizado
+        self.gemini_client = GeminiClient(model_name="flash")
         
         # Estado de la conversación
         self.conversation_state = {
@@ -168,9 +163,9 @@ class TouristGuideAgent(Agent):
         """
         try:
             prompt = self.conversation_templates['greeting']
-            response = self.model.generate_content(prompt)
+            response = self.gemini_client.generate(prompt)
             
-            greeting = response.text.strip()
+            greeting = response.strip()
             
             # Actualizar estado
             self.conversation_state['phase'] = 'destination'
@@ -275,37 +270,26 @@ class TouristGuideAgent(Agent):
             IMPORTANTE: Devuelve SOLO el JSON, sin explicaciones adicionales.
             """
             
-            response = self.model.generate_content(extraction_prompt)
+            # Usar gemini_json para extraer preferencias
+            extracted_data = gemini_json(extraction_prompt)
             
-            # Intentar parsear el JSON
-            try:
-                # Limpiar la respuesta para obtener solo el JSON
-                json_str = response.text.strip()
-                # Buscar el JSON en la respuesta
-                start_idx = json_str.find('{')
-                end_idx = json_str.rfind('}') + 1
-                
-                if start_idx != -1 and end_idx > start_idx:
-                    json_str = json_str[start_idx:end_idx]
-                    extracted_data = json.loads(json_str)
-                    
-                    # Actualizar preferencias
-                    for key, value in extracted_data.items():
-                        if key in self.conversation_state['preferences']:
-                            if isinstance(self.conversation_state['preferences'][key], list):
-                                # Para listas, agregar elementos nuevos
-                                if isinstance(value, list):
-                                    self.conversation_state['preferences'][key].extend(value)
-                                else:
-                                    self.conversation_state['preferences'][key].append(value)
-                                # Eliminar duplicados
-                                self.conversation_state['preferences'][key] = list(set(self.conversation_state['preferences'][key]))
+            if extracted_data:
+                # Actualizar preferencias
+                for key, value in extracted_data.items():
+                    if key in self.conversation_state['preferences']:
+                        if isinstance(self.conversation_state['preferences'][key], list):
+                            # Para listas, agregar elementos nuevos
+                            if isinstance(value, list):
+                                self.conversation_state['preferences'][key].extend(value)
                             else:
-                                # Para valores simples, reemplazar
-                                self.conversation_state['preferences'][key] = value
-                
-            except json.JSONDecodeError:
-                # Si no se puede parsear, intentar extracción manual básica
+                                self.conversation_state['preferences'][key].append(value)
+                            # Eliminar duplicados
+                            self.conversation_state['preferences'][key] = list(set(self.conversation_state['preferences'][key]))
+                        else:
+                            # Para valores simples, reemplazar
+                            self.conversation_state['preferences'][key] = value
+            else:
+                # Si no se puede extraer, intentar extracción manual básica
                 self._manual_extraction(user_message)
                 
         except Exception as e:
@@ -339,8 +323,8 @@ class TouristGuideAgent(Agent):
             user_message=user_message
         )
         
-        response = self.model.generate_content(prompt)
-        guide_response = response.text.strip()
+        response = self.gemini_client.generate(prompt)
+        guide_response = response.strip()
         
         # Actualizar historial
         self.conversation_state['conversation_history'].append({
@@ -372,8 +356,8 @@ class TouristGuideAgent(Agent):
             user_message=user_message
         )
         
-        response = self.model.generate_content(prompt)
-        guide_response = response.text.strip()
+        response = self.gemini_client.generate(prompt)
+        guide_response = response.strip()
         
         # Actualizar historial
         self.conversation_state['conversation_history'].append({
@@ -406,8 +390,8 @@ class TouristGuideAgent(Agent):
             user_message=user_message
         )
         
-        response = self.model.generate_content(prompt)
-        guide_response = response.text.strip()
+        response = self.gemini_client.generate(prompt)
+        guide_response = response.strip()
         
         # Actualizar historial
         self.conversation_state['conversation_history'].append({
@@ -433,8 +417,8 @@ class TouristGuideAgent(Agent):
             preferences=json.dumps(self.conversation_state['preferences'], indent=2, ensure_ascii=False)
         )
         
-        response = self.model.generate_content(prompt)
-        guide_response = response.text.strip()
+        response = self.gemini_client.generate(prompt)
+        guide_response = response.strip()
         
         # Actualizar historial
         self.conversation_state['conversation_history'].append({
@@ -465,8 +449,8 @@ class TouristGuideAgent(Agent):
         Mantén la respuesta en 3-4 líneas máximo.
         """
         
-        response = self.model.generate_content(prompt)
-        guide_response = response.text.strip()
+        response = self.gemini_client.generate(prompt)
+        guide_response = response.strip()
         
         return {
             'type': 'guide_response',
@@ -672,8 +656,8 @@ class TouristGuideAgent(Agent):
             o 'false' si el usuario parece dispuesto a continuar proporcionando información.
             """
             
-            response = self.model.generate_content(prompt)
-            result = response.text.strip().lower()
+            response = self.gemini_client.generate(prompt)
+            result = response.strip().lower()
             
             return 'true' in result
             
