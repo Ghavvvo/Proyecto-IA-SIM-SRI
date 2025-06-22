@@ -5,6 +5,7 @@ from agent_interface import InterfaceAgent
 from agent_context import ContextAgent
 from agent_route import RouteAgent
 from agent_tourist_guide import TouristGuideAgent
+from agent_simulation import TouristSimulationAgent
 from urls import starting_urls
 from dotenv import load_dotenv
 
@@ -45,11 +46,13 @@ if __name__ == "__main__":
     context_agent = ContextAgent("context_agent")
     route_agent = RouteAgent("route_agent")
     tourist_guide_agent = TouristGuideAgent("tourist_guide_agent")
-    coordinator = CoordinatorAgent("coordinator", crawler_agent, rag_agent, interface_agent, context_agent, route_agent, tourist_guide_agent)
+    simulation_agent = TouristSimulationAgent("simulation_agent", "average")  # Perfil por defecto: average
+    coordinator = CoordinatorAgent("coordinator", crawler_agent, rag_agent, interface_agent, context_agent, route_agent, tourist_guide_agent, simulation_agent)
 
     # Iniciar el sistema multiagente
     print("⚡ Iniciando sistema multiagente de turismo con crawler paralelo...")
     print(f"🔧 Configuración: {crawler_agent.crawler.num_threads} hilos paralelos")
+    print("🎮 Agente de simulación turística activado con lógica difusa")
     coordinator.start()
 
     print("\n📋 Comandos disponibles durante la conversación:")
