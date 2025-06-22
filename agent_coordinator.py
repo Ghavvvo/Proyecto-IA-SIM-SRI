@@ -1,12 +1,13 @@
 from autogen import Agent
 from typing import List
 import google.generativeai as genai
+import json
 
 from simulation_utils import format_as_simulation_input
 
 
 class CoordinatorAgent(Agent):
-    def __init__(self, name, crawler_agent, rag_agent, interface_agent, context_agent, route_agent, tourist_guide_agent=None):
+    def __init__(self, name, crawler_agent, rag_agent, interface_agent, context_agent, route_agent, tourist_guide_agent=None, simulation_agent=None):
         super().__init__(name)
         self.crawler_agent = crawler_agent
         self.rag_agent = rag_agent
@@ -14,6 +15,7 @@ class CoordinatorAgent(Agent):
         self.context_agent = context_agent
         self.route_agent = route_agent
         self.tourist_guide_agent = tourist_guide_agent
+        self.simulation_agent = simulation_agent
         
         # Estado del flujo de planificación
         self.planning_state = {
@@ -852,11 +854,23 @@ class CoordinatorAgent(Agent):
             response = model.generate_content(prompt)
             formatted_itinerary = response.text.strip()
 
-            # Call simulation utils and print the JSON
+            # Call simulation utils and send to simulation agent
             simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
-            print("🧩 JSON para simulación:")
-            import json
-            print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
+            
+            # Send to simulation agent if available
+            if self.simulation_agent:
+                print("🧩 Enviando itinerario al agente de simulación...")
+                print("🧩 JSON para simulación:")
+                print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
+                simulation_result = self._run_simulation(simulation_json)
+                
+                # Add simulation results to the itinerary
+                if simulation_result:
+                    formatted_itinerary += f"\n\n{simulation_result}"
+            else:
+                print("⚠️ Agente de simulación no disponible")
+                print("🧩 JSON para simulación:")
+                print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
 
             return formatted_itinerary
 
@@ -1318,11 +1332,22 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
 
             response = model.generate_content(prompt)
             formatted_itinerary = response.text.strip()
-            # Call simulation utils and print the JSON
+
             simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
-            print("🧩 JSON para simulación:")
-            import json
-            print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
+            # Send to simulation agent if available
+            if self.simulation_agent:
+                print("🧩 Enviando itinerario al agente de simulación...")
+                print("🧩 JSON para simulación:")
+                print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
+                simulation_result = self._run_simulation(simulation_json)
+
+                # Add simulation results to the itinerary
+                if simulation_result:
+                    formatted_itinerary += f"\n\n{simulation_result}"
+            else:
+                print("⚠️ Agente de simulación no disponible")
+                print("🧩 JSON para simulación:")
+                print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
             return response.text.strip()
 
         except Exception as e:
@@ -1341,3 +1366,234 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             fallback += "¡Disfruta tu viaje!"
 
             return fallback
+
+    def _run_simulation(self, simulation_json: dict) -> str:
+        """
+        Ejecuta la simulación del itinerario usando el agente de simulación
+        
+        Args:
+            simulation_json: JSON estructurado con el itinerario para simular
+            
+        Returns:
+            String con los resultados de la simulación formateados
+        """
+        try:
+            print("🔍 Iniciando proceso de simulación...")
+            print(f"📋 Datos recibidos: {len(simulation_json.get('days', []))} días de itinerario")
+            
+            # Verificar que el agente de simulación esté disponible
+            if not self.simulation_agent:
+                print("⚠️ Agente de simulación no está disponible")
+                return ""
+            
+            # Convertir el JSON del itinerario al formato esperado por el simulador
+            itinerary_data = []
+            context_data = {
+                'temporada': simulation_json.get('season', 'verano'),
+                'hora_inicio': 9,  # Hora de inicio por defecto
+                'prob_lluvia': 0.2,  # Probabilidad de lluvia por defecto
+                'preferencias_cliente': simulation_json.get('interests', [])  # Pasar las preferencias del cliente
+            }
+            
+            print(f"🎯 Preferencias del cliente: {context_data['preferencias_cliente']}")
+            
+            # Extraer actividades de cada día
+            for day_info in simulation_json.get('days', []):
+                day_num = day_info.get('day', 1)
+                day_of_week = day_info.get('day_of_week', 'sabado')
+                
+                print(f"📅 Procesando día {day_num} ({day_of_week})")
+                
+                # Actualizar contexto con el día de la semana
+                if day_num == 1:  # Solo para el primer día
+                    context_data['dia_semana'] = day_of_week
+                
+                for i, activity in enumerate(day_info.get('activities', [])):
+                    # Convertir hora string a número
+                    time_str = activity.get('time', '09:00')
+                    try:
+                        hour = int(time_str.split(':')[0])
+                    except:
+                        hour = 9 + i * 2  # Fallback: espaciar 2 horas entre actividades
+                    
+                    place_data = {
+                        'nombre': activity.get('location', f'Lugar {i+1}'),
+                        'tipo': activity.get('type', 'otro'),
+                        'popularidad': activity.get('popularity', 7.0),
+                        'distancia_anterior': activity.get('distance_from_previous_km', 2.0) if i > 0 else 0,
+                        'distancia_inicio': activity.get('distance_from_previous_km', 3.0) if i == 0 else 0,
+                        'dia': day_num  # Añadir información del día
+                    }
+                    
+                    itinerary_data.append(place_data)
+                    print(f"  📍 Añadido: {place_data['nombre']} (tipo: {place_data['tipo']})")
+            
+            # Verificar que hay datos para simular
+            if not itinerary_data:
+                print("⚠️ No hay actividades para simular")
+                return ""
+            
+            print(f"📊 Total de lugares a simular: {len(itinerary_data)}")
+            
+            # Determinar el perfil del turista basado en las preferencias
+            tourist_profile = simulation_json.get('tourist_profile', 'average')
+            
+            # Validar que el perfil sea válido
+            valid_profiles = ['exigente', 'relajado', 'average']
+            if tourist_profile not in valid_profiles:
+                print(f"⚠️ Perfil '{tourist_profile}' no válido. Usando 'average'")
+                tourist_profile = 'average'
+            
+            # Enviar al agente de simulación
+            print(f"🎮 Simulando experiencia turística (perfil: {tourist_profile})...")
+            
+            try:
+                simulation_response = self.simulation_agent.receive({
+                    'type': 'simulate_itinerary',
+                    'itinerary': itinerary_data,
+                    'context': context_data,
+                    'profile': tourist_profile
+                }, self)
+                
+                print(f"📨 Respuesta recibida: tipo = {simulation_response.get('type')}")
+                
+                if simulation_response.get('type') == 'simulation_results':
+                    results = simulation_response.get('results', {})
+                    
+                    print(f"✅ Simulación completada exitosamente")
+                    print(f"   - Satisfacción general: {results.get('satisfaccion_general', 0)}/10")
+                    print(f"   - Lugares visitados: {len(results.get('lugares_visitados', []))}")
+                    
+                    # Formatear los resultados de la simulación
+                    simulation_summary = self._format_simulation_results(results)
+                    
+                    # Generar visualización si es posible
+                    try:
+                        self.simulation_agent.visualizar_resultados(results)
+                        print("📊 Gráficos de simulación guardados en 'simulacion_turista.png'")
+                    except Exception as e:
+                        print(f"⚠️ No se pudieron generar los gráficos: {e}")
+                        import traceback
+                        traceback.print_exc()
+                    
+                    return simulation_summary
+                else:
+                    error_msg = simulation_response.get('msg', 'Error desconocido')
+                    print(f"❌ Error en la simulación: {error_msg}")
+                    return ""
+                    
+            except Exception as e:
+                print(f"❌ Error al comunicarse con el agente de simulación: {e}")
+                import traceback
+                traceback.print_exc()
+                return ""
+                
+        except Exception as e:
+            print(f"❌ Error ejecutando simulación: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""
+    
+    def _format_simulation_results(self, results: dict) -> str:
+        """
+        Formatea los resultados de la simulación en un texto legible
+        
+        Args:
+            results: Diccionario con los resultados de la simulación
+            
+        Returns:
+            String formateado con el resumen de la simulación
+        """
+        try:
+            # Extraer datos principales
+            profile = results.get('perfil_turista', 'average')
+            general_satisfaction = results.get('satisfaccion_general', 0)
+            final_fatigue = results.get('cansancio_final', 0)
+            total_duration = results.get('duracion_total_hrs', 0)
+            overall_rating = results.get('valoracion_viaje', '')
+            places_visited = results.get('lugares_visitados', [])
+            dias_simulados = results.get('dias_simulados', 1)
+            lugares_por_dia = results.get('lugares_por_dia', {})
+            
+            # Construir resumen
+            summary = f"""
+🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA**
+
+📊 **Resultados Generales:**
+- Perfil del turista: {profile.capitalize()}
+- Satisfacción general: {general_satisfaction}/10 {'⭐' * int(general_satisfaction)}
+- Nivel de cansancio final: {final_fatigue}/10
+- Duración total estimada: {total_duration:.1f} horas
+- Días simulados: {dias_simulados}
+
+💭 **Valoración del viaje:**
+{overall_rating}"""
+
+            # Mostrar distribución por día si hay múltiples días
+            if dias_simulados > 1 and lugares_por_dia:
+                summary += "\n\n📅 **Experiencia por día:**"
+                for dia, lugares in sorted(lugares_por_dia.items()):
+                    summary += f"\n\n**Día {dia}:**"
+                    summary += f"\n- Lugares visitados: {len(lugares)}"
+                    
+                    # Calcular satisfacción promedio del día
+                    lugares_dia = [p for p in places_visited if p.get('dia', 1) == dia]
+                    if lugares_dia:
+                        avg_satisfaction = sum(p.get('satisfaccion', 0) for p in lugares_dia) / len(lugares_dia)
+                        summary += f"\n- Satisfacción promedio: {avg_satisfaction:.1f}/10"
+                        
+                        # Mejor lugar del día
+                        best_place = max(lugares_dia, key=lambda x: x.get('satisfaccion', 0))
+                        summary += f"\n- Mejor experiencia: {best_place['lugar']} ({best_place['satisfaccion']}/10)"
+
+            summary += "\n\n🏆 **Mejores experiencias del viaje:**"
+            
+            # Encontrar los lugares con mayor satisfacción
+            if places_visited:
+                sorted_places = sorted(places_visited, key=lambda x: x.get('satisfaccion', 0), reverse=True)
+                top_places = sorted_places[:3]
+                
+                for place in top_places:
+                    dia_info = f" (Día {place.get('dia', 1)})" if dias_simulados > 1 else ""
+                    summary += f"\n- {place['lugar']}{dia_info}: {place['satisfaccion']}/10 - {place.get('comentario', 'Sin comentarios')}"
+            
+            # Agregar advertencias si hay problemas
+            warnings = []
+            if final_fatigue > 8:
+                warnings.append("⚠️ El itinerario es muy agotador. Considera reducir actividades o agregar más descansos entre días.")
+            
+            if general_satisfaction < 6:
+                warnings.append("⚠️ La satisfacción general es baja. Revisa los tiempos de espera y la distribución de actividades.")
+            
+            # Encontrar problemas específicos
+            problem_places = [p for p in places_visited if p.get('satisfaccion', 0) < 5]
+            if problem_places:
+                warnings.append(f"⚠️ {len(problem_places)} lugares con baja satisfacción. Considera alternativas.")
+            
+            # Verificar si algún día está muy cargado
+            if lugares_por_dia:
+                for dia, lugares in lugares_por_dia.items():
+                    if len(lugares) > 5:
+                        warnings.append(f"⚠️ El día {dia} tiene demasiadas actividades ({len(lugares)}). Considera distribuir mejor.")
+            
+            if warnings:
+                summary += "\n\n⚠️ **Recomendaciones de mejora:**"
+                for warning in warnings:
+                    summary += f"\n{warning}"
+            
+            # Agregar estadísticas detalladas
+            if places_visited:
+                avg_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited) / len(places_visited)
+                total_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited)
+                
+                summary += f"\n\n📈 **Estadísticas adicionales:**"
+                summary += f"\n- Tiempo promedio de espera: {avg_wait_time:.0f} minutos"
+                summary += f"\n- Tiempo total en esperas: {total_wait_time:.0f} minutos"
+                summary += f"\n- Total de lugares visitados: {len(places_visited)}"
+                summary += f"\n- Promedio de lugares por día: {len(places_visited)/dias_simulados:.1f}"
+            
+            return summary
+            
+        except Exception as e:
+            print(f"Error formateando resultados de simulación: {e}")
+            return "\n\n⚠️ No se pudieron procesar los resultados de la simulación."
