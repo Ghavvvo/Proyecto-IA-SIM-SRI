@@ -1197,7 +1197,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         
         if duration_str and duration_str != 'No especificada':
             # Buscar números en la duración
-            numbers = re.findall(r'\d+', duration_str.lower())
+            numbers = re.findall(r'\d+', str(duration_str).lower())
             if numbers:
                 days = int(numbers[0])
             elif 'semana' in duration_str.lower():
