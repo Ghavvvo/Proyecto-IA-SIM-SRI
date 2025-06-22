@@ -1,5 +1,6 @@
 from autogen import Agent
 from crawler import TourismCrawler
+from datetime import datetime
 
 class CrawlerAgent(Agent):
     def __init__(self, name, starting_urls, max_pages=100, max_depth=2, num_threads=10, enable_gemini_processing=True):
@@ -102,15 +103,27 @@ class CrawlerAgent(Agent):
                         print(f"   🔍 Palabras clave: {keywords}")
                         print(f"   ✅ Chunk guardado exitosamente\n")
                         
+                        # Preparar metadata
+                        metadata = {
+                            "url": content_item['url'],
+                            "title": content_item['title'],
+                            "source": "aco_google_crawler",
+                            "extraction_method": content_item.get('extraction_method', 'aco'),
+                            "keywords_used": str(keywords),
+                            "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        }
+                        
+                        # Guardar en archivo ANTES de guardar en ChromaDB
+                        self.crawler._save_chunk_to_file(
+                            doc_id, 
+                            content_item['content'], 
+                            metadata, 
+                            "ACO"
+                        )
+                        
                         self.crawler.collection.add(
                             documents=[content_item['content']],
-                            metadatas=[{
-                                "url": content_item['url'],
-                                "title": content_item['title'],
-                                "source": "aco_google_crawler",
-                                "extraction_method": content_item.get('extraction_method', 'aco'),
-                                "keywords_used": str(keywords)
-                            }],
+                            metadatas=[metadata],
                             ids=[doc_id]
                         )
                         content_added += 1

@@ -81,6 +81,10 @@ class TourismCrawler:
         self.gemini_errors = 0
         self.gliner_processed = 0
         self.gliner_errors = 0
+        
+        # Archivo para guardar chunks
+        self.chunks_file_path = self._initialize_chunks_file()
+        self.file_lock = threading.Lock()
     
     def enable_gliner(self):
         """Habilita el procesamiento con GLiNER"""
@@ -102,6 +106,148 @@ class TourismCrawler:
         self.enable_gemini_processing = False
         self.processor_agent = None
         print("❌ Procesamiento con Gemini deshabilitado")
+    
+    def _initialize_chunks_file(self) -> str:
+        """Inicializa el archivo para guardar los chunks"""
+        try:
+            # Crear directorio de logs si no existe
+            logs_dir = "crawler_logs"
+            logs_path = os.path.abspath(logs_dir)
+            
+            if not os.path.exists(logs_path):
+                os.makedirs(logs_path)
+                print(f"📁 Directorio creado: {logs_path}")
+            
+            # Crear nombre de archivo con timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = os.path.join(logs_path, f"chunks_{timestamp}.txt")
+            
+            # Escribir encabezado
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write(f"CHUNKS DE CRAWLER - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 80 + "\n\n")
+            
+            # Verificar que el archivo se creó correctamente
+            if os.path.exists(filename):
+                file_size = os.path.getsize(filename)
+                print(f"📄 Archivo de chunks creado exitosamente:")
+                print(f"   📍 Ruta: {filename}")
+                print(f"   📏 Tamaño inicial: {file_size} bytes")
+            else:
+                print(f"⚠️ Advertencia: El archivo {filename} no se pudo verificar")
+            
+            return filename
+            
+        except Exception as e:
+            print(f"❌ Error al inicializar archivo de chunks: {e}")
+            import traceback
+            traceback.print_exc()
+            # Retornar una ruta por defecto
+            return "chunks_error.txt"
+    
+    def _save_chunk_to_file(self, doc_id: str, content: str, metadata: dict, processor: str):
+        """Guarda un chunk en el archivo de texto EXACTAMENTE como se almacena en ChromaDB"""
+        print(f"💾 Intentando guardar chunk en archivo: {self.chunks_file_path}")
+        print(f"   - ID: {doc_id}")
+        print(f"   - Procesador: {processor}")
+        print(f"   - Tamaño contenido: {len(content)} caracteres")
+        
+        with self.file_lock:
+            try:
+                # Verificar que el archivo existe antes de escribir
+                if not os.path.exists(self.chunks_file_path):
+                    print(f"⚠️ El archivo no existe, creándolo: {self.chunks_file_path}")
+                    os.makedirs(os.path.dirname(self.chunks_file_path), exist_ok=True)
+                
+                with open(self.chunks_file_path, 'a', encoding='utf-8') as f:
+                    f.write("=" * 100 + "\n")
+                    f.write("INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB\n")
+                    f.write("=" * 100 + "\n\n")
+                    
+                    # INFORMACIÓN DEL DOCUMENTO
+                    f.write("### INFORMACIÓN DEL DOCUMENTO ###\n")
+                    f.write(f"ID: {doc_id}\n")
+                    f.write(f"TIMESTAMP: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                    f.write(f"PROCESADOR: {processor}\n\n")
+                    
+                    # METADATA COMPLETA (como se guarda en ChromaDB)
+                    f.write("### METADATA (como se guarda en ChromaDB) ###\n")
+                    f.write("{\n")
+                    for key, value in sorted(metadata.items()):
+                        if isinstance(value, str) and '\n' in value:
+                            # Para valores multilinea, usar formato JSON
+                            f.write(f'  "{key}": {json.dumps(value, ensure_ascii=False)},\n')
+                        else:
+                            f.write(f'  "{key}": {json.dumps(value, ensure_ascii=False)},\n')
+                    f.write("}\n\n")
+                    
+                    # CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB)
+                    f.write("### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###\n")
+                    f.write(f"Tamaño: {len(content)} caracteres\n")
+                    f.write("-" * 80 + "\n")
+                    f.write(content)
+                    f.write("\n" + "-" * 80 + "\n\n")
+                    
+                    # RESUMEN DE INFORMACIÓN CLAVE
+                    f.write("### RESUMEN DE INFORMACIÓN CLAVE ###\n")
+                    
+                    # Información según el procesador
+                    if processor == "GLiNER":
+                        if 'entities_data' in metadata:
+                            try:
+                                entities_data = json.loads(metadata['entities_data'])
+                                if 'entities' in entities_data:
+                                    entities = entities_data['entities']
+                                    if 'countries' in entities and entities['countries']:
+                                        f.write(f"PAÍSES DETECTADOS: {', '.join(entities['countries'])}\n")
+                                    if 'cities' in entities and entities['cities']:
+                                        f.write(f"CIUDADES DETECTADAS: {', '.join(entities['cities'])}\n")
+                                    if 'hotels' in entities and entities['hotels']:
+                                        hotel_names = [h.get('name', 'Sin nombre') for h in entities['hotels']]
+                                        f.write(f"HOTELES DETECTADOS: {', '.join(hotel_names[:10])}\n")
+                            except:
+                                pass
+                    
+                    elif processor == "Gemini":
+                        if 'structured_data' in metadata:
+                            try:
+                                structured_data = json.loads(metadata['structured_data'])
+                                if 'pais' in structured_data:
+                                    f.write(f"PAÍS: {structured_data['pais']}\n")
+                                if 'ciudad' in structured_data:
+                                    f.write(f"CIUDAD: {structured_data['ciudad']}\n")
+                                if 'lugares' in structured_data and structured_data['lugares']:
+                                    lugares_nombres = [lugar.get('nombre', '') for lugar in structured_data['lugares'][:10] if lugar.get('nombre')]
+                                    if lugares_nombres:
+                                        f.write(f"LUGARES PRINCIPALES: {', '.join(lugares_nombres)}\n")
+                                    tipos_unicos = list(set([lugar.get('tipo', '') for lugar in structured_data['lugares'] if lugar.get('tipo')]))
+                                    if tipos_unicos:
+                                        f.write(f"TIPOS DE LUGARES: {', '.join(tipos_unicos)}\n")
+                            except:
+                                pass
+                    
+                    elif processor == "ACO":
+                        if 'keywords_used' in metadata:
+                            f.write(f"PALABRAS CLAVE UTILIZADAS: {metadata['keywords_used']}\n")
+                        if 'extraction_method' in metadata:
+                            f.write(f"MÉTODO DE EXTRACCIÓN: {metadata['extraction_method']}\n")
+                    
+                    f.write("\n" + "=" * 100 + "\n")
+                    f.write("FIN DE CHUNK\n")
+                    f.write("=" * 100 + "\n\n\n")
+                    
+                print(f"✅ Chunk guardado exitosamente en archivo")
+                
+                # Verificar el tamaño del archivo después de escribir
+                if os.path.exists(self.chunks_file_path):
+                    file_size = os.path.getsize(self.chunks_file_path)
+                    print(f"   📏 Tamaño actual del archivo: {file_size:,} bytes")
+                    
+            except Exception as e:
+                print(f"❌ Error guardando chunk en archivo: {e}")
+                import traceback
+                traceback.print_exc()
 
     def is_valid_url(self, url: str) -> bool:
         """Determina si una URL es válida para el crawler de turismo."""
@@ -430,6 +576,9 @@ class TourismCrawler:
                                     metadatas=[metadata],
                                     ids=[doc_id]
                                 )
+                                
+                                # Guardar también en archivo de texto
+                                self._save_chunk_to_file(doc_id, structured_text, metadata, "GLiNER")
                             
                             with self.stats_lock:
                                 self.pages_added_to_db += 1
@@ -511,6 +660,9 @@ class TourismCrawler:
                                     metadatas=[metadata],
                                     ids=[doc_id]
                                 )
+                                
+                                # Guardar también en archivo de texto
+                                self._save_chunk_to_file(doc_id, structured_text, metadata, "GLiNER")
                             
                             with self.stats_lock:
                                 self.pages_added_to_db += 1
@@ -1398,6 +1550,16 @@ class TourismCrawler:
         with self.collection_lock:
             doc_id = f"parallel_doc_{hash(content_data['url']) % 10000000}_{depth}_{int(time.time())}"
             
+            # Preparar metadata
+            metadata = {
+                "url": content_data["url"],
+                "title": content_data["title"],
+                "source": "parallel_tourism_crawler",
+                "depth": depth,
+                "thread_id": str(thread_id),
+                "processed_by_gemini": False
+            }
+            
             # IMPRIMIR INFORMACIÓN DEL CHUNK
             print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
             print(f"   📌 ID: {doc_id}")
@@ -1411,16 +1573,12 @@ class TourismCrawler:
             
             self.collection.add(
                 documents=[content_data["content"]],
-                metadatas=[{
-                    "url": content_data["url"],
-                    "title": content_data["title"],
-                    "source": "parallel_tourism_crawler",
-                    "depth": depth,
-                    "thread_id": str(thread_id),
-                    "processed_by_gemini": False
-                }],
+                metadatas=[metadata],
                 ids=[doc_id]
             )
+            
+            # Guardar también en archivo de texto
+            self._save_chunk_to_file(doc_id, content_data["content"], metadata, "Crawler (sin procesamiento)")
         
         with self.stats_lock:
             self.pages_added_to_db += 1
