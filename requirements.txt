@@ -1,14 +1,43 @@
-protobuf~=5.29.5
+# Core dependencies
 requests~=2.32.3
-chromadb~=1.0.12
-tiktoken~=0.9.0
-beautifulsoup4~=4.13.4
-autogen~=0.9.2
-numpy~=2.2.6
-scikit-learn~=1.6.1
-sentence-transformers~=4.1.0
-gliner>=0.2.0
+beautifulsoup4~=4.12.3
+urllib3~=2.2.0
+
+# ChromaDB and embeddings
+chromadb~=0.5.0
+sentence-transformers~=3.0.0
+tiktoken~=0.7.0
+
+# Machine Learning and AI
+numpy~=1.26.4
+scikit-learn~=1.5.0
 torch>=2.0.0
 transformers>=4.30.0
+
+# Google Generative AI
+google-generativeai~=0.7.0
+protobuf~=4.25.0
+
+# GLiNER for entity extraction
+gliner>=0.2.0
+
+# AutoGen for multi-agent system
+pyautogen~=0.2.0
+
+# Environment and utilities
 python-dotenv~=1.0.0
-google-generativeai~=0.3.0
+
+# Additional dependencies for data processing
+pandas~=2.2.0
+tqdm~=4.66.0
+
+# Web scraping utilities
+lxml~=5.2.0
+html5lib~=1.1
+
+# Threading and async support
+aiohttp~=3.9.0
+asyncio~=3.4.3
+
+# Logging and debugging
+colorama~=0.4.6
