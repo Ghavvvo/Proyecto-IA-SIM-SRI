@@ -604,13 +604,20 @@ class CoordinatorAgent(Agent):
                     self.planning_state['preferences'] = final_prefs
                     return self._execute_aco_search_with_preferences(final_prefs)
                 else:
-                    # Si no hay preferencias finales, obtenerlas del agente
-                    prefs_response = self.tourist_guide_agent.receive({'type': 'get_preferences'}, self)
-                    if prefs_response['type'] == 'preferences':
-                        self.planning_state['preferences'] = prefs_response['preferences']
-                        return self._execute_aco_search_with_preferences(prefs_response['preferences'])
+                    # Si no hay preferencias finales, usar las preferencias actuales del response
+                    # que ya incluyen la información del último mensaje
+                    current_prefs = response.get('current_preferences')
+                    if current_prefs:
+                        self.planning_state['preferences'] = current_prefs
+                        return self._execute_aco_search_with_preferences(current_prefs)
                     else:
-                        return "Error al obtener las preferencias. Por favor, intenta de nuevo."
+                        # Como último recurso, obtenerlas del agente
+                        prefs_response = self.tourist_guide_agent.receive({'type': 'get_preferences'}, self)
+                        if prefs_response['type'] == 'preferences':
+                            self.planning_state['preferences'] = prefs_response['preferences']
+                            return self._execute_aco_search_with_preferences(prefs_response['preferences'])
+                        else:
+                            return "Error al obtener las preferencias. Por favor, intenta de nuevo."
             else:
                 return response['message']
         else:

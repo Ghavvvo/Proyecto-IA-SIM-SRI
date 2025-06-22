@@ -200,6 +200,11 @@ class TouristGuideAgent(Agent):
                 'timestamp': datetime.now().isoformat()
             })
             
+            # IMPORTANTE: Extraer información del mensaje ANTES de verificar si quiere proceder
+            # Esto asegura que capturemos cualquier preferencia mencionada, incluso si el usuario
+            # indica que no quiere dar más información en el mismo mensaje
+            self._extract_preferences(user_message)
+            
             # Verificar si el usuario quiere proceder con la información actual
             if self._wants_to_proceed_with_current_info(user_message):
                 # Marcar que el usuario quiere proceder
@@ -212,9 +217,6 @@ class TouristGuideAgent(Agent):
                 else:
                     # Si no tenemos información mínima, explicar qué falta
                     return self._explain_missing_info()
-            
-            # Extraer información del mensaje
-            self._extract_preferences(user_message)
             
             # Determinar siguiente fase
             current_phase = self.conversation_state['phase']
@@ -252,8 +254,13 @@ class TouristGuideAgent(Agent):
             Preferencias actuales:
             {json.dumps(self.conversation_state['preferences'], indent=2)}
             
-            Extrae y actualiza SOLO la información nueva mencionada en el mensaje.
-            Devuelve un JSON con solo los campos que deberían actualizarse.
+            IMPORTANTE: Extrae TODA la información de preferencias mencionada en el mensaje, 
+            incluso si el usuario también indica que no quiere dar más información.
+            
+            Por ejemplo:
+            - "Solo me interesan museos, nada más" → Extraer "museos" como interés
+            - "Quiero ir a playas, eso es todo" → Extraer "playas" como interés
+            - "Cuba, ya no preguntes más" → Extraer "Cuba" como destino
             
             Campos posibles:
             - destination: ciudad o país de destino
@@ -432,7 +439,8 @@ class TouristGuideAgent(Agent):
             'message': guide_response,
             'phase': 'complete',
             'preferences_collected': True,
-            'final_preferences': self.conversation_state['preferences']
+            'final_preferences': self.conversation_state['preferences'],
+            'current_preferences': self.conversation_state['preferences']  # Incluir también como current_preferences
         }
     
     def _handle_general_conversation(self, user_message: str) -> Dict:
@@ -451,6 +459,13 @@ class TouristGuideAgent(Agent):
         
         response = self.gemini_client.generate(prompt)
         guide_response = response.strip()
+        
+        # Actualizar historial
+        self.conversation_state['conversation_history'].append({
+            'role': 'assistant',
+            'content': guide_response,
+            'timestamp': datetime.now().isoformat()
+        })
         
         return {
             'type': 'guide_response',
