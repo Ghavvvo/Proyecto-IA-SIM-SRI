@@ -609,13 +609,20 @@ class CoordinatorAgent(Agent):
                     self.planning_state['preferences'] = final_prefs
                     return self._execute_aco_search_with_preferences(final_prefs)
                 else:
-                    # Si no hay preferencias finales, obtenerlas del agente
-                    prefs_response = self.tourist_guide_agent.receive({'type': 'get_preferences'}, self)
-                    if prefs_response['type'] == 'preferences':
-                        self.planning_state['preferences'] = prefs_response['preferences']
-                        return self._execute_aco_search_with_preferences(prefs_response['preferences'])
+                    # Si no hay preferencias finales, usar las preferencias actuales del response
+                    # que ya incluyen la información del último mensaje
+                    current_prefs = response.get('current_preferences')
+                    if current_prefs:
+                        self.planning_state['preferences'] = current_prefs
+                        return self._execute_aco_search_with_preferences(current_prefs)
                     else:
-                        return "Error al obtener las preferencias. Por favor, intenta de nuevo."
+                        # Como último recurso, obtenerlas del agente
+                        prefs_response = self.tourist_guide_agent.receive({'type': 'get_preferences'}, self)
+                        if prefs_response['type'] == 'preferences':
+                            self.planning_state['preferences'] = prefs_response['preferences']
+                            return self._execute_aco_search_with_preferences(prefs_response['preferences'])
+                        else:
+                            return "Error al obtener las preferencias. Por favor, intenta de nuevo."
             else:
                 return response['message']
         else:
@@ -638,8 +645,8 @@ class CoordinatorAgent(Agent):
 
     def _execute_aco_search_with_preferences(self, preferences: dict) -> str:
         """
-        Ejecuta búsqueda ACO con las preferencias recopiladas
-        IMPORTANTE: Realiza búsquedas separadas por cada interés del usuario
+        Ejecuta búsqueda con las preferencias recopiladas
+        IMPORTANTE: Primero intenta usar la información de la BD local antes de buscar en DuckDuckGo
         """
         # Obtener palabras clave estructuradas
         structured_prefs = self.tourist_guide_agent.get_structured_preferences()
@@ -649,48 +656,101 @@ class CoordinatorAgent(Agent):
 
         print(f"🎯 Destino: {destination}")
         print(f"🎯 Intereses: {interests}")
-
-        # Crear búsquedas específicas para cada interés
-        search_queries = self._create_specific_search_queries(destination, interests)
-
-        print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
-        for i, query in enumerate(search_queries, 1):
-            print(f"   {i}. {query}")
-
-        total_content_extracted = 0
-
-        # Realizar búsqueda separada para cada consulta
-        for query in search_queries:
-            print(f"\n🔍 Buscando: '{query}'")
-
-            # Ejecutar búsqueda ACO para esta consulta específica
-            aco_result = self.crawler_agent.receive({
-                'type': 'search_google_aco',
-                'keywords': [query],  # Usar la consulta completa como keyword
-                'improved_query': query,
-                'max_urls': 8,  # Menos URLs por búsqueda ya que haremos varias
-                'max_depth': self.planning_state['aco_depth']
-            }, self)
-
-            if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
-                content_count = aco_result.get('content_extracted', 0)
-                total_content_extracted += content_count
-                print(f"   ✅ Extraídas {content_count} páginas para '{query}'")
+        
+        # PASO 1: Primero intentar generar el itinerario con la información existente en la BD
+        print("📚 Consultando información existente en la base de datos...")
+        
+        # Construir consulta para el itinerario
+        itinerary_query = f"Crear itinerario turístico para {destination}"
+        if interests:
+            itinerary_query += f" incluyendo {', '.join(interests)}"
+        
+        # Consultar al RAG con la información existente
+        response = self.rag_agent.receive({'type': 'query', 'query': itinerary_query}, self)
+        
+        if response['type'] == 'answer':
+            # Evaluar si la respuesta es útil
+            evaluation = self._evaluate_response_usefulness(itinerary_query, response['answer'])
+            
+            if evaluation:
+                # Si la respuesta es útil, generar el itinerario directamente
+                print("✅ Encontré suficiente información en la base de datos local")
+                return self._generate_travel_itinerary(preferences, structured_prefs)
             else:
-                print(f"   ⚠️ No se encontraron resultados para '{query}'")
-
-        if total_content_extracted > 0:
-            print(f"\n✅ Total de páginas extraídas: {total_content_extracted}")
-
-            # Incrementar profundidad para próxima iteración
-            self.planning_state['aco_depth'] += 1
-            self.planning_state['iterations'] += 1
-
-            # Generar itinerario con la información recopilada
-            return self._generate_travel_itinerary(preferences, structured_prefs)
+                # Si la respuesta no es útil, entonces buscar en DuckDuckGo
+                print("⚠️ La información en la base de datos no es suficiente")
+                print("🔍 Iniciando búsqueda en DuckDuckGo para obtener más información...")
+                
+                # Crear búsquedas específicas para cada interés
+                search_queries = self._create_specific_search_queries(destination, interests)
+                
+                print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
+                for i, query in enumerate(search_queries, 1):
+                    print(f"   {i}. {query}")
+                
+                total_content_extracted = 0
+                
+                # Realizar búsqueda separada para cada consulta
+                for query in search_queries:
+                    print(f"\n🔍 Buscando: '{query}'")
+                    
+                    # Ejecutar búsqueda ACO para esta consulta específica
+                    aco_result = self.crawler_agent.receive({
+                        'type': 'search_google_aco',
+                        'keywords': [query],  # Usar la consulta completa como keyword
+                        'improved_query': query,
+                        'max_urls': 8,  # Menos URLs por búsqueda ya que haremos varias
+                        'max_depth': self.planning_state['aco_depth']
+                    }, self)
+                    
+                    if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
+                        content_count = aco_result.get('content_extracted', 0)
+                        total_content_extracted += content_count
+                        print(f"   ✅ Extraídas {content_count} páginas para '{query}'")
+                    else:
+                        print(f"   ⚠️ No se encontraron resultados para '{query}'")
+                
+                if total_content_extracted > 0:
+                    print(f"\n✅ Total de páginas extraídas: {total_content_extracted}")
+                    
+                    # Incrementar profundidad para próxima iteración
+                    self.planning_state['aco_depth'] += 1
+                    self.planning_state['iterations'] += 1
+                    
+                    # Generar itinerario con la información recopilada
+                    return self._generate_travel_itinerary(preferences, structured_prefs)
+                else:
+                    # Si no se encontró información en DuckDuckGo, usar lo que hay en la BD
+                    print("⚠️ No se encontró información adicional en DuckDuckGo")
+                    print("📚 Generando itinerario con la información disponible en la base de datos...")
+                    return self._generate_travel_itinerary(preferences, structured_prefs)
         else:
-            return "Lo siento, no pude encontrar suficiente información para crear tu itinerario. Por favor, intenta con otro destino."
-
+            # Si hay error al consultar la BD, intentar buscar en DuckDuckGo
+            print("❌ Error al consultar la base de datos, buscando en DuckDuckGo...")
+            
+            # Crear búsquedas específicas para cada interés
+            search_queries = self._create_specific_search_queries(destination, interests)
+            
+            total_content_extracted = 0
+            
+            for query in search_queries:
+                aco_result = self.crawler_agent.receive({
+                    'type': 'search_google_aco',
+                    'keywords': [query],
+                    'improved_query': query,
+                    'max_urls': 8,
+                    'max_depth': self.planning_state['aco_depth']
+                }, self)
+                
+                if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
+                    content_count = aco_result.get('content_extracted', 0)
+                    total_content_extracted += content_count
+            
+            if total_content_extracted > 0:
+                return self._generate_travel_itinerary(preferences, structured_prefs)
+            else:
+                return "Lo siento, no pude encontrar suficiente información para crear tu itinerario. Por favor, intenta con otro destino."
+    
     def _generate_travel_itinerary(self, preferences: dict, structured_prefs: dict) -> str:
         """
         Genera un itinerario de viaje basado en las preferencias y la información recopilada
