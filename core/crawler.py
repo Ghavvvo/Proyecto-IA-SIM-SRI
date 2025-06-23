@@ -65,7 +65,7 @@ class TourismCrawler:
         self.processor_agent = None
         if self.enable_gemini_processing:
             try:
-                from agent_processor import ProcessorAgent
+                from agents.agent_processor import ProcessorAgent
                 self.processor_agent = ProcessorAgent()
                 print("✅ Procesamiento con Gemini habilitado")
             except Exception as e:
@@ -90,7 +90,7 @@ class TourismCrawler:
         """Habilita el procesamiento con GLiNER"""
         if not self.enable_gliner_processing:
             try:
-                from agent_gliner import GLiNERAgent
+                from agents.agent_gliner import GLiNERAgent
                 self.gliner_agent = GLiNERAgent()
                 self.enable_gliner_processing = True
                 print("✅ Procesamiento con GLiNER habilitado")

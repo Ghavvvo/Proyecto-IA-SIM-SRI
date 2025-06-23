@@ -1,5 +1,5 @@
 from autogen import Agent
-from rag import RAGSystem
+from core.rag import RAGSystem
 
 class RAGAgent(Agent):
     def __init__(self, name):

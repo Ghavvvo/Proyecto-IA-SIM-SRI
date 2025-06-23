@@ -1,0 +1,242 @@
+================================================================================
+CHUNKS DE CRAWLER - 2025-06-22 19:16:10
+================================================================================
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_6292965_1750634292
+TIMESTAMP: 2025-06-22 19:18:12
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['museos en Roma']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:18:12",
+  "title": "Los 10 mejores Museos de Roma",
+  "url": "https://www.audioguiaroma.com/museos-roma.php",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+Museos de Roma En Roma existen unos 150 museos de todo tipo, públicos y privados, científicos, literarios, de instrumentos musicales, casas-museo, museos de carrozas, del crimen, del pan, de la pasta... además de los arqueológicos y artísticos. Esta es nuestra selección de los 10 mejores museos de la ciudad: Aquí puedes ver la relación completa de Museos municipales , con los descuentos que ofrecen, y aquí la relación de Museos estatales . Más abajo tienes un mapa de los Museos con la ubicación de estos 10 que hemos seleccionado. MUSEOS VATICANOS y Capilla Sixtina Uno de los mejores museos del mundo. Incluyen la Capilla Sixtina. Puedes saltarte la cola reservando on-line. IMPRESCINDIBLE Tpo. mín.: 3-4 horas Domingos cerrado Horario: 9 a 18 h. GALLERIA BORGHESE Toda una experiencia estética. Tanto la sección de escultura barroca como la pinacoteca son espectaculares. IMPRESCINDIBLE Tpo. máximo permitido: 2 horas ¡ RESERVA OBLIGATORIA ! MUSEOS CAPITOLINOS Los más importantes sobre la Antigua Roma, después de los Vaticanos. Extraordinaria colección de retratos romanos. MUY IMPORTANTE Tpo. mín.: 2 horas Abierto todos los días PALAZZO MASSIMO Magnífica colección de estatuaria antigua, pero su fuerte son los mosaicos y frescos de época romana: impresionantes. MUY IMPORTANTE Tpo. mín.: 2 horas Lunes cerrado GALLERIA DORIA PAMPHILI Contiene el retrato de Inocencio X, de Velazquez, mundialmente conocido, pero toda la pinacoteca es de primer orden. MUY INTERESANTE Tpo. mín.: 1,5 horas Abierto todos los días PALAZZO BARBERINI - Galleria Nazionale Además de la importante pinacoteca, con obras muy conocidas, el propio palacio barroco es digno de una visita. MUY INTERESANTE Tpo. mín.: 1,5 horas Lunes cerrado ETRU - Museo etrusco (Villa Giulia) Magnífica colección de arte prerromano, especialmente etrusco, con sede en la deliciosa villa renacentista de Villa Giulia. MUY INTERESANTE Tpo. mín.: 1,5 horas Lunes cerrado PALAZZO ALTEMPS Extraordinaria colección de escultura clásica for
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['museos en Roma']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_766324_1750634292
+TIMESTAMP: 2025-06-22 19:18:12
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['museos en Roma']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:18:12",
+  "title": "Hoteles de Roma – Cómo son, por categorías",
+  "url": "https://www.audioguiaroma.com/hoteles-roma.php",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+Hoteles de Roma Qué ofrecen De 1 estrella De 2 estrellas De 3 estrellas De 4 estrellas Los hoteles son la opción mayoritaria de los viajeros para alojarse en Roma. Entre hoteles con el mismo número de estrellas pueden existir grandes diferencias, aunque todos deben cumplir los requisitos de su categoría, establecidos por ley. Es bueno saber por adelantado lo que nos vamos a encontrar, para no crearnos falsas expectativas. Leyendo estas notas sacarás una idea general bastante aproximada de los hoteles romanos. Hoteles de 1 estrella Mínimo, por ley: recepción 12 horas al día, limpieza diaria habitaciones y cambio de sábanas y toallas una vez por semana. No es obligatorio tener baño privado. Dimensiones mínimas de la habitación doble: 14 metros cuadrados. Son alojamientos meramente funcionales: sirven para pasar la noche y poco más. Las habitaciones y los baños son pequeños y con frecuencia tienen aspecto desangelado: mobiliario pobre y viejo, y un aire de pensión más que de hotel. La atención del personal es muy desigual. Al ser estructuras pequeñas, a veces ofrecen un trato cordial y familiar. Otras, en cambio, el personal puede ser brusco y poco profesional. Si la estructura es nueva, se pueden encontrar agradables sorpresas, con hoteles que en realidad parecen de 3 estrellas... pero también suben bastante de precio. Hoteles de 2 estrellas Mínimo, por ley: recepción 12 horas al día, limpieza diaria habitaciones. Cambio de sábanas y toallas dos veces por semana. Ascensor. No es obligatorio tener baño privado. Dimensiones mínimas de la habitación doble: 14 metros cuadrados. Suelen ser estructuras con pocas habitaciones, que no ocupan todo un edificio sino una planta. Más de la mitad se ubican en la zona de Termini, en edificios del siglo XIX. No suelen tener zonas comunes o éstas son muy pobres. El único lugar para descansar es la habitación. Es fácil encontrar estructuras viejas y poco funcionales: baños, ascensores y ventiladores que funcionan mal. A veces, personal
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['museos en Roma']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_9420234_1750634313
+TIMESTAMP: 2025-06-22 19:18:33
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['restaurantes en Roma']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:18:33",
+  "title": "32 Hoteles a pie de Playa en España ¡Sol, Mar y Relax!",
+  "url": "https://soyunblogdeviajes.com/hoteles-a-pie-de-playa-en-espana/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+Patricia Pozuelo Actualizado: 04/02/2025 Desde la Costa del Sol hasta la Costa Brava, vamos a encontrar muchos hoteles a pie de playa en España pero en este artículo te hablo de los 32 mejores. Alojamientos con increíbles vistas y todos los servicios para que disfrutes de tus vacaciones al máximo, ¿quieres conocerlos? Además de la comida y de las fiestas, España también destaca por contar con buenos hoteles a pie de playa. ¿Te imaginas despertar con el sonido de las olas y salir al balcón a primera hora para ver el mar? En este post, te traigo una selección de los mejores hoteles a pie de playa en España donde la arena empieza justo en la puerta, ¿te vienes? Contenido Los mejores hoteles a pie de playa en España ¿Estás planeando unas vacaciones donde solo tengas que preocuparte por qué cóctel vas a tomar cada día junto al mar? En España, hay opciones para todos los gustos y para cualquier tipo de presupuesto. Hoteles de lujo, con todo incluido y pequeños paraísos escondidos, ¡seguro que encuentras el mejor hotel para ti! Aquí te cuento cuáles son los mejores hoteles a pie de playa en España para que solo tengas que hacer las maletas y disfrutar. Descuento en IATI Seguros Viaja con tranquilidad con un buen seguro de viajes Descuento IATI 1. El Vicenç de la Mar Quiero empezar con uno de los hoteles a pie de playa en España mejor valorados, el Vicenç de la Mar. Está en Mallorca, en la Cala Sant Vicente y nos ofrece un estupendo alojamiento de 5 estrellas. Tiene piscina exterior, centro de fitness y también un salón compartido para pasar el rato. Cuenta además con un restaurante, una terraza, sauna y bañeras de hidromasaje. En El Vicenç de la Mar se sirve un desayuno a la carta o continental cada mañana. También tiene centro de spa y zona de juegos, y por la zona se puede hacer senderismo y ciclismo. Cerca están las playas de Cala Molins, Cala Clara y Cala Barques. Consulta la disponibilidad y el precio de El Vicenç de la Mar 2. Noa Boutique Hotel Otro de los hoteles a 
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['restaurantes en Roma']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_6123260_1750634314
+TIMESTAMP: 2025-06-22 19:18:34
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['restaurantes en Roma']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:18:34",
+  "title": "Dónde comer en Roma ¡12 Restaurantes Top! + Mapa Gratis",
+  "url": "https://soyunblogdeviajes.com/donde-comer-en-roma/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+Patricia Pozuelo Actualizado: 02/10/2024 No hay mejor manera de conocer un lugar, que hacerlo a través de su gastronomía . Si estás planeando un viaje a la capital italiana y te preguntas dónde comer en Roma, espero que esta guía gastronómica te sirva de ayuda. Lo que me gusta de Roma es que no solo es una ciudad famosa por sus monumentos, sino también por sus sabores únicos , con una cocina reconocida mundialmente. En nuestro último viaje visitamos muchos de los lugares más destacados de la ciudad peros disfrutamos sobre todo con su oferta culinaria . Desde pizzas napolitanas, la mejor pasta de la ciudad o ricos helados artesanales y buen café de especialidad , ¡no nos hemos dejado nada! Más abajo está el mapa con las ubicaciones de todos los locales Contenido Los mejores restaurantes donde comer en Roma Auténtica pasta fresca como la que se come en Italia es difícil encontrar en otro lugar, además de sus pizzas recién hechas o los mejores platos de carne y marisco. En Roma hay acogedoras trattorias de película y elegantes restaurantes gourmet donde los precios varían mucho dependiendo de la zona. Como en todas las ciudades turísticas, cerca de los lugares más emblemáticos es más probable que encuentres peor producto y precios mucho más disparados. Intenta evitar estos locales tan caros donde vemos que claramente enfocan su carta al turista. En este artículo vas a encontrar los 12 locales donde comer en Roma más destacados, con mejores valoraciones y nuestros favoritos. Restaurantes , cafeterías de especialidad , heladerías y las mejores burgers en Roma. ¡Tip de viaje! Recuerda que es muy importante contratar un seguro de viaje para tener cobertura médica en el país de destino. Te recomendamos IATI Seguros, además con descuento. Descuento en IATI 1. Osteria Da Fortunata Si buscas un auténtico sabor italiano te recomiendo ir a la Osteria Da Fortunata. Este restaurante está escondido en una callejuela cerca de Campo de’ Fiori y su menú ofrece una variedad de platos c
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['restaurantes en Roma']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_4658991_1750634332
+TIMESTAMP: 2025-06-22 19:18:52
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['guía turística Roma']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:18:52",
+  "title": "Hoteles en Roma: zonas y precios de referencia | Conociendo Italia",
+  "url": "https://www.conociendoitalia.com/hoteles-en-roma-zonas-precios-de-referencia/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+¿Cúales son los mejores Hoteles en Roma? . Roma cuenta con una importante oferta de alojamientos para todos los gustos. Desde lujosos hoteles 5 estrellas con vista a los monumentos más importantes, pasando por hoteles confortables a buen precio hasta habitaciones compartidas en los modernos hostales juveniles. En Roma encontrarán siempre un hotel para vuestro budget y gusto. En este post veremos las mejores zonas donde alojarse en Roma, los precios de referencia y nuestras recomendaciones para encontrar alojamiento en Roma. ¿El secreto para encontrar los mejores hoteles en Roma? ¡Fácil!, elegir la mejor zona según vuestro viaje, y buscar el hotel perdiendo la menor cantidad de tiempo posible. En Roma se encuentran decentes hoteles con precios bastante razonables. Digamos que los precios mínimos de un hotel 3 estrellas oscilan entre 60 y 70 euros por una habitación doble, incluso a pocos pasos de las mayores atracciones turísticas de la ciudad. Para los que buscan hoteles económicos pero de buena calidad, o para aquellos viajadores que lo único que desean es un «lugar decente donde dormir» sin duda alguna considero que la zona que mejor zona donde pernoctar es en Termini, a los alrededores de la estación de trenes. Aquí se encuentran hoteles de todo tipo, pero indiscutiblemente los hoteles con la mejor relación calidad – precio – ubicación de toda la ciudad, Incluso hostales y Bed & Breakfast para los mochileros, con precios adapto a todos los bolsillos. Aunque la zona puede llegar a ser bastante rumorosa durante la noche, es un punto estratégico para movilizarse por la ciudad pues allí se encuentra la principal estación de metro, numerosas lineas de buses, tranvía y filobus que conectan con cualquier otra zona de Roma, y es el principal terminal de taxi de toda la ciudad. Desde la estación de trenes podrán llegar y partir hacia los principales destinos italianos. Además de estar muy bien conectada con los Aeropuertos de Roma. Otras buenas zonas donde pernoctar en la
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['guía turística Roma']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_9192730_1750634333
+TIMESTAMP: 2025-06-22 19:18:53
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['guía turística Roma']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:18:53",
+  "title": "Guía de viaje a Roma – Consejos, itinerarios paso a paso | Conociendo Italia",
+  "url": "https://www.conociendoitalia.com/guia-turistica-de-roma-consejos-itinerarios-atracciones/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+Si están preparando vuestro viaje a Roma , en este post encontrarán toda la información más importantes para organizar vuestro viaje. Roma es uno de los destinos más turísticos de Italia y el mundo. Visitar Roma es siempre una aventura, son innumerables las atracciones que visitar e infinitas las emociones que regala. En esta Guía de Viajes a Roma, compartiremos con uds. nuestros consejos, ideas de itinerarios paso a paso, las principales atracciones que visitar, que hacer, donde dormir, los platos típicos que degustar y mucho más!, para que disfruten al máximo vuestro viaje. Disfrutando Roma Roma, la Ciudad Eterna, con más de 2,700 años de historia, la capital italiana es un verdadero museo al aire libre. En esta guía de viaje a Roma, te proporcionaremos consejos prácticos, itinerarios detallados y todo lo que necesitas saber para aprovechar al máximo tu visita. Preparando el Viaje – Consejos y guías prácticas Antes de viajar a cualquier ciudad recomiendo siempre leer lo más posible sobre las atracciones turísticas y lugares interesantes que visitar. Roma ofrece mucho y es muy fácil perderse de cosas increíbles simplemente porque no lo leímos antes. Aquí les dejos las principales atracciones que visitar en Roma!: Visitar el Coliseo de Roma – Entradas, horarios y precios ¿Cómo subir al último piso del Coliseo Romano? ¿Cúal es la página oficial para comprar entradas al Coliseo? Visitar Plaza Navona – Que ver y como llegar Fuente de Trevi – Leyenda y como llegar Piramide de Caio Cestia en Roma – Como llegar La Escalera Santa de Cristo en Roma Visitar el Castillo Sant’Angelo – Roma Visitar las Catacumbas de Roma – Cuales y donde quedan Subir a la Terraza del Pincio – Vista panorámica de Roma Visitar la Capilla Sixtina – Entradas, horarios y precios Consejos Prácticos para Visitar Roma Mejor Época para Visitar Roma tiene un encanto particular en cada estación del año, pero las mejores épocas para visitarla son la primavera (abril a junio) y el otoño (septiembre a octubr
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['guía turística Roma']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_4065615_1750634345
+TIMESTAMP: 2025-06-22 19:19:05
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['qué visitar en Roma']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:19:05",
+  "title": "⭐ 30 lugares que ver en Roma en 2025: Guía con Mapa",
+  "url": "https://mundoxdescubrir.com/que-ver-en-roma/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+30 lugares que ver en Roma: la ciudad eterna ¿Qué ver en Roma en 1, 2 y 3 días? Viajamos a la ciudad conocida mundialmente como “ la ciudad eterna ” es una de las ciudades más bonitas del mundo y centro de una las civilizaciones antiguas más importantes de la historia. Esta gran metrópoli es un verdadero museo al aire libre que posee uno de los centros históricos más grande de Europa que alberga joyas arquitectónicas, monumentos y ruinas que han perdurado durante milenios. Además de sumergirte en su rica historia, Roma es también un paraíso gastronómico, donde podrás disfrutar de platos deliciosos como la pasta, la pizza y los gelatos. Desde el Coliseo hasta el Vaticano, pasando por la Fontana di Trevi y el Panteón, cada rincón de Roma te sorprenderá. ¡No dejes pasar la oportunidad de explorar esta ciudad única! Planifica tu viaje y conoce Roma como nunca antes. ¿Te lo vas a perder? Si estás preparando tu viaje a Roma recuerda incluir como uno de los imprescindibles en tu lista viajar con seguro de viaje . Nosotros siempre viajamos con IATI Seguros que cuenta con una gran variedad de tipos de seguro que se adaptan a tu viaje, necesidades y presupuesto. Con nuestro enlace tienes un 5% de descuento en cualquier seguro que contrates. Listado de contenidos Los 30 mejores lugares que ver y visitar en Roma 1. Piazza Navona, un emblema de Roma 2. Panteón de Agripa 3. Templo de Adriano 4. Gallería Doria Pamphilj, un lugar clave que visitar en Roma 5. Fontana di Trevi, un imprescindible que ver en Roma 6. Piazza de España de Roma 7. Villa Borghese, la zona verde más grande de Roma 8. Piazza del Popolo 9. Puentes de Roma 10. Barrio del Trastevere, el barrio más famoso de Roma 11. Basílica de Santa María del Trastevere 12. Iglesia de Santa María dell’Orto 13. Teatro Marcelo, un lugar por descubrir en Roma 14. Monumento a Víctor Manuel II 15. Plaza Campidoglio de Roma 16. Museos Capitolinos, los mejores museos que ver en Roma 17. Basílica de Santa María la Mayor 18. Coliseo de 
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['qué visitar en Roma']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+

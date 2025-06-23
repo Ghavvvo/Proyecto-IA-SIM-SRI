@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional, Tuple
-from gemini_config import GeminiClient, gemini_generate
+from core.gemini_config import GeminiClient, gemini_generate
 import numpy as np
 import random
 from sklearn.feature_extraction.text import TfidfVectorizer

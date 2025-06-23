@@ -3,7 +3,7 @@ from typing import List
 import google.generativeai as genai
 import json
 
-from simulation_utils import format_as_simulation_input
+from utils.simulation_utils import format_as_simulation_input
 
 
 class CoordinatorAgent(Agent):

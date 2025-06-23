@@ -1,12 +1,12 @@
-from agent_crawler import CrawlerAgent
-from agent_rag import RAGAgent
-from agent_coordinator import CoordinatorAgent
-from agent_interface import InterfaceAgent
-from agent_context import ContextAgent
-from agent_route import RouteAgent
-from agent_tourist_guide import TouristGuideAgent
-from agent_simulation import TouristSimulationAgent
-from urls import starting_urls
+from agents.agent_crawler import CrawlerAgent
+from agents.agent_rag import RAGAgent
+from agents.agent_coordinator import CoordinatorAgent
+from agents.agent_interface import InterfaceAgent
+from agents.agent_context import ContextAgent
+from agents.agent_route import RouteAgent
+from agents.agent_tourist_guide import TouristGuideAgent
+from agents.agent_simulation import TouristSimulationAgent
+from utils.urls import starting_urls
 from dotenv import load_dotenv
 
 # Suprimir warning de flaml.automl

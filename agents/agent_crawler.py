@@ -1,5 +1,5 @@
 from autogen import Agent
-from crawler import TourismCrawler
+from core.crawler import TourismCrawler
 from datetime import datetime
 
 class CrawlerAgent(Agent):
@@ -74,7 +74,7 @@ class CrawlerAgent(Agent):
             
             try:
                 # Importar y usar ACO
-                from ant_colony_crawler import integrate_aco_with_crawler
+                from utils.ant_colony_crawler import integrate_aco_with_crawler
                 import time
                 
                 # Ejecutar exploración ACO con consulta mejorada y profundidad

@@ -1,0 +1,140 @@
+================================================================================
+CHUNKS DE CRAWLER - 2025-06-22 19:52:07
+================================================================================
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_3090457_1750636380
+TIMESTAMP: 2025-06-22 19:53:00
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['museos en Berlin']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:53:00",
+  "title": "Museums in Berlin – Berlin.de",
+  "url": "https://www.berlin.de/en/museums/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+© dpa Top 10: Berlins Most Visited Museums The Institute for Museum Research of the Prussian Cultural Heritage Foundation annually publishes a list of the most visited museums. These are the the Top 10 museums in Berlin. more © Courtesy Artist, Kraupa-Tuskany Zeidler, White Cube / Nationalgalerie – Staatliche Museen zu Berlin, Zdeněk Porcal – Studio Flusser Exhibitions in Berlin See the best museum, art and photography exhibitions at Berlin's top museums, galleries and event venues. more © dpa History of Berlin History of the city of Berlin: eras, history of the districts, museums and monuments, National Socialism and the Berlin Wall. more © JFL Photography - stock.adobe.com River Cruises Boat trips in Berlin on Spree river, on Landwehr canal or over the Wannsee. more © dpa Berlin's Districts Information on residential areas, infrastructure, events, local authorities and leisure activities. more © dpa Attractions & Sights Berlin’s top attractions, palaces and monuments with address, photos, public transport details and more © Jim Kroft Events & Culture in Berlin Highlights of the Berlin culture program including tips for the best concerts, exhibitions, trade fairs, seasonal events and specials. more © Courtesy Artist, Kraupa-Tuskany Zeidler, White Cube / Nationalgalerie – Staatliche Museen zu Berlin, Zdeněk Porcal – Studio Flusser Exhibitions in Berlin See the best museum, art and photography exhibitions at Berlin's top museums, galleries and event venues. more Museums in Berlin A-Z A Akademie der Künste Pariser Platz Allied Museum Alte Nationalgalerie Altes Museum Anne Frank Zentrum Anoha - Children's World of the Jewish Museum B Bauhaus Archive Berlin Story Bunker Berliner Unterwelten Museum Berlinische Galerie Post Mill in Berlin-Marzahn Bode Museum Bröhan Museum Brücke Museum C C/O Berlin Computerspielemuseum D DDR Museum DesignPanoptikum - Surreal Museum for Industrial Objects Deutsche Bank KunstHalle Disgusting Food Museum Berlin Dokumentationszentrum Berliner
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['museos en Berlin']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_2206273_1750636381
+TIMESTAMP: 2025-06-22 19:53:01
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['museos en Berlin']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:53:01",
+  "title": "Guided City Tours – Berlin.de",
+  "url": "https://www.berlin.de/en/tourism/guides/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+© BerlinWalks Guided Tour: Discover Berlin This guided tour offers an exciting and comprehensive overview of the city's highlights and refreshes your knowledge of Berlin history in an entertaining way. more © OBW Guided City Tour: Express WWII & Cold War This city tour takes participants to the most important sights from the Second World War and the Cold War in Berlin. more © BerlinWalks Walking Tour: Queer Berlin The Queer Berlin city tour immerses participants in Berlin's famous LGBTIQ+ scene. more © BerlinWalks Berlin Street Art Tour From large mural to small sticker: This walking tour through Kreuzberg and Friedrichshain shows Berlin's colourful street art culture. more © Sectret Tours Hidden Backyards in Mitte On the guided walk in Berlin-Mitte, you will not only discover hidden backyards with their exciting stories, but also follow in the footsteps of Jewish life in Berlin. more © dpa Private Van Tour: Sachsenhausen Concentration Camp On the tour to the former Sachsenhausen concentration camp visitors learn about the darkest time in German history, the Nazi crimes during the Second World War. more © Martina Baltkalne Protest and the City: Berlin and the History of Resistance This guided tour illuminates Berlin's protest culture and shows important places of resistance all over the city center. more © Beyond and Beneath Tours Hansaviertel: A Design for Life The city tour through the Hansaviertel not only focuses on the pioneering architecture of the neighbourhood in the west of Berlin, but also on the exciting history of the district. more © Martina Baltkalne Beyond the Graves: The Fights and Flights of Invalidenfriedhof Today, the Invalidenfriedhof cemetery in Mitte is an idyllic green space in the middle of the city - but in the past, the deadly border of the Berlin Wall ran through the graveyard. more © Martina Baltkalne Broken Utopias: The Many Lives of Stalinallee Stalinallee, now Karl-Marx-Allee, was once the prestigious boulevard of the GDR. This guided 
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['museos en Berlin']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_7249680_1750636392
+TIMESTAMP: 2025-06-22 19:53:12
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['guía turística Berlin']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:53:12",
+  "title": "Berlín - Guia de Alemania",
+  "url": "https://www.guiadealemania.com/berlin/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+Conocida por: Museos, arte, conciertos, cicloturismo, shopping Berlín es una ciudad estado y a su vez es capital de Alemania ; se trata de una urbe impregnada de encanto histórico, desde las viejas e inalterables calles del este de hace 50 años, hasta la grandiosa arquitectura del Museumsinsel y Unter den Linden o el parque Tiergarten . También destaca por su animada vida nocturna , que ofrece variedad para todo tipo de gustos, como actividades artísticas, culturales, recreativas y demás. Entre los lugares que ver en Berlín , está la Isla de los Museos y el Muro de Berlín . Destacada por ser capital de los eventos internacionales , con más de 400 ferias y congresos entre ellas la Semana verde Internacional, la Bolsa internacional de Turismo (ITB), entre otros. SPor su vida cultural , que abarca museos impresionantes, eventos constantes, cabaret, espectáculos y conciertos todo el año. También por ser una capital tranquila , puesto que el ruido, tránsito agobiante, y la contaminación no forman parte de su hermoso paisaje. Pero lo primordial que se destaca de Berlín es su Arquitectura , como lo podemos ver en la Puerta de Brandemburgo , en la Catedral de Berlín y más. Berlín es famosa por sus veranos largos y soleados (desde junio a finales de agosto) por lo que éste es el mejor momento para pasar unas vacaciones , cuando los cafés al aire libre en los parques y jardines (en especial el Tiergarten ) cobran vida junto con los mejores acontecimientos. Conoce Berlín por meses: – Berlín en noviembre – Berlín en diciembre Más información sobre Clima en Berlín La gastronomía está ampliamente influenciada por la de la región de Brandeburgo , incluyendo entre sus principales ingredientes a las carnes , como la de cerdo, aves y pescado blanco, también presentan verduras y legumbres , siendo infaltables la col, nabos y papas. Los centros comerciales de la cuidad de Berlín se sitúan a unos kilómetros de distancia. Cada barrio dispone de los centros comerciales que se denomina pas
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['guía turística Berlin']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
+====================================================================================================
+INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
+====================================================================================================
+
+### INFORMACIÓN DEL DOCUMENTO ###
+ID: aco_doc_201210_1750636406
+TIMESTAMP: 2025-06-22 19:53:26
+PROCESADOR: ACO
+
+### METADATA (como se guarda en ChromaDB) ###
+{
+  "extraction_method": "aco",
+  "keywords_used": "['qué visitar en Berlin']",
+  "source": "aco_google_crawler",
+  "timestamp": "2025-06-22 19:53:26",
+  "title": "⭐ 17 lugares que ver en Berlín en 2025: capital de Alemania",
+  "url": "https://mundoxdescubrir.com/lugares-que-ver-en-berlin/",
+}
+
+### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+Tamaño: 2000 caracteres
+--------------------------------------------------------------------------------
+17 lugares que ver en Berlín: capital de Alemania ¿Qué ver en Berlín en 1, 2 o 3 días? Viajamos a la capital de Alemania considerada como una de las ciudades más verdes de Europa. En tu viaje podrás disfrutar de una ciudad llena de contrastes y sobre todo llena de historia por haber sido uno de los epicentros de la Segunda Guerra Mundial. Marcada por la guerra, Berlín ha sabido resurgir y transformarse para convertirse en una ciudad europea cultural, emergente y global. En tu visita a Berlín podrás conocer algunos de los mejores museos de Europa además de degustar su curiosa gastronomía donde las berlinas y el currywurst no pueden faltar nunca. ¿Te lo vas a perder? Si estás preparando tu viaje a Berlín recuerda incluir como uno de los imprescindibles en tu lista viajar con seguro de viaje . Con nuestro enlace tienes un 5% de descuento en cualquier seguro que contrates. No arriesgues tus vacaciones sean donde sean. Listado de contenidos Los 17 imprescindibles que visitar en Berlín 1. Puerta de Brandeburgo, uno de los símbolos de Berlín 2. Edificio del Reichstag, el Parlamento de Berlín 3. Parque Tiergarten, el pulmón verde de Berlín 4. Monumento al Holocausto de Berlín 5. Unter den Linden, la calle más importante de Berlín 6. Isla Museos de Berlín un imprescindible 7. Catedral de Berlín 8. Barrio Nikolaiviertel, el barrio más antiguo de Berlín 9. Plaza Alexander, la plaza más turística de Berlín 10. Torre de televisión de Berlín 11. Haus Schwarzenberg, una galería de arte urbano en Berlín 12. Checkpoint Charlie, un lugar que ver en Berlín 13. Topografía del terror en Berlín 14. Museo Judío de Berlín 15. Muro de Berlín, East Side Gallery 16. Iglesia Kaiser Wilhelm, un memorial que visitar en Berlín 17. Palacio Charlottenburg, un plan que hacer en Berlín ¿Dónde alojarse en Berlín? Mejores tours que hacer en Berlín ¿Cómo llegar a Berlín? ¿Cómo ir del aeropuerto hasta Berlín? ¿Cómo moverse por Berlín? Mapa itinerario que visitar en Berlín en 2 días ¿Dónde comer en Berlín
+--------------------------------------------------------------------------------
+
+### RESUMEN DE INFORMACIÓN CLAVE ###
+PALABRAS CLAVE UTILIZADAS: ['qué visitar en Berlin']
+MÉTODO DE EXTRACCIÓN: aco
+
+====================================================================================================
+FIN DE CHUNK
+====================================================================================================
+
+
