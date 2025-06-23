@@ -2,9 +2,18 @@ import numpy as np
 import random
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
-import matplotlib.pyplot as plt
 from typing import Dict, List, Tuple, Any
 from autogen import Agent
+
+# Configure matplotlib before importing pyplot
+import os
+import sys
+# Check if we're in experiment/testing mode
+if any('experiment' in arg for arg in sys.argv) or os.environ.get('TESTING', '').lower() == 'true':
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+
+import matplotlib.pyplot as plt
 
 class TouristSimulationAgent(Agent):
     def __init__(self, name: str, tourist_profile: str = "average"):
