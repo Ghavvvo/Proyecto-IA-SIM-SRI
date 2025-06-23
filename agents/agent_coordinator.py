@@ -1172,6 +1172,59 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
 
         return {}
 
+    def _get_destination_from_context(self) -> str:
+        """
+        Intenta obtener el destino del contexto de la conversación actual
+        
+        Returns:
+            String con el destino encontrado o cadena vacía si no se encuentra
+        """
+        try:
+            # Obtener el contexto de la conversación
+            context_result = self.context_agent.receive({'type': 'get_context'}, self)
+            
+            if context_result['type'] == 'context_data':
+                history = context_result.get('history', [])
+                
+                if not history:
+                    return ""
+                
+                # Usar Gemini para extraer el destino del historial
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                # Construir el historial como texto
+                history_text = ""
+                for interaction in history[-5:]:  # Últimas 5 interacciones
+                    history_text += f"Usuario: {interaction['query']}\n"
+                    history_text += f"Sistema: {interaction['response'][:200]}...\n\n"
+                
+                prompt = f"""
+                Analiza el siguiente historial de conversación y extrae el destino turístico principal.
+                
+                Historial:
+                {history_text}
+                
+                INSTRUCCIONES:
+                - Busca menciones de ciudades, países o lugares turísticos
+                - Si hay múltiples destinos, devuelve el más reciente o relevante
+                - Si no hay un destino claro, devuelve una cadena vacía
+                
+                Devuelve SOLO el nombre del destino (ciudad o país), sin explicaciones.
+                Si no hay destino, devuelve exactamente: "ninguno"
+                """
+                
+                response = model.generate_content(prompt)
+                result = response.text.strip()
+                
+                if result.lower() == "ninguno" or not result:
+                    return ""
+                
+                return result
+                
+        except Exception as e:
+            print(f"Error obteniendo destino del contexto: {e}")
+            return ""
+    
     def _extract_topic_keywords(self, query: str) -> list:
         """
         Extrae palabras clave del tema sobre el que se necesita más información
@@ -1210,6 +1263,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
     def _create_specific_search_queries(self, destination: str, interests: List[str]) -> List[str]:
         """
         Crea consultas de búsqueda específicas para cada combinación de destino + interés
+        IMPORTANTE: Siempre incluye el destino en TODAS las búsquedas
 
         Args:
             destination: Destino del viaje
@@ -1234,32 +1288,56 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             'culture': ['sitios culturales', 'patrimonio cultural', 'lugares históricos']
         }
 
-        # Si hay destino, crear consultas específicas para cada interés
+        # SIEMPRE incluir el destino en las búsquedas
         if destination:
+            # Crear consultas específicas para cada interés CON el destino
             for interest in interests:
                 # Obtener términos de búsqueda para este interés
                 search_terms = interest_mapping.get(interest.lower(), [interest])
 
-                # Crear múltiples consultas para cada interés
+                # Crear múltiples consultas para cada interés, SIEMPRE con el destino
                 for term in search_terms:
                     query = f"{term} en {destination}"
                     search_queries.append(query)
 
-                # También agregar una consulta simple
+                # También agregar una consulta simple con el destino
                 if interest not in interest_mapping:
                     search_queries.append(f"{interest} en {destination}")
 
-        # Si no hay destino pero hay intereses, buscar por intereses generales
-        elif interests:
-            for interest in interests:
-                search_terms = interest_mapping.get(interest.lower(), [interest])
-                for term in search_terms:
-                    search_queries.append(f"{term} turismo")
+            # Si no hay intereses específicos, buscar información general del destino
+            if not interests:
+                search_queries.extend([
+                    f"turismo en {destination}",
+                    f"qué hacer en {destination}",
+                    f"lugares turísticos {destination}",
+                    f"atracciones principales {destination}"
+                ])
 
-        # Agregar consulta general si hay destino
+        # Si no hay destino pero hay intereses, incluir el contexto de la conversación
+        elif interests:
+            # Intentar obtener el destino del contexto de la conversación
+            context_destination = self._get_destination_from_context()
+            
+            if context_destination:
+                # Si encontramos un destino en el contexto, usarlo
+                for interest in interests:
+                    search_terms = interest_mapping.get(interest.lower(), [interest])
+                    for term in search_terms:
+                        search_queries.append(f"{term} en {context_destination}")
+            else:
+                # Solo si no hay destino en absoluto, buscar por intereses generales
+                for interest in interests:
+                    search_terms = interest_mapping.get(interest.lower(), [interest])
+                    for term in search_terms:
+                        search_queries.append(f"{term} turismo")
+
+        # Agregar consultas generales si hay destino
         if destination:
-            search_queries.append(f"guía turística {destination}")
-            search_queries.append(f"qué visitar en {destination}")
+            search_queries.extend([
+                f"guía turística {destination}",
+                f"qué visitar en {destination}",
+                f"información turística {destination}"
+            ])
 
         # Eliminar duplicados manteniendo el orden
         seen = set()
@@ -1270,7 +1348,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                 unique_queries.append(query)
 
         # Limitar a un máximo razonable de consultas
-        return unique_queries[:10]
+        return unique_queries[:12]  # Aumentado ligeramente el límite
 
     def _estimate_days_needed(self, num_places: int, duration_str: str) -> dict:
         """
