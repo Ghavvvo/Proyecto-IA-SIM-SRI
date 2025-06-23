@@ -40,7 +40,7 @@ class GeminiConfig:
         self.api_key = os.getenv('GOOGLE_API_KEY')
         if not self.api_key:
             # Intentar con la key hardcodeada como fallback (no recomendado en producción)
-            self.api_key = "AIzaSyDmW-QXAeksN6hacpCMVpTQnOEAD8MLG00"
+            self.api_key = "AIzaSyCuiFY0aCJEaOndmd_jEHZIabbA23TWn6E"
         
         # Configurar Gemini
         genai.configure(api_key=self.api_key)
