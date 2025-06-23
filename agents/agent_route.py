@@ -7,6 +7,8 @@ from geopy.distance import geodesic
 from deap import base, creator, tools, algorithms
 from typing import List, Dict, Tuple, Callable, Any, Optional
 import functools
+import json
+from utils import format_as_simulation_input
 
 class RouteAgent(Agent):
     def __init__(self, name: str, user_agent: str = "route_optimizer"):
@@ -46,6 +48,9 @@ class RouteAgent(Agent):
             
             if msg_type == 'optimize_route':
                 return self._handle_optimize_route(message)
+                
+            elif msg_type == 'generate_itinerary':
+                return self._handle_generate_itinerary(message)
                 
             elif msg_type == 'get_status':
                 return self._get_status()
@@ -207,3 +212,365 @@ class RouteAgent(Agent):
         for i in range(len(route) - 1):
             total += matrix[route[i]][route[i+1]]
         return total
+    
+    def _handle_generate_itinerary(self, message: Dict) -> Dict:
+        """
+        Genera un itinerario completo con rutas optimizadas
+        
+        Args:
+            message: Diccionario con:
+                - places: Lista de lugares a visitar
+                - preferences: Preferencias del usuario (destino, intereses, duración, etc.)
+                - days: Número de días para el itinerario (opcional)
+                
+        Returns:
+            Diccionario con el itinerario generado
+        """
+        try:
+            places = message.get('places', [])
+            preferences = message.get('preferences', {})
+            days = message.get('days', 1)
+            
+            if len(places) < 2:
+                return {
+                    'type': 'error',
+                    'msg': "Se necesitan al menos 2 lugares para generar un itinerario"
+                }
+            
+            # Estimar días si no se especifica
+            if days == 1 and len(places) > 6:
+                days = self._estimate_days_needed(len(places), preferences.get('duration', ''))
+            
+            # Distribuir lugares por días
+            places_per_day = self._distribute_places_by_days(places, days)
+            
+            # Optimizar rutas para cada día
+            optimized_routes = {}
+            total_distance = 0
+            total_travel_time = 0
+            
+            for day_num, day_places in enumerate(places_per_day, 1):
+                if len(day_places) >= 2:
+                    # Optimizar ruta del día
+                    route_result = self._handle_optimize_route({
+                        'places': day_places,
+                        'parameters': {}
+                    })
+                    
+                    if route_result['type'] == 'route_result':
+                        # Calcular tiempos de viaje entre lugares
+                        travel_times = self._calculate_travel_times(route_result['order'])
+                        
+                        # Calcular tiempo total de viaje del día
+                        day_travel_time = sum(t['time_minutes'] for t in travel_times.values())
+                        
+                        optimized_routes[f'day_{day_num}'] = {
+                            'places': route_result['order'],
+                            'distance_km': route_result['total_distance_km'],
+                            'coordinates': self._get_places_coordinates(route_result['order']),
+                            'travel_times': travel_times,
+                            'total_travel_time_min': day_travel_time
+                        }
+                        total_distance += route_result['total_distance_km']
+                        total_travel_time += day_travel_time
+                else:
+                    # Si solo hay un lugar en el día
+                    optimized_routes[f'day_{day_num}'] = {
+                        'places': day_places,
+                        'distance_km': 0,
+                        'coordinates': self._get_places_coordinates(day_places),
+                        'travel_times': {},
+                        'total_travel_time_min': 0
+                    }
+            
+            # Generar itinerario formateado
+            formatted_itinerary = self._format_itinerary_with_routes(
+                optimized_routes, 
+                preferences,
+                total_distance
+            )
+            
+            # Generar JSON para simulación
+            simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
+            
+            return {
+                'type': 'itinerary_generated',
+                'itinerary': formatted_itinerary,
+                'routes': optimized_routes,
+                'total_distance_km': round(total_distance, 2),
+                'days': days,
+                'places_count': len(places),
+                'simulation_json': simulation_json
+            }
+            
+        except Exception as e:
+            return {
+                'type': 'error',
+                'msg': f"Error generando itinerario: {str(e)}"
+            }
+    
+    def _estimate_days_needed(self, num_places: int, duration_str: str) -> int:
+        """Estima el número de días necesarios basado en la cantidad de lugares"""
+        import re
+        
+        # Si hay duración especificada, intentar extraerla
+        if duration_str and duration_str != 'No especificada':
+            numbers = re.findall(r'\d+', str(duration_str).lower())
+            if numbers:
+                return int(numbers[0])
+            elif 'semana' in duration_str.lower():
+                return 7
+            elif 'fin de semana' in duration_str.lower():
+                return 2
+        
+        # Estimar basado en número de lugares (3-4 lugares por día)
+        return max(1, (num_places + 2) // 3)
+    
+    def _distribute_places_by_days(self, places: List[str], days: int) -> List[List[str]]:
+        """Distribuye los lugares equitativamente entre los días"""
+        if days <= 1:
+            return [places]
+        
+        places_per_day = len(places) // days
+        remainder = len(places) % days
+        
+        distribution = []
+        start_idx = 0
+        
+        for day in range(days):
+            end_idx = start_idx + places_per_day + (1 if day < remainder else 0)
+            distribution.append(places[start_idx:end_idx])
+            start_idx = end_idx
+        
+        return distribution
+    
+    def _get_places_coordinates(self, places: List[str]) -> List[Dict[str, float]]:
+        """Obtiene las coordenadas de una lista de lugares"""
+        coordinates = []
+        for place in places:
+            try:
+                lat, lon = self._get_coordinates(place)
+                coordinates.append({
+                    'place': place,
+                    'latitude': lat,
+                    'longitude': lon
+                })
+            except:
+                coordinates.append({
+                    'place': place,
+                    'latitude': None,
+                    'longitude': None
+                })
+        return coordinates
+    
+    def _calculate_travel_times(self, places: List[str]) -> Dict[str, float]:
+        """
+        Calcula los tiempos de viaje entre lugares consecutivos usando coordenadas reales
+        
+        Args:
+            places: Lista ordenada de lugares
+            
+        Returns:
+            Diccionario con tiempos de viaje en minutos entre lugares consecutivos
+        """
+        travel_times = {}
+        
+        for i in range(len(places) - 1):
+            origin = places[i]
+            destination = places[i + 1]
+            key = f"{origin} → {destination}"
+            
+            try:
+                # Obtener coordenadas de ambos lugares
+                origin_coords = self._get_coordinates(origin)
+                dest_coords = self._get_coordinates(destination)
+                
+                # Calcular distancia en kilómetros
+                distance_km = geodesic(origin_coords, dest_coords).kilometers
+                
+                # Calcular tiempo según el medio de transporte
+                # Asumimos una combinación de caminar y transporte público en ciudad
+                if distance_km <= 1.0:
+                    # Distancias cortas: caminar (5 km/h)
+                    time_minutes = (distance_km / 5) * 60
+                    travel_times[key] = {
+                        'distance_km': round(distance_km, 2),
+                        'time_minutes': round(time_minutes),
+                        'mode': 'walking'
+                    }
+                elif distance_km <= 5.0:
+                    # Distancias medias: transporte público (20 km/h promedio)
+                    time_minutes = (distance_km / 20) * 60
+                    travel_times[key] = {
+                        'distance_km': round(distance_km, 2),
+                        'time_minutes': round(time_minutes),
+                        'mode': 'public_transport'
+                    }
+                else:
+                    # Distancias largas: taxi/auto (30 km/h promedio en ciudad)
+                    time_minutes = (distance_km / 30) * 60
+                    travel_times[key] = {
+                        'distance_km': round(distance_km, 2),
+                        'time_minutes': round(time_minutes),
+                        'mode': 'taxi'
+                    }
+                    
+            except Exception as e:
+                # Si no se pueden obtener coordenadas, estimar tiempo basado en promedio
+                print(f"Error calculando tiempo entre {origin} y {destination}: {e}")
+                travel_times[key] = {
+                    'distance_km': 2.0,  # Distancia promedio estimada
+                    'time_minutes': 15,   # Tiempo promedio estimado
+                    'mode': 'estimated'
+                }
+        
+        return travel_times
+    
+    def _format_itinerary_with_routes(self, routes: Dict, preferences: Dict, total_distance: float) -> str:
+        """
+        Formatea el itinerario con las rutas optimizadas usando Gemini
+        """
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            # Preparar información de rutas con tiempos de viaje calculados
+            routes_info = ""
+            travel_times_info = ""
+            
+            for day_key, route_data in sorted(routes.items()):
+                day_num = day_key.replace('day_', '')
+                places_order = " → ".join(route_data['places'])
+                distance = route_data['distance_km']
+                total_time = route_data.get('total_travel_time_min', 0)
+                
+                routes_info += f"\nDía {day_num}: {places_order}"
+                routes_info += f"\n  - Distancia total: {distance:.1f} km"
+                routes_info += f"\n  - Tiempo total de desplazamiento: {total_time} minutos"
+                
+                # Detallar tiempos de viaje entre lugares
+                travel_times_info += f"\n\nTiempos de desplazamiento Día {day_num}:"
+                for segment, time_data in route_data.get('travel_times', {}).items():
+                    travel_times_info += f"\n- {segment}:"
+                    travel_times_info += f"\n  * Distancia: {time_data['distance_km']} km"
+                    travel_times_info += f"\n  * Tiempo: {time_data['time_minutes']} minutos"
+                    travel_times_info += f"\n  * Modo: {time_data['mode'].replace('_', ' ')}"
+            
+            prompt = f"""
+            Eres un experto planificador de viajes y guía turístico. Crea un itinerario detallado y atractivo.
+
+            Rutas optimizadas por día con distancias y tiempos calculados:
+            {routes_info}
+
+            Tiempos de desplazamiento detallados (calculados con coordenadas reales):
+            {travel_times_info}
+
+            Preferencias del viajero:
+            - Destino: {preferences.get('destination', 'No especificado')}
+            - Intereses: {', '.join(preferences.get('interests', ['turismo general']))}
+            - Duración: {preferences.get('duration', 'No especificada')}
+            - Presupuesto: {preferences.get('budget', 'No especificado')}
+
+            INSTRUCCIONES IMPORTANTES:
+            1. USA EXACTAMENTE el orden de lugares proporcionado en las rutas optimizadas
+            2. USA EXACTAMENTE los tiempos de desplazamiento calculados que te proporciono
+            3. Para cada desplazamiento, indica el modo de transporte recomendado (walking, public transport, taxi)
+            4. Incluye horarios específicos para cada lugar considerando:
+               - Los tiempos de desplazamiento reales proporcionados
+               - Tiempo de visita apropiado para cada tipo de lugar:
+                 * Museos: 1.5-2 horas
+                 * Parques grandes: 2-3 horas
+                 * Monumentos: 30-45 minutos
+                 * Restaurantes: 1-1.5 horas
+            5. Añade recomendaciones de restaurantes para almuerzo y cena
+            6. Incluye consejos prácticos específicos
+            7. Usa emojis para hacer el itinerario más visual
+            8. Si los lugares están en diferentes ciudades, sugiere dividir por ciudades
+
+            Formato deseado:
+            🌟 ITINERARIO OPTIMIZADO PARA {preferences.get('destination', 'TU DESTINO').upper()}
+
+            📊 RESUMEN:
+            - Días totales: {len(routes)}
+            - Lugares a visitar: {sum(len(r['places']) for r in routes.values())}
+            - Distancia total: {total_distance:.1f} km
+
+            📅 DÍA 1: [Título descriptivo]
+            📍 Ruta: [Lugar 1] → [Lugar 2] → [Lugar 3]
+            📏 Distancia del día: X.X km
+
+            🕐 9:00-10:30 | [Lugar 1]
+            📝 [Descripción breve y qué hacer/ver]
+            💡 Consejo: [Tip específico]
+
+            🚶 10:30-10:45 | Desplazamiento (X.X km, 15 min caminando)
+
+            🕑 10:45-12:30 | [Lugar 2]
+            📝 [Descripción y actividades]
+            💡 Consejo: [Tip específico]
+
+            🍽️ 12:30-14:00 | Almuerzo
+            📍 Recomendación: [Restaurante cerca con especialidad]
+
+            [Continuar con el resto del día...]
+
+            🏨 Alojamiento sugerido: [Zona recomendada para hospedarse]
+
+            [Repetir formato para cada día]
+
+            💡 CONSEJOS GENERALES:
+            - [Consejo sobre transporte]
+            - [Consejo sobre horarios/temporada]
+            - [Consejo sobre presupuesto]
+
+            🎯 MENSAJE FINAL:
+            [Mensaje motivador personalizado según los intereses]
+            """
+
+            response = model.generate_content(prompt)
+            return response.text.strip()
+            
+        except Exception as e:
+            # Fallback en caso de error
+            print(f"Error formateando con Gemini: {e}")
+            return self._format_itinerary_fallback(routes, preferences, total_distance)
+    
+    def _format_itinerary_fallback(self, routes: Dict, preferences: Dict, total_distance: float) -> str:
+        """Formato de itinerario básico como fallback"""
+        itinerary = f"🌟 ITINERARIO PARA {preferences.get('destination', 'TU DESTINO').upper()}\n\n"
+        itinerary += f"📊 Resumen:\n"
+        itinerary += f"- Días: {len(routes)}\n"
+        itinerary += f"- Distancia total: {total_distance:.1f} km\n"
+        
+        # Calcular tiempo total de viaje
+        total_travel_time = sum(r.get('total_travel_time_min', 0) for r in routes.values())
+        itinerary += f"- Tiempo total de desplazamiento: {total_travel_time} minutos ({total_travel_time/60:.1f} horas)\n\n"
+        
+        for day_key, route_data in sorted(routes.items()):
+            day_num = day_key.replace('day_', '')
+            itinerary += f"📅 DÍA {day_num}:\n"
+            itinerary += f"📍 Ruta: {' → '.join(route_data['places'])}\n"
+            itinerary += f"📏 Distancia del día: {route_data['distance_km']:.1f} km\n"
+            itinerary += f"⏱️ Tiempo de desplazamiento: {route_data.get('total_travel_time_min', 0)} minutos\n"
+            
+            # Detallar tiempos entre lugares si están disponibles
+            if route_data.get('travel_times'):
+                itinerary += "\n🚶 Desplazamientos:\n"
+                for segment, time_data in route_data['travel_times'].items():
+                    mode_text = {
+                        'walking': '🚶 Caminando',
+                        'public_transport': '🚌 Transporte público',
+                        'taxi': '🚕 Taxi/Auto',
+                        'estimated': '❓ Estimado'
+                    }.get(time_data['mode'], time_data['mode'])
+                    
+                    itinerary += f"  • {segment}\n"
+                    itinerary += f"    - Distancia: {time_data['distance_km']} km\n"
+                    itinerary += f"    - Tiempo: {time_data['time_minutes']} min\n"
+                    itinerary += f"    - Modo: {mode_text}\n"
+            
+            itinerary += "\n"
+        
+        if preferences.get('interests'):
+            itinerary += f"💡 Basado en tus intereses: {', '.join(preferences['interests'])}\n"
+        
+        return itinerary
