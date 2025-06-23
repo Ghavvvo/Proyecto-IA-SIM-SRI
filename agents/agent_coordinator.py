@@ -1,9 +1,10 @@
+import json
+
 from autogen import Agent
 from typing import List
 import google.generativeai as genai
-import json
 
-from utils.simulation_utils import format_as_simulation_input
+from utils import format_as_simulation_input
 
 
 class CoordinatorAgent(Agent):
@@ -26,7 +27,7 @@ class CoordinatorAgent(Agent):
             'max_iterations': 5
         }
 
-    def start(self): 
+    def start(self):
         self._notify_interface('system_start', {
             'component': self.name,
             'action': 'initializing'
@@ -55,48 +56,48 @@ class CoordinatorAgent(Agent):
             })
             if crawl_result['type'] == 'crawled':
                 self.rag_agent.receive({'type': 'init_collection', 'collection': crawl_result['collection']}, self)
-                
+
 
     def ask(self, query):
         # PRIMERO: Si estamos en modo planificación, manejar dentro del flujo de planificación
         if self.planning_state['mode'] == 'planning':
             return self._handle_planning_mode(query)
-        
+
         # DESPUÉS: Detectar intención del usuario solo si NO estamos en modo planificación
         user_intent = self._detect_user_intent(query)
-        
+
         # Manejar según la intención detectada
         if user_intent == 'plan_vacation':
             return self._start_vacation_planning()
-        
+
         elif user_intent == 'create_itinerary':
             return self._create_itinerary_with_current_info()
-        
+
         elif user_intent == 'need_more_info':
             return self._search_more_information(query)
-        
+
         # Paso 0: Manejar solicitudes directas de rutas
         if self._is_direct_route_request(query):
             return self._handle_direct_route_request(query)
-        
+
         # Paso 0.5: Verificar si es confirmación de ruta basada en contexto
         if self._is_route_confirmation(query):
             return self._generate_route_from_context()
-        
+
         # Paso 1: Analizar y mejorar la consulta usando el contexto
         print("🧠 Analizando consulta con contexto conversacional...")
         context_analysis = self.context_agent.receive({'type': 'analyze_query', 'query': query}, self)
-        
+
         if context_analysis['type'] == 'query_analyzed':
             analysis = context_analysis['analysis']
             improved_query = analysis['improved_query']
             context_info = analysis['context_analysis']
-            
+
             print(f"📝 Consulta original: {query}")
             print(f"🔍 Consulta mejorada: {improved_query}")
             print(f"🎯 Intención detectada: {context_info.get('user_intent', 'No detectada')}")
             print(f"🔗 Continuación de tema: {'Sí' if context_info.get('is_continuation', False) else 'No'}")
-            
+
             if analysis.get('improvements_made'):
                 print(f"✨ Mejoras aplicadas: {', '.join(analysis['improvements_made'])}")
         else:
@@ -116,11 +117,11 @@ class CoordinatorAgent(Agent):
             # Paso 3: Guardar la interacción en el contexto
             final_answer = response['answer']
             self.context_agent.receive({
-                'type': 'add_interaction', 
-                'query': query, 
+                'type': 'add_interaction',
+                'query': query,
                 'response': final_answer
             }, self)
-            
+
             # Utilizar Gemini para evaluar si la respuesta es útil
             evaluation = self._evaluate_response_usefulness(query, final_answer)
             if not evaluation:
@@ -137,7 +138,7 @@ class CoordinatorAgent(Agent):
                     # Detectar si hay un destino en las palabras clave
                     destination = None
                     interests = []
-                    
+
                     # Intentar identificar destino vs intereses
                     for keyword in problematic_keywords:
                         # Palabras que típicamente son destinos
@@ -145,27 +146,27 @@ class CoordinatorAgent(Agent):
                             destination = keyword
                         else:
                             interests.append(keyword)
-                    
+
                     # Si no se detectó destino pero hay múltiples keywords, usar el primero como destino
                     if not destination and len(problematic_keywords) > 1:
                         destination = problematic_keywords[0]
                         interests = problematic_keywords[1:]
                     elif not interests and destination:
                         interests = problematic_keywords
-                    
+
                     # Crear búsquedas específicas
                     search_queries = self._create_specific_search_queries(destination, interests)
-                    
+
                     print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
                     for i, query in enumerate(search_queries, 1):
                         print(f"   {i}. {query}")
-                    
+
                     total_content_extracted = 0
-                    
+
                     # Realizar búsqueda separada para cada consulta
                     for search_query in search_queries:
                         print(f"\n🔍 Buscando: '{search_query}'")
-                        
+
                         aco_result = self.crawler_agent.receive({
                             'type': 'search_google_aco',
                             'keywords': [search_query],
@@ -230,7 +231,7 @@ class CoordinatorAgent(Agent):
                     print("❌ Error en exploración ACO, intentando método alternativo...")
                     return self._fallback_search_method(problematic_keywords, query, improved_query)
 
-            # Manejar sugerencia de ruta si es relevante
+            # Manejar sugerencia de ruta si es relevante            
             return self._handle_route_suggestion(query, final_answer)
 
         return response.get('msg', 'Error al consultar la base de datos')
@@ -238,7 +239,7 @@ class CoordinatorAgent(Agent):
     def get_conversation_stats(self):
         """
         Obtiene estadísticas de la conversación actual.
-
+        
         Returns:
             Diccionario con estadísticas de conversación
         """
@@ -247,7 +248,7 @@ class CoordinatorAgent(Agent):
     def clear_conversation_context(self):
         """
         Limpia el contexto de conversación.
-
+        
         Returns:
             Resultado de la operación de limpieza
         """
@@ -260,7 +261,7 @@ class CoordinatorAgent(Agent):
     def get_conversation_context(self):
         """
         Obtiene el contexto actual de conversación.
-
+        
         Returns:
             Contexto de conversación actual
         """
@@ -494,9 +495,9 @@ class CoordinatorAgent(Agent):
 
         self.context_agent.receive({'type': 'add_route_to_answer'}, self)
         return (f"{current_answer}\n\n"
-        f"📍 He identificado varios lugares en mi respuesta ({places_list}). "
-        "¿Desea que optimice una ruta para visitarlos? "
-        "Simplemente responda 'sí' para generarla.")
+                f"📍 He identificado varios lugares en mi respuesta ({places_list}). "
+                "¿Desea que optimice una ruta para visitarlos? "
+                "Simplemente responda 'sí' para generarla.")
 
 
     def _format_route(self, route_result):
@@ -510,13 +511,13 @@ class CoordinatorAgent(Agent):
 
             prompt = f"""
             Eres un guía turístico experto. Describe la siguiente ruta optimizada de manera natural y útil:
-
+            
             Lugares a visitar (en orden):
             {", ".join(places)}
-
+            
             Distancia total: {total_distance} km
             Tiempo estimado caminando: {total_distance/5:.1f} horas
-
+            
             Instrucciones:
             1. Comienza con un saludo entusiasta
             2. Si hay lugares en diferentes ciudades, sugiere dividir la ruta en varios días
@@ -525,7 +526,7 @@ class CoordinatorAgent(Agent):
             5. Mantén un tono amigable y motivador
             6. Destaca experiencias únicas en cada lugar
             7. Termina con una recomendación general y buena energía
-
+            
             """
 
             model = genai.GenerativeModel('gemini-1.5-flash')
@@ -656,22 +657,22 @@ class CoordinatorAgent(Agent):
 
         print(f"🎯 Destino: {destination}")
         print(f"🎯 Intereses: {interests}")
-        
+
         # PASO 1: Primero intentar generar el itinerario con la información existente en la BD
         print("📚 Consultando información existente en la base de datos...")
-        
+
         # Construir consulta para el itinerario
         itinerary_query = f"Crear itinerario turístico para {destination}"
         if interests:
             itinerary_query += f" incluyendo {', '.join(interests)}"
-        
+
         # Consultar al RAG con la información existente
         response = self.rag_agent.receive({'type': 'query', 'query': itinerary_query}, self)
-        
+
         if response['type'] == 'answer':
             # Evaluar si la respuesta es útil
             evaluation = self._evaluate_response_usefulness(itinerary_query, response['answer'])
-            
+
             if evaluation:
                 # Si la respuesta es útil, generar el itinerario directamente
                 print("✅ Encontré suficiente información en la base de datos local")
@@ -680,20 +681,20 @@ class CoordinatorAgent(Agent):
                 # Si la respuesta no es útil, entonces buscar en DuckDuckGo
                 print("⚠️ La información en la base de datos no es suficiente")
                 print("🔍 Iniciando búsqueda en DuckDuckGo para obtener más información...")
-                
+
                 # Crear búsquedas específicas para cada interés
                 search_queries = self._create_specific_search_queries(destination, interests)
-                
+
                 print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
                 for i, query in enumerate(search_queries, 1):
                     print(f"   {i}. {query}")
-                
+
                 total_content_extracted = 0
-                
+
                 # Realizar búsqueda separada para cada consulta
                 for query in search_queries:
                     print(f"\n🔍 Buscando: '{query}'")
-                    
+
                     # Ejecutar búsqueda ACO para esta consulta específica
                     aco_result = self.crawler_agent.receive({
                         'type': 'search_google_aco',
@@ -702,21 +703,21 @@ class CoordinatorAgent(Agent):
                         'max_urls': 8,  # Menos URLs por búsqueda ya que haremos varias
                         'max_depth': self.planning_state['aco_depth']
                     }, self)
-                    
+
                     if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
                         content_count = aco_result.get('content_extracted', 0)
                         total_content_extracted += content_count
                         print(f"   ✅ Extraídas {content_count} páginas para '{query}'")
                     else:
                         print(f"   ⚠️ No se encontraron resultados para '{query}'")
-                
+
                 if total_content_extracted > 0:
                     print(f"\n✅ Total de páginas extraídas: {total_content_extracted}")
-                    
+
                     # Incrementar profundidad para próxima iteración
                     self.planning_state['aco_depth'] += 1
                     self.planning_state['iterations'] += 1
-                    
+
                     # Generar itinerario con la información recopilada
                     return self._generate_travel_itinerary(preferences, structured_prefs)
                 else:
@@ -727,12 +728,12 @@ class CoordinatorAgent(Agent):
         else:
             # Si hay error al consultar la BD, intentar buscar en DuckDuckGo
             print("❌ Error al consultar la base de datos, buscando en DuckDuckGo...")
-            
+
             # Crear búsquedas específicas para cada interés
             search_queries = self._create_specific_search_queries(destination, interests)
-            
+
             total_content_extracted = 0
-            
+
             for query in search_queries:
                 aco_result = self.crawler_agent.receive({
                     'type': 'search_google_aco',
@@ -741,16 +742,16 @@ class CoordinatorAgent(Agent):
                     'max_urls': 8,
                     'max_depth': self.planning_state['aco_depth']
                 }, self)
-                
+
                 if aco_result.get('type') == 'aco_completed' and aco_result.get('content_extracted'):
                     content_count = aco_result.get('content_extracted', 0)
                     total_content_extracted += content_count
-            
+
             if total_content_extracted > 0:
                 return self._generate_travel_itinerary(preferences, structured_prefs)
             else:
                 return "Lo siento, no pude encontrar suficiente información para crear tu itinerario. Por favor, intenta con otro destino."
-    
+
     def _generate_travel_itinerary(self, preferences: dict, structured_prefs: dict) -> str:
         """
         Genera un itinerario de viaje basado en las preferencias y la información recopilada
@@ -1172,59 +1173,6 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
 
         return {}
 
-    def _get_destination_from_context(self) -> str:
-        """
-        Intenta obtener el destino del contexto de la conversación actual
-        
-        Returns:
-            String con el destino encontrado o cadena vacía si no se encuentra
-        """
-        try:
-            # Obtener el contexto de la conversación
-            context_result = self.context_agent.receive({'type': 'get_context'}, self)
-            
-            if context_result['type'] == 'context_data':
-                history = context_result.get('history', [])
-                
-                if not history:
-                    return ""
-                
-                # Usar Gemini para extraer el destino del historial
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                
-                # Construir el historial como texto
-                history_text = ""
-                for interaction in history[-5:]:  # Últimas 5 interacciones
-                    history_text += f"Usuario: {interaction['query']}\n"
-                    history_text += f"Sistema: {interaction['response'][:200]}...\n\n"
-                
-                prompt = f"""
-                Analiza el siguiente historial de conversación y extrae el destino turístico principal.
-                
-                Historial:
-                {history_text}
-                
-                INSTRUCCIONES:
-                - Busca menciones de ciudades, países o lugares turísticos
-                - Si hay múltiples destinos, devuelve el más reciente o relevante
-                - Si no hay un destino claro, devuelve una cadena vacía
-                
-                Devuelve SOLO el nombre del destino (ciudad o país), sin explicaciones.
-                Si no hay destino, devuelve exactamente: "ninguno"
-                """
-                
-                response = model.generate_content(prompt)
-                result = response.text.strip()
-                
-                if result.lower() == "ninguno" or not result:
-                    return ""
-                
-                return result
-                
-        except Exception as e:
-            print(f"Error obteniendo destino del contexto: {e}")
-            return ""
-    
     def _extract_topic_keywords(self, query: str) -> list:
         """
         Extrae palabras clave del tema sobre el que se necesita más información
@@ -1263,7 +1211,6 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
     def _create_specific_search_queries(self, destination: str, interests: List[str]) -> List[str]:
         """
         Crea consultas de búsqueda específicas para cada combinación de destino + interés
-        IMPORTANTE: Siempre incluye el destino en TODAS las búsquedas
 
         Args:
             destination: Destino del viaje
@@ -1288,56 +1235,32 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             'culture': ['sitios culturales', 'patrimonio cultural', 'lugares históricos']
         }
 
-        # SIEMPRE incluir el destino en las búsquedas
+        # Si hay destino, crear consultas específicas para cada interés
         if destination:
-            # Crear consultas específicas para cada interés CON el destino
             for interest in interests:
                 # Obtener términos de búsqueda para este interés
                 search_terms = interest_mapping.get(interest.lower(), [interest])
 
-                # Crear múltiples consultas para cada interés, SIEMPRE con el destino
+                # Crear múltiples consultas para cada interés
                 for term in search_terms:
                     query = f"{term} en {destination}"
                     search_queries.append(query)
 
-                # También agregar una consulta simple con el destino
+                # También agregar una consulta simple
                 if interest not in interest_mapping:
                     search_queries.append(f"{interest} en {destination}")
 
-            # Si no hay intereses específicos, buscar información general del destino
-            if not interests:
-                search_queries.extend([
-                    f"turismo en {destination}",
-                    f"qué hacer en {destination}",
-                    f"lugares turísticos {destination}",
-                    f"atracciones principales {destination}"
-                ])
-
-        # Si no hay destino pero hay intereses, incluir el contexto de la conversación
+        # Si no hay destino pero hay intereses, buscar por intereses generales
         elif interests:
-            # Intentar obtener el destino del contexto de la conversación
-            context_destination = self._get_destination_from_context()
-            
-            if context_destination:
-                # Si encontramos un destino en el contexto, usarlo
-                for interest in interests:
-                    search_terms = interest_mapping.get(interest.lower(), [interest])
-                    for term in search_terms:
-                        search_queries.append(f"{term} en {context_destination}")
-            else:
-                # Solo si no hay destino en absoluto, buscar por intereses generales
-                for interest in interests:
-                    search_terms = interest_mapping.get(interest.lower(), [interest])
-                    for term in search_terms:
-                        search_queries.append(f"{term} turismo")
+            for interest in interests:
+                search_terms = interest_mapping.get(interest.lower(), [interest])
+                for term in search_terms:
+                    search_queries.append(f"{term} turismo")
 
-        # Agregar consultas generales si hay destino
+        # Agregar consulta general si hay destino
         if destination:
-            search_queries.extend([
-                f"guía turística {destination}",
-                f"qué visitar en {destination}",
-                f"información turística {destination}"
-            ])
+            search_queries.append(f"guía turística {destination}")
+            search_queries.append(f"qué visitar en {destination}")
 
         # Eliminar duplicados manteniendo el orden
         seen = set()
@@ -1348,7 +1271,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                 unique_queries.append(query)
 
         # Limitar a un máximo razonable de consultas
-        return unique_queries[:12]  # Aumentado ligeramente el límite
+        return unique_queries[:10]
 
     def _estimate_days_needed(self, num_places: int, duration_str: str) -> dict:
         """

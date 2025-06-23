@@ -19,5 +19,10 @@ wrapt==1.17.2  # Requerido por opentelemetry (dependencia de chromadb)
 protobuf==5.29.3  # Requerido por google-generativeai y chromadb
 sympy  # Requerido por onnxruntime (dependencia de chromadb)
 
+# Dependencias para el sistema de experimentación
+matplotlib>=3.5.0  # Para generación de gráficos
+seaborn>=0.12.0  # Para visualizaciones estadísticas
+pandas>=1.3.0  # Para manejo de datos tabulares
+
 # Opcional - solo si se usa agent_gliner.py
 # gliner
