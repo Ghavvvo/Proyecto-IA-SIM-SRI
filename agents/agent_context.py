@@ -1,6 +1,6 @@
 from autogen import Agent
 from typing import List, Dict, Any
-from gemini_config import GeminiClient, gemini_generate
+from core.gemini_config import GeminiClient, gemini_generate
 from datetime import datetime
 
 class ContextAgent(Agent):

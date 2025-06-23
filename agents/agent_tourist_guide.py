@@ -3,7 +3,7 @@ Agente Guía Turístico - Especializado en recopilar preferencias de viaje
 """
 
 from autogen import Agent
-from gemini_config import GeminiClient, gemini_json
+from core.gemini_config import GeminiClient, gemini_json
 import json
 from typing import Dict, List, Optional
 from datetime import datetime

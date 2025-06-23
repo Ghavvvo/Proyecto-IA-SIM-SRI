@@ -1,5 +1,5 @@
 from autogen import Agent
-from gemini_config import GeminiClient
+from core.gemini_config import GeminiClient
 import textwrap
 from datetime import datetime
 

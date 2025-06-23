@@ -2,7 +2,7 @@
 Agente procesador que utiliza Gemini para estructurar la información turística
 antes de guardarla en ChromaDB
 """
-from gemini_config import GeminiClient, gemini_json
+from core.gemini_config import GeminiClient, gemini_json
 import json
 from typing import Dict, List, Optional
 from autogen import Agent
