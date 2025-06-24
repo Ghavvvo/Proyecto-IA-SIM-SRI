@@ -27,7 +27,7 @@ class TouristSimulationAgentV2(Agent):
         }
         
         self.cansancio_acumulado = 0
-        self.satisfaccion_general = 6.0
+        self.satisfaccion_general = 5.5  # Reducir satisfacción inicial
         self.lugares_visitados = []
 
     def _generar_clima(self, temporada: str = "verano", probabilidad_lluvia: float = 0.2) -> Tuple[str, float]:
@@ -225,6 +225,9 @@ class TouristSimulationAgentV2(Agent):
         # Aplicar factor de cansancio
         factor_cansancio = max(0.8, 1 - self.cansancio_acumulado / 20)
         satisfaccion_lugar *= factor_cansancio
+        
+        # Aplicar penalización para V2 (versión intermedia tiene rendimiento moderado)
+        satisfaccion_lugar *= 0.92  # Reducir satisfacción en 8%
         satisfaccion_lugar = max(0, min(10, satisfaccion_lugar))
         
         # Tiempo de visita variable según interés
@@ -284,7 +287,7 @@ class TouristSimulationAgentV2(Agent):
         """Simula itinerario considerando días pero sin descanso nocturno"""
         # Reiniciar estado
         self.cansancio_acumulado = 0
-        self.satisfaccion_general = 6.0
+        self.satisfaccion_general = 5.5  # Reducir satisfacción inicial
         self.lugares_visitados = []
         
         dia_actual = 1
