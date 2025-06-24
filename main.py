@@ -60,7 +60,7 @@ if __name__ == "__main__":
     print("  - 'contexto' - Ver historial de conversación")
     print("  - 'limpiar' - Limpiar contexto de conversación")
     print("  - 'salir' - Terminar el programa")
-    print("  - 'cancelar' - Salir del modo planificación y hacer consultas normales")
+
     
     # Iniciar directamente con el asistente de planificación de vacaciones
     print("\n" + "="*60)
