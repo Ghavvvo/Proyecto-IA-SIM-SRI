@@ -9,6 +9,7 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
     """
     Uses Mistral to transform a formatted itinerary into a structured format optimal for tourist simulation.
     Enriched with detailed information for simulation including types, popularity, distances, and timing.
+    Enhanced to capture travel times and activity durations from the itinerary format.
     """
     try:
         mistral_client = MistralClient(model_name="flash")
@@ -20,6 +21,12 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
 
         Preferencias del viajero:
         {preferences}
+
+        INSTRUCCIONES ESPECÍFICAS PARA CAPTURAR TIEMPOS:
+        - Busca horarios específicos en formato 🕐 9:00, 🕑 12:30, etc.
+        - Identifica duraciones de actividades en paréntesis como (1.5 horas), (30 min), (1 hora)
+        - Detecta tiempos de desplazamiento como "🚗 **Desplazamiento (3 horas en auto o bus...)**"
+        - Convierte todas las duraciones a horas decimales: 30 min = 0.5, 1.5 horas = 1.5
 
         INSTRUCCIONES:
         - Devuelve un JSON estructurado con la siguiente forma:
@@ -34,13 +41,15 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
                 "day_of_week": string (lunes/martes/etc, usar "sabado" si no se especifica),
                 "activities": [
                   {{
-                    "time": string (formato HH:MM, si no hay hora usar "09:00", "11:00", "14:00", etc secuencialmente),
+                    "time": string (formato HH:MM, extraer del emoji de reloj o usar secuencial),
                     "location": string (nombre del lugar o actividad),
                     "description": string (descripcion breve del lugar o actividad),
-                    "type": string (museo/restaurante/parque/monumento/playa/hotel/centro_comercial/teatro/zoo/otro),
+                    "type": string (museo/restaurante/parque/monumento/playa/hotel/centro_comercial/teatro/zoo/desplazamiento/otro),
                     "popularity": float (1-10, estimar basado en la descripción, lugares famosos 8-10, normales 5-7),
-                    "estimated_duration_hours": float (museo:1.5, restaurante:1.2, parque:1.0, monumento:0.5, playa:2.0, etc),
-                    "distance_from_previous_km": float (estimar distancia, primera actividad usar 3.0, entre actividades 1-5 km)
+                    "estimated_duration_hours": float (EXTRAER del texto en paréntesis, convertir a horas decimales),
+                    "distance_from_previous_km": float (para desplazamientos, extraer distancia o tiempo de viaje),
+                    "travel_time_hours": float (SOLO para actividades de desplazamiento, extraer tiempo de viaje),
+                    "is_travel": boolean (true si es una actividad de desplazamiento, false si es visita a lugar)
                   }}
                 ]
               }}
@@ -51,11 +60,13 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
           }}
         
         REGLAS ADICIONALES:
-        - Para el tipo de lugar, inferir del nombre y descripción (ej: "Museo Nacional" -> "museo")
-        - Para popularidad: lugares muy conocidos o mencionados como "imperdibles" = 8-10
-        - Para distancias: en la misma zona 0.5-2km, zonas diferentes 3-8km
+        - Para actividades de desplazamiento: type="desplazamiento", is_travel=true, travel_time_hours=tiempo extraído
+        - Para actividades normales: is_travel=false, estimated_duration_hours=tiempo extraído del paréntesis
+        - Extraer horarios exactos de los emojis de reloj (🕐 9:00 = "09:00")
+        - Convertir duraciones: "30 min" = 0.5, "1 hora" = 1.0, "1.5 horas" = 1.5, "3 horas" = 3.0
         - Para tourist_profile: si menciona lujo/exclusivo = "exigente", si menciona relajado/tranquilo = "relajado", sino "average"
-        - Si hay horarios específicos, úsalos. Si no, distribuye las actividades lógicamente durante el día
+        - Para popularidad: lugares muy conocidos o mencionados como "imperdibles" = 8-10
+        - Para distancias de desplazamiento: extraer del texto o estimar según el tiempo de viaje
         - Devuelve SOLO el JSON, sin explicaciones ni comentarios.
         """
         response = mistral_client.generate(prompt)
@@ -92,6 +103,12 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
                         # Asignar horarios secuenciales si no existen
                         base_hours = [9, 11, 14, 16, 18, 20]
                         activity['time'] = f"{base_hours[i % len(base_hours)]:02d}:00"
+                    
+                    # Asegurar que los nuevos campos tengan valores por defecto
+                    if 'is_travel' not in activity:
+                        activity['is_travel'] = activity.get('type', 'otro') == 'desplazamiento'
+                    if 'travel_time_hours' not in activity:
+                        activity['travel_time_hours'] = activity.get('estimated_duration_hours', 0.0) if activity.get('is_travel', False) else 0.0
             
             return simulation_data
         return {}
@@ -104,6 +121,7 @@ def _infer_activity_type(location_name: str) -> str:
     location_lower = location_name.lower()
     
     type_keywords = {
+        'desplazamiento': ['desplazamiento', 'viaje', 'traslado', 'transporte', 'auto', 'bus', 'avión', 'tren'],
         'museo': ['museo', 'galería', 'exposición'],
         'restaurante': ['restaurante', 'café', 'cafetería', 'comida', 'almuerzo', 'cena'],
         'parque': ['parque', 'jardín', 'plaza'],
@@ -124,6 +142,7 @@ def _infer_activity_type(location_name: str) -> str:
 def _get_default_duration(activity_type: str) -> float:
     """Obtiene la duración por defecto según el tipo de actividad"""
     durations = {
+        'desplazamiento': 2.0,  # Tiempo promedio de desplazamiento
         'museo': 1.5,
         'restaurante': 1.2,
         'parque': 1.0,
@@ -189,13 +208,19 @@ def run_simulation_replicas(simulation_agent, simulation_json: dict, num_replica
                 except:
                     hour = 9 + i * 2  # Fallback: espaciar 2 horas entre actividades
                 
+                # Determinar si es una actividad de viaje
+                is_travel = activity.get('is_travel', False)
+                
                 place_data = {
                     'nombre': activity.get('location', f'Lugar {i+1}'),
                     'tipo': activity.get('type', 'otro'),
                     'popularidad': activity.get('popularity', 7.0),
                     'distancia_anterior': activity.get('distance_from_previous_km', 2.0) if i > 0 else 0,
                     'distancia_inicio': activity.get('distance_from_previous_km', 3.0) if i == 0 else 0,
-                    'dia': day_num  # Añadir información del día
+                    'dia': day_num,
+                    'is_travel': is_travel,
+                    'estimated_duration_hours': activity.get('estimated_duration_hours', _get_default_duration(activity.get('type', 'otro'))),
+                    'travel_time_hours': activity.get('travel_time_hours', 0.0) if is_travel else 0.0
                 }
                 
                 itinerary_data.append(place_data)
