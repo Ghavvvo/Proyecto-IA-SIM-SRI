@@ -12,14 +12,14 @@ def test_gliner_crawler():
         "https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html"
     ]
     
-    # Crear instancia del crawler con Gemini deshabilitado por defecto
+    # Crear instancia del crawler con Mistral deshabilitado por defecto
     crawler = TourismCrawler(
         starting_urls=starting_urls,
         chroma_collection_name="tourism_gliner_test",
         max_pages=10,
         max_depth=2,
         num_threads=3,
-        enable_gemini_processing=False  # Deshabilitamos Gemini
+        enable_mistral_processing=False  # Deshabilitamos Mistral
     )
     
     # Habilitar GLiNER
@@ -59,7 +59,7 @@ def test_gliner_with_keywords():
         max_pages=15,
         max_depth=1,
         num_threads=5,
-        enable_gemini_processing=False
+        enable_mistral_processing=False
     )
     
     # Habilitar GLiNER
@@ -80,23 +80,23 @@ def test_gliner_with_keywords():
 
 def compare_processors():
     """
-    Compara el procesamiento entre Gemini y GLiNER
+    Compara el procesamiento entre Mistral y GLiNER
     """
     test_url = ["https://www.lonelyplanet.com/cuba"]
     
     print("\n=== COMPARACIÓN DE PROCESADORES ===\n")
     
-    # Test con Gemini
-    print("1️⃣ Procesando con Gemini...")
-    crawler_gemini = TourismCrawler(
+    # Test con Mistral
+    print("1️⃣ Procesando con Mistral...")
+    crawler_mistral = TourismCrawler(
         starting_urls=test_url,
-        chroma_collection_name="tourism_comparison_gemini",
+        chroma_collection_name="tourism_comparison_mistral",
         max_pages=5,
         max_depth=1,
         num_threads=2,
-        enable_gemini_processing=True
+        enable_mistral_processing=True
     )
-    pages_gemini = crawler_gemini.run_parallel_crawler()
+    pages_mistral = crawler_mistral.run_parallel_crawler()
     
     # Test con GLiNER
     print("\n2️⃣ Procesando con GLiNER...")
@@ -106,16 +106,16 @@ def compare_processors():
         max_pages=5,
         max_depth=1,
         num_threads=2,
-        enable_gemini_processing=False
+        enable_mistral_processing=False
     )
     crawler_gliner.enable_gliner()
     pages_gliner = crawler_gliner.run_parallel_crawler()
     
     # Comparar resultados
     print("\n📊 RESULTADOS DE LA COMPARACIÓN:")
-    print(f"\nGemini:")
-    print(f"  • Páginas procesadas: {crawler_gemini.gemini_processed}")
-    print(f"  • Errores: {crawler_gemini.gemini_errors}")
+    print(f"\nMistral:")
+    print(f"  • Páginas procesadas: {crawler_mistral.mistral_processed}")
+    print(f"  • Errores: {crawler_mistral.mistral_errors}")
     
     print(f"\nGLiNER:")
     print(f"  • Páginas procesadas: {crawler_gliner.gliner_processed}")
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     print("Seleccione una opción:")
     print("1. Test básico con URLs predefinidas")
     print("2. Test con búsqueda por palabras clave")
-    print("3. Comparación entre Gemini y GLiNER")
+    print("3. Comparación entre Mistral y GLiNER")
     
     choice = input("\nIngrese su opción (1-3): ")
     

@@ -1,8 +1,8 @@
 """
-Agente procesador que utiliza Gemini para estructurar la información turística
+Agente procesador que utiliza Mistral para estructurar la información turística
 antes de guardarla en ChromaDB
 """
-from core.gemini_config import GeminiClient, gemini_json
+from core.mistral_config import MistralClient, mistral_json
 import json
 from typing import Dict, List, Optional
 from autogen import Agent
@@ -11,13 +11,13 @@ import re
 
 class ProcessorAgent(Agent):
     """
-    Agente que procesa el contenido extraído por el crawler usando Gemini
+    Agente que procesa el contenido extraído por el crawler usando Mistral
     para estructurar la información turística en formato JSON
     """
     
     def __init__(self, name: str = "ProcessorAgent"):
         super().__init__(name)
-        self.gemini_client = GeminiClient(model_name="flash")
+        self.mistral_client = MistralClient(model_name="flash")
         self.processed_count = 0
         self.errors_count = 0
         
@@ -41,7 +41,7 @@ class ProcessorAgent(Agent):
             contents = message.get('contents', [])
             processed_results = []
             
-            print(f"🤖 Procesando {len(contents)} páginas con Gemini...")
+            print(f"🤖 Procesando {len(contents)} páginas con Mistral...")
             
             for content_data in contents:
                 result = self._process_single_content(content_data)
@@ -59,7 +59,7 @@ class ProcessorAgent(Agent):
     
     def _process_single_content(self, content_data: Dict) -> Optional[Dict]:
         """
-        Procesa un contenido individual con Gemini para extraer información turística estructurada
+        Procesa un contenido individual con Mistral para extraer información turística estructurada
         """
         try:
             url = content_data.get('url', '')
@@ -69,17 +69,17 @@ class ProcessorAgent(Agent):
             if not content or len(content) < 100:
                 return None
             
-            # Crear prompt para Gemini
+            # Crear prompt para Mistral
             prompt = self._create_extraction_prompt(content, title, url)
             
-            # Generar respuesta JSON con Gemini
-            structured_data = self.gemini_client.generate_json(prompt)
+            # Generar respuesta JSON con Mistral
+            structured_data = self.mistral_client.generate_json(prompt)
             
             if structured_data:
                 # Añadir metadatos
                 structured_data['source_url'] = url
                 structured_data['source_title'] = title
-                structured_data['processed_by'] = 'gemini'
+                structured_data['processed_by'] = 'mistral'
                 
                 self.processed_count += 1
                 print(f"✅ Procesado: {title[:50]}...")
@@ -96,7 +96,7 @@ class ProcessorAgent(Agent):
     
     def _create_extraction_prompt(self, content: str, title: str, url: str) -> str:
         """
-        Crea el prompt para Gemini para extraer información turística estructurada
+        Crea el prompt para Mistral para extraer información turística estructurada
         """
         # Limitar el contenido para no exceder límites de tokens
         max_content_length = 3000
@@ -228,9 +228,9 @@ class ProcessorAgent(Agent):
         
         return prompt
     
-    def _parse_gemini_response(self, response_text: str) -> Optional[Dict]:
+    def _parse_mistral_response(self, response_text: str) -> Optional[Dict]:
         """
-        Parsea la respuesta de Gemini y extrae el JSON estructurado
+        Parsea la respuesta de Mistral y extrae el JSON estructurado
         """
         try:
             # Limpiar la respuesta para extraer solo el JSON
@@ -253,7 +253,7 @@ class ProcessorAgent(Agent):
             return None
             
         except json.JSONDecodeError as e:
-            print(f"Error parseando JSON de Gemini: {e}")
+            print(f"Error parseando JSON de Mistral: {e}")
             # Intentar corregir errores comunes
             try:
                 # Eliminar comas finales
@@ -268,7 +268,7 @@ class ProcessorAgent(Agent):
                 
             return None
         except Exception as e:
-            print(f"Error procesando respuesta de Gemini: {e}")
+            print(f"Error procesando respuesta de Mistral: {e}")
             return None
     
     def get_stats(self) -> Dict:

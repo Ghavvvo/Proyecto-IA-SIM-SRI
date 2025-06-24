@@ -2,7 +2,7 @@ import json
 
 from autogen import Agent
 from typing import List
-import google.generativeai as genai
+from core.mistral_config import MistralClient
 
 from utils import format_as_simulation_input
 
@@ -280,7 +280,7 @@ class CoordinatorAgent(Agent):
             bool: True si la respuesta es útil, False en caso contrario.
         """
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
             prompt = f"""
             Eres un evaluador de respuestas. Determina si la siguiente respuesta es útil para la consulta del usuario.
 
@@ -295,8 +295,8 @@ class CoordinatorAgent(Agent):
             - Responde únicamente con 'true' si la respuesta es útil, o 'false' si no lo es.
             """
 
-            response = model.generate_content(prompt)
-            result = response.text.lower().strip()
+            response = mistral_client.generate(prompt)
+            result = response.lower().strip()
 
             # Determinar si la respuesta es útil basada en el texto generado
             return 'true' in result
@@ -317,7 +317,7 @@ class CoordinatorAgent(Agent):
             List[str]: Lista de palabras clave problemáticas.
         """
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
             prompt = f"""
             Eres un analizador de consultas. Tu tarea es identificar las palabras clave específicas en la consulta del usuario que causaron que el sistema no pudiera proporcionar una respuesta útil.
 
@@ -334,8 +334,8 @@ class CoordinatorAgent(Agent):
 
             Palabras clave problemáticas:"""
 
-            response = model.generate_content(prompt)
-            result = response.text.strip()
+            response = mistral_client.generate(prompt)
+            result = response.strip()
 
             # Procesar la respuesta
             if result.lower() == "ninguna" or not result:
@@ -529,13 +529,13 @@ class CoordinatorAgent(Agent):
             
             """
 
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            return response.text.strip()
+            mistral_client = MistralClient(model_name="flash")
+            response = mistral_client.generate(prompt)
+            return response.strip()
 
         except Exception as e:
             # Fallback en caso de error
-            print(f"Error al generar descripción con Gemini: {e}")
+            print(f"Error al generar descripción con Mistral: {e}")
             route_str = "🗺️ **Ruta optimizada**:\n"
             for i, place in enumerate(places):
                 route_str += f"{i+1}. {place}\n"
@@ -866,7 +866,7 @@ class CoordinatorAgent(Agent):
 
         print("------------------------------\n"+raw_response+"\n------------------------------")
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
 
             prompt = f"""
             Eres un experto planificador de viajes. Transforma la siguiente información en un itinerario de viaje estructurado y atractivo.
@@ -912,8 +912,8 @@ class CoordinatorAgent(Agent):
             Nunca añadas destinos que no aparecen en la información disponible.
             """
 
-            response = model.generate_content(prompt)
-            formatted_itinerary = response.text.strip()
+            response = mistral_client.generate(prompt)
+            formatted_itinerary = response.strip()
 
             # Call simulation utils and send to simulation agent
             simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
@@ -974,7 +974,7 @@ Si deseas que optimice las rutas para visitarlos de la manera más eficiente, so
 
     def _detect_user_intent(self, query: str) -> str:
         """
-        Detecta la intención del usuario usando Gemini
+        Detecta la intención del usuario usando Mistral
 
         Returns:
             'plan_vacation' - Usuario quiere planificar nuevas vacaciones
@@ -983,7 +983,7 @@ Si deseas que optimice las rutas para visitarlos de la manera más eficiente, so
             'normal_query' - Consulta normal del sistema
         """
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
 
             # Obtener contexto de la conversación
             context_result = self.context_agent.receive({'type': 'get_context'}, self)
@@ -1021,8 +1021,8 @@ Si deseas que optimice las rutas para visitarlos de la manera más eficiente, so
             Responde ÚNICAMENTE con una de estas opciones: 'plan_vacation', 'create_itinerary', 'need_more_info', 'normal_query'
             """
 
-            response = model.generate_content(prompt)
-            intent = response.text.strip().lower()
+            response = mistral_client.generate(prompt)
+            intent = response.strip().lower()
 
             # Validar que la respuesta sea una de las opciones válidas
             valid_intents = ['plan_vacation', 'create_itinerary', 'need_more_info', 'normal_query']
@@ -1062,7 +1062,7 @@ Si deseas que optimice las rutas para visitarlos de la manera más eficiente, so
             # Analizar el historial para extraer información de viaje
             history = context_result.get('history', [])
 
-            # Usar Gemini para extraer preferencias del historial
+            # Usar Mistral para extraer preferencias del historial
             preferences = self._extract_preferences_from_history(history)
 
             if preferences and (preferences.get('destination') or preferences.get('interests')):
@@ -1129,7 +1129,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             return {}
 
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
 
             # Construir el historial como texto
             history_text = ""
@@ -1156,8 +1156,8 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             IMPORTANTE: Devuelve SOLO el JSON, sin explicaciones.
             """
 
-            response = model.generate_content(prompt)
-            json_str = response.text.strip()
+            response = mistral_client.generate(prompt)
+            json_str = response.strip()
 
             # Buscar el JSON en la respuesta
             start_idx = json_str.find('{')
@@ -1178,7 +1178,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         Extrae palabras clave del tema sobre el que se necesita más información
         """
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
 
             prompt = f"""
             El usuario necesita más información sobre algo. Extrae las palabras clave del tema específico.
@@ -1195,8 +1195,8 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             Si no hay tema claro, responde con "ninguno".
             """
 
-            response = model.generate_content(prompt)
-            result = response.text.strip()
+            response = mistral_client.generate(prompt)
+            result = response.strip()
 
             if result.lower() == "ninguno" or not result:
                 return []
@@ -1324,7 +1324,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         Formatea la respuesta como un itinerario estructurado con rutas optimizadas
         """
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
 
             # Preparar información de rutas optimizadas
             routes_info = ""
@@ -1391,8 +1391,8 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             IMPORTANTE: Usa SOLO la información proporcionada. No inventes lugares ni añadas destinos que no aparecen en los datos.
             """
 
-            response = model.generate_content(prompt)
-            formatted_itinerary = response.text.strip()
+            response = mistral_client.generate(prompt)
+            formatted_itinerary = response.strip()
 
             simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
             # Send to simulation agent if available
@@ -1409,7 +1409,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                 print("⚠️ Agente de simulación no disponible")
                 print("🧩 JSON para simulación:")
                 print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
-            return response.text.strip()
+            return formatted_itinerary
 
         except Exception as e:
             print(f"Error formateando itinerario con rutas: {e}")

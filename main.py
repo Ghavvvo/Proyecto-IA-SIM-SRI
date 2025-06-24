@@ -24,11 +24,11 @@ if __name__ == "__main__":
     
     # Verificar que se cargó la API key
     import os
-    if os.getenv('GOOGLE_API_KEY'):
-        print("✅ GOOGLE_API_KEY cargada correctamente")
+    if os.getenv('MISTRAL_API_KEY'):
+        print("✅ MISTRAL_API_KEY cargada correctamente")
     else:
-        print("❌ Error: GOOGLE_API_KEY no encontrada en las variables de entorno")
-        print("   Asegúrese de que el archivo .env existe y contiene GOOGLE_API_KEY=su_clave_aqui")
+        print("❌ Error: MISTRAL_API_KEY no encontrada en las variables de entorno")
+        print("   Asegúrese de que el archivo .env existe y contiene MISTRAL_API_KEY=su_clave_aqui")
     
     # Crear agentes con crawler paralelo y contexto conversacional
     print("🚀 Configurando sistema con crawler paralelo y contexto conversacional...")

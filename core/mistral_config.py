@@ -1,9 +1,9 @@
 """
-Configuración centralizada para Google Gemini AI
-Este módulo proporciona una interfaz unificada para todas las interacciones con Gemini
+Configuración centralizada para Mistral AI
+Este módulo proporciona una interfaz unificada para todas las interacciones con Mistral
 """
 
-import google.generativeai as genai
+from mistralai import Mistral
 import os
 from typing import Optional, Dict, List, Union, Any
 from functools import lru_cache
@@ -17,9 +17,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class GeminiConfig:
+class MistralConfig:
     """
-    Clase singleton para gestionar la configuración de Gemini
+    Clase singleton para gestionar la configuración de Mistral
     """
     _instance = None
     _lock = threading.Lock()
@@ -37,19 +37,18 @@ class GeminiConfig:
             return
             
         # Obtener API key
-        self.api_key = os.getenv('GOOGLE_API_KEY')
+        self.api_key = os.getenv('MISTRAL_API_KEY')
         if not self.api_key:
-            # Intentar con la key hardcodeada como fallback (no recomendado en producción)
-            self.api_key = "AIzaSyDOynOk2TEYU5UHTAn-vk676fLAI4qJCtw"
+            raise ValueError("MISTRAL_API_KEY no encontrada en las variables de entorno")
         
-        # Configurar Gemini
-        genai.configure(api_key=self.api_key)
+        # Configurar cliente Mistral
+        self.client = Mistral(api_key=self.api_key)
         
         # Modelos disponibles
         self.models = {
-            'flash': 'gemini-1.5-flash',
-            'pro': 'gemini-1.5-pro',
-            'flash-8b': 'gemini-1.5-flash-8b'
+            'flash': 'mistral-small-latest',  # Equivalente a Gemini Flash
+            'pro': 'mistral-large-latest',    # Equivalente a Gemini Pro
+            'flash-8b': 'mistral-small-latest'  # Usando small como equivalente
         }
         
         # Modelo por defecto
@@ -59,12 +58,11 @@ class GeminiConfig:
         self.default_generation_config = {
             'temperature': 0.7,
             'top_p': 0.95,
-            'top_k': 40,
-            'max_output_tokens': 2048,
+            'max_tokens': 2048,
         }
         
-        # Cache de modelos
-        self._model_cache = {}
+        # Cache de configuraciones
+        self._config_cache = {}
         
         # Estadísticas de uso
         self.stats = {
@@ -77,18 +75,17 @@ class GeminiConfig:
         }
         
         self._initialized = True
-        print("✅ Gemini configurado correctamente")
+        print("✅ Mistral configurado correctamente")
     
-    def get_model(self, model_name: str = None, **generation_config) -> genai.GenerativeModel:
+    def get_model_name(self, model_name: str = None) -> str:
         """
-        Obtiene una instancia del modelo Gemini
+        Obtiene el nombre completo del modelo
         
         Args:
             model_name: Nombre del modelo ('flash', 'pro', 'flash-8b') o nombre completo
-            **generation_config: Configuración de generación personalizada
             
         Returns:
-            Instancia del modelo GenerativeModel
+            Nombre completo del modelo
         """
         # Usar modelo por defecto si no se especifica
         if model_name is None:
@@ -96,30 +93,24 @@ class GeminiConfig:
         
         # Convertir alias a nombre completo
         if model_name in self.models:
-            model_name = self.models[model_name]
+            return self.models[model_name]
         
-        # Crear clave de cache
-        config_key = json.dumps(generation_config, sort_keys=True) if generation_config else 'default'
-        cache_key = f"{model_name}:{config_key}"
+        return model_name
+    
+    def get_generation_config(self, **kwargs) -> Dict[str, Any]:
+        """
+        Obtiene la configuración de generación combinada
         
-        # Verificar cache
-        if cache_key in self._model_cache:
-            return self._model_cache[cache_key]
-        
+        Args:
+            **kwargs: Configuración personalizada
+            
+        Returns:
+            Configuración final
+        """
         # Combinar configuración por defecto con personalizada
         final_config = self.default_generation_config.copy()
-        final_config.update(generation_config)
-        
-        # Crear modelo
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            generation_config=final_config
-        )
-        
-        # Guardar en cache
-        self._model_cache[cache_key] = model
-        
-        return model
+        final_config.update(kwargs)
+        return final_config
     
     def get_stats(self) -> Dict[str, Any]:
         """Obtiene estadísticas de uso"""
@@ -137,23 +128,23 @@ class GeminiConfig:
         }
 
 
-class GeminiClient:
+class MistralClient:
     """
-    Cliente principal para interactuar con Gemini
+    Cliente principal para interactuar con Mistral
     """
     
     def __init__(self, model_name: str = None, **generation_config):
         """
-        Inicializa el cliente Gemini
+        Inicializa el cliente Mistral
         
         Args:
             model_name: Nombre del modelo a usar
             **generation_config: Configuración de generación
         """
-        self.config = GeminiConfig()
+        self.config = MistralConfig()
         self.model_name = model_name or self.config.default_model
         self.generation_config = generation_config
-        self.model = self.config.get_model(self.model_name, **generation_config)
+        self.model = self.config.get_model_name(self.model_name)
     
     def generate(self, 
                 prompt: str, 
@@ -162,7 +153,7 @@ class GeminiClient:
                 max_retries: int = 3,
                 **kwargs) -> Union[str, Dict, None]:
         """
-        Genera una respuesta usando Gemini
+        Genera una respuesta usando Mistral
         
         Args:
             prompt: Prompt para el modelo
@@ -181,28 +172,49 @@ class GeminiClient:
             self.config.stats['requests_by_model'][model_key] = 0
         self.config.stats['requests_by_model'][model_key] += 1
         
-        # Preparar el prompt completo
-        full_prompt = prompt
+        # Preparar mensajes
+        messages = []
         if system_instruction:
-            full_prompt = f"{system_instruction}\n\n{prompt}"
+            messages.append({
+                "role": "system",
+                "content": system_instruction
+            })
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
+        
+        # Obtener configuración final
+        final_config = self.config.get_generation_config(**self.generation_config, **kwargs)
         
         # Intentar generar respuesta con reintentos
         last_error = None
         for attempt in range(max_retries):
             try:
-                # Generar respuesta
-                response = self.model.generate_content(full_prompt, **kwargs)
+                # Generar respuesta usando la API de Mistral
+                response = self.config.client.chat.complete(
+                    model=self.model,
+                    messages=messages,
+                    temperature=final_config.get('temperature', 0.7),
+                    top_p=final_config.get('top_p', 0.95),
+                    max_tokens=final_config.get('max_tokens', 2048),
+                )
+                
+                # Extraer el contenido de la respuesta
+                response_text = response.choices[0].message.content
                 
                 # Procesar según formato esperado
                 if response_format == "json":
-                    result = self._parse_json_response(response.text)
+                    result = self._parse_json_response(response_text)
                 elif response_format == "structured":
-                    result = self._parse_structured_response(response.text)
+                    result = self._parse_structured_response(response_text)
                 else:
-                    result = response.text.strip()
+                    result = response_text.strip()
                 
                 # Actualizar estadísticas de éxito
                 self.config.stats['successful_requests'] += 1
+                if hasattr(response, 'usage'):
+                    self.config.stats['total_tokens'] += response.usage.total_tokens
                 
                 return result
                 
@@ -264,7 +276,7 @@ class GeminiClient:
     
     def _parse_json_response(self, response_text: str) -> Optional[Dict]:
         """
-        Parsea una respuesta JSON de Gemini
+        Parsea una respuesta JSON de Mistral
         
         Args:
             response_text: Texto de respuesta del modelo
@@ -298,7 +310,7 @@ class GeminiClient:
     
     def _parse_structured_response(self, response_text: str) -> Dict:
         """
-        Parsea una respuesta estructurada de Gemini
+        Parsea una respuesta estructurada de Mistral
         
         Args:
             response_text: Texto de respuesta del modelo
@@ -347,51 +359,61 @@ class GeminiClient:
         Returns:
             Respuesta del asistente
         """
-        # Construir prompt desde el historial
-        prompt_parts = []
+        # Convertir mensajes al formato de Mistral
+        mistral_messages = []
         for msg in messages:
             role = msg.get('role', 'user')
             content = msg.get('content', '')
             
-            if role == 'user':
-                prompt_parts.append(f"Usuario: {content}")
-            elif role == 'assistant':
-                prompt_parts.append(f"Asistente: {content}")
-            elif role == 'system':
-                prompt_parts.append(f"Sistema: {content}")
+            # Mistral usa 'system', 'user', 'assistant'
+            if role in ['system', 'user', 'assistant']:
+                mistral_messages.append({
+                    "role": role,
+                    "content": content
+                })
         
-        full_prompt = "\n\n".join(prompt_parts)
+        # Obtener configuración final
+        final_config = self.config.get_generation_config(**self.generation_config, **kwargs)
         
-        # Añadir indicador para la respuesta
-        full_prompt += "\n\nAsistente:"
-        
-        response = self.generate(full_prompt, **kwargs)
-        
-        return response.strip() if response else None
+        try:
+            # Generar respuesta
+            response = self.config.client.chat.complete(
+                model=self.model,
+                messages=mistral_messages,
+                temperature=final_config.get('temperature', 0.7),
+                top_p=final_config.get('top_p', 0.95),
+                max_tokens=final_config.get('max_tokens', 2048),
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            print(f"❌ Error en chat: {str(e)}")
+            return None
 
 
-# Funciones de conveniencia
+# Funciones de conveniencia (mantienen la misma interfaz que gemini_config.py)
 @lru_cache(maxsize=1)
-def get_gemini_client(model_name: str = None, **kwargs) -> GeminiClient:
+def get_mistral_client(model_name: str = None, **kwargs) -> MistralClient:
     """
-    Obtiene una instancia del cliente Gemini (con cache)
+    Obtiene una instancia del cliente Mistral (con cache)
     
     Args:
         model_name: Nombre del modelo
         **kwargs: Configuración adicional
         
     Returns:
-        Cliente Gemini configurado
+        Cliente Mistral configurado
     """
-    return GeminiClient(model_name, **kwargs)
+    return MistralClient(model_name, **kwargs)
 
 
-def gemini_generate(prompt: str, 
+def mistral_generate(prompt: str, 
                    model: str = "flash",
                    response_format: str = "text",
                    **kwargs) -> Union[str, Dict, None]:
     """
-    Función rápida para generar respuestas con Gemini
+    Función rápida para generar respuestas con Mistral
     
     Args:
         prompt: Prompt para el modelo
@@ -402,13 +424,13 @@ def gemini_generate(prompt: str,
     Returns:
         Respuesta generada
     """
-    client = get_gemini_client(model)
+    client = get_mistral_client(model)
     return client.generate(prompt, response_format=response_format, **kwargs)
 
 
-def gemini_json(prompt: str, schema: Dict = None, model: str = "flash", **kwargs) -> Optional[Dict]:
+def mistral_json(prompt: str, schema: Dict = None, model: str = "flash", **kwargs) -> Optional[Dict]:
     """
-    Función rápida para generar respuestas JSON con Gemini
+    Función rápida para generar respuestas JSON con Mistral
     
     Args:
         prompt: Prompt para el modelo
@@ -419,22 +441,30 @@ def gemini_json(prompt: str, schema: Dict = None, model: str = "flash", **kwargs
     Returns:
         Diccionario con la respuesta
     """
-    client = get_gemini_client(model)
+    client = get_mistral_client(model)
     return client.generate_json(prompt, schema, **kwargs)
+
+
+# Alias para mantener compatibilidad con la interfaz anterior
+GeminiClient = MistralClient
+GeminiConfig = MistralConfig
+gemini_generate = mistral_generate
+gemini_json = mistral_json
+get_gemini_client = get_mistral_client
 
 
 # Ejemplo de uso y pruebas
 if __name__ == "__main__":
-    print("=== Prueba de Configuración Centralizada de Gemini ===\n")
+    print("=== Prueba de Configuración Centralizada de Mistral ===\n")
     
     # Prueba 1: Generación de texto simple
     print("1. Generación de texto simple:")
-    response = gemini_generate("¿Cuál es la capital de Francia?")
+    response = mistral_generate("¿Cuál es la capital de Francia?")
     print(f"Respuesta: {response}\n")
     
     # Prueba 2: Generación de JSON
     print("2. Generación de JSON:")
-    json_response = gemini_json(
+    json_response = mistral_json(
         "Dame información sobre París en formato JSON con campos: nombre, pais, poblacion, atracciones",
         schema={
             "nombre": "string",
@@ -447,10 +477,10 @@ if __name__ == "__main__":
     
     # Prueba 3: Cliente personalizado
     print("3. Cliente personalizado con configuración específica:")
-    custom_client = GeminiClient(
+    custom_client = MistralClient(
         model_name="flash",
         temperature=0.9,
-        max_output_tokens=500
+        max_tokens=500
     )
     creative_response = custom_client.generate(
         "Escribe un haiku sobre programación",
@@ -460,7 +490,7 @@ if __name__ == "__main__":
     
     # Prueba 4: Estadísticas
     print("4. Estadísticas de uso:")
-    config = GeminiConfig()
+    config = MistralConfig()
     stats = config.get_stats()
     print(f"Total de solicitudes: {stats['total_requests']}")
     print(f"Solicitudes exitosas: {stats['successful_requests']}")

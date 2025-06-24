@@ -1,5 +1,5 @@
 from typing import List, Dict, Any, Optional, Tuple
-from core.gemini_config import GeminiClient, gemini_generate
+from core.mistral_config import MistralClient, mistral_generate
 import numpy as np
 import random
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -19,8 +19,8 @@ except ImportError:
 class RAGSystem:
     def __init__(self, chroma_collection):
         self.collection = chroma_collection
-        # Crear instancia del cliente Gemini
-        self.gemini_client = GeminiClient(model_name="flash")
+        # Crear instancia del cliente Mistral
+        self.mistral_client = MistralClient(model_name="flash")
 
     def retrieve(self, query: str, top_k: int = 20) -> List[str]:
         """
@@ -71,7 +71,7 @@ INSTRUCCIONES IMPORTANTES:
 Respuesta:"""
 
         try:
-            response = self.gemini_client.generate(prompt)
+            response = self.mistral_client.generate(prompt)
             return response
         except Exception as e:
             print(f"Error al generar contenido: {e}")
@@ -558,7 +558,7 @@ INSTRUCCIONES:
 Respuesta:"""
 
         try:
-            response = self.gemini_client.generate(prompt)
+            response = self.mistral_client.generate(prompt)
             return response
         except Exception as e:
             print(f"Error al generar contenido: {e}")

@@ -1,12 +1,12 @@
 from autogen import Agent
-from core.gemini_config import GeminiClient
+from core.mistral_config import MistralClient
 import textwrap
 from datetime import datetime
 
 class InterfaceAgent(Agent):
     def __init__(self, name):
         super().__init__(name)
-        self.gemini_client = GeminiClient(model_name="flash")
+        self.mistral_client = MistralClient(model_name="flash")
         self.conversation_context = []
     
     def receive(self, message, sender):
@@ -46,7 +46,7 @@ class InterfaceAgent(Agent):
         """Genera una respuesta completamente dinámica usando el modelo generativo"""
         try:
             prompt = self._build_dynamic_prompt(message)
-            response = self.gemini_client.generate(prompt)
+            response = self.mistral_client.generate(prompt)
             return response.strip()
         except Exception as e:
             print(f"Error generando mensaje: {e}")

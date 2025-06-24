@@ -1,14 +1,14 @@
 import re
 from typing import Dict, Any
-import google.generativeai as genai
+from core.mistral_config import MistralClient
 
 def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str, Any]:
     """
-    Uses Gemini to transform a formatted itinerary into a structured format optimal for tourist simulation.
+    Uses Mistral to transform a formatted itinerary into a structured format optimal for tourist simulation.
     Enriched with detailed information for simulation including types, popularity, distances, and timing.
     """
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        mistral_client = MistralClient(model_name="flash")
         prompt = f"""
         Eres un experto en simulación de turistas. Recibe el siguiente itinerario de viaje y extrae información detallada para simular a un turista siguiendo el itinerario.
 
@@ -55,8 +55,8 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
         - Si hay horarios específicos, úsalos. Si no, distribuye las actividades lógicamente durante el día
         - Devuelve SOLO el JSON, sin explicaciones ni comentarios.
         """
-        response = model.generate_content(prompt)
-        json_str = response.text.strip()
+        response = mistral_client.generate(prompt)
+        json_str = response.strip()
         # Buscar el JSON en la respuesta
         start_idx = json_str.find('{')
         end_idx = json_str.rfind('}') + 1
@@ -93,7 +93,7 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
             return simulation_data
         return {}
     except Exception as e:
-        print(f"Error usando Gemini para estructurar simulación: {e}")
+        print(f"Error usando Mistral para estructurar simulación: {e}")
         return {}
 
 def _infer_activity_type(location_name: str) -> str:

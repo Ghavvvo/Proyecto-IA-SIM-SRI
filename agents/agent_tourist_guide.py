@@ -3,7 +3,7 @@ Agente Guía Turístico - Especializado en recopilar preferencias de viaje
 """
 
 from autogen import Agent
-from core.gemini_config import GeminiClient, gemini_json
+from core.mistral_config import MistralClient, mistral_json
 import json
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -18,8 +18,8 @@ class TouristGuideAgent(Agent):
     def __init__(self, name: str):
         super().__init__(name)
         
-        # Usar cliente Gemini centralizado
-        self.gemini_client = GeminiClient(model_name="flash")
+        # Usar cliente Mistral centralizado
+        self.mistral_client = MistralClient(model_name="flash")
         
         # Estado de la conversación
         self.conversation_state = {
@@ -163,7 +163,7 @@ class TouristGuideAgent(Agent):
         """
         try:
             prompt = self.conversation_templates['greeting']
-            response = self.gemini_client.generate(prompt)
+            response = self.mistral_client.generate(prompt)
             
             greeting = response.strip()
             
@@ -243,7 +243,7 @@ class TouristGuideAgent(Agent):
     
     def _extract_preferences(self, user_message: str) -> None:
         """
-        Extrae preferencias del mensaje del usuario usando Gemini
+        Extrae preferencias del mensaje del usuario usando Mistral
         """
         try:
             extraction_prompt = f"""
@@ -277,8 +277,8 @@ class TouristGuideAgent(Agent):
             IMPORTANTE: Devuelve SOLO el JSON, sin explicaciones adicionales.
             """
             
-            # Usar gemini_json para extraer preferencias
-            extracted_data = gemini_json(extraction_prompt)
+            # Usar mistral_json para extraer preferencias
+            extracted_data = mistral_json(extraction_prompt)
             
             if extracted_data:
                 # Actualizar preferencias
@@ -330,7 +330,7 @@ class TouristGuideAgent(Agent):
             user_message=user_message
         )
         
-        response = self.gemini_client.generate(prompt)
+        response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
         # Actualizar historial
@@ -363,7 +363,7 @@ class TouristGuideAgent(Agent):
             user_message=user_message
         )
         
-        response = self.gemini_client.generate(prompt)
+        response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
         # Actualizar historial
@@ -397,7 +397,7 @@ class TouristGuideAgent(Agent):
             user_message=user_message
         )
         
-        response = self.gemini_client.generate(prompt)
+        response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
         # Actualizar historial
@@ -424,7 +424,7 @@ class TouristGuideAgent(Agent):
             preferences=json.dumps(self.conversation_state['preferences'], indent=2, ensure_ascii=False)
         )
         
-        response = self.gemini_client.generate(prompt)
+        response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
         # Actualizar historial
@@ -457,7 +457,7 @@ class TouristGuideAgent(Agent):
         Mantén la respuesta en 3-4 líneas máximo.
         """
         
-        response = self.gemini_client.generate(prompt)
+        response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
         # Actualizar historial
@@ -648,7 +648,7 @@ class TouristGuideAgent(Agent):
             if re.search(pattern, message_lower):
                 return True
         
-        # Usar Gemini para detectar intención de proceder con análisis más sofisticado
+        # Usar Mistral para detectar intención de proceder con análisis más sofisticado
         try:
             prompt = f"""
             Analiza el siguiente mensaje del usuario en el contexto de una conversación sobre planificación de viajes.
@@ -671,13 +671,13 @@ class TouristGuideAgent(Agent):
             o 'false' si el usuario parece dispuesto a continuar proporcionando información.
             """
             
-            response = self.gemini_client.generate(prompt)
+            response = self.mistral_client.generate(prompt)
             result = response.strip().lower()
             
             return 'true' in result
             
         except Exception:
-            # Si falla Gemini, usar solo la detección por frases y patrones
+            # Si falla Mistral, usar solo la detección por frases y patrones
             return False
     
     def _explain_missing_info(self) -> Dict:

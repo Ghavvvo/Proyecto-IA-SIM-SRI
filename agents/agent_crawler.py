@@ -3,15 +3,15 @@ from core.crawler import TourismCrawler
 from datetime import datetime
 
 class CrawlerAgent(Agent):
-    def __init__(self, name, starting_urls, max_pages=100, max_depth=2, num_threads=10, enable_gemini_processing=True):
+    def __init__(self, name, starting_urls, max_pages=100, max_depth=2, num_threads=10, enable_mistral_processing=True):
         super().__init__(name)
-        # Crear crawler con soporte para paralelismo mejorado y procesamiento Gemini
+        # Crear crawler con soporte para paralelismo mejorado y procesamiento Mistral
         self.crawler = TourismCrawler(
             starting_urls=starting_urls, 
             max_pages=max_pages, 
             max_depth=max_depth,
             num_threads=num_threads,  # 10 hilos por defecto
-            enable_gemini_processing=enable_gemini_processing  # Procesar con Gemini por defecto
+            enable_mistral_processing=enable_mistral_processing  # Procesar con Mistral por defecto
         )
     def receive(self, message, sender):
         if message['type'] == 'crawl':

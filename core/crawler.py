@@ -16,7 +16,7 @@ from datetime import datetime
 
 
 class TourismCrawler:
-    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data", max_pages: int = 100, max_depth: int = 3, num_threads: int = 10, enable_gemini_processing: bool = True):
+    def __init__(self, starting_urls: List[str], chroma_collection_name: str = "tourism_data", max_pages: int = 100, max_depth: int = 3, num_threads: int = 10, enable_mistral_processing: bool = True):
         self.starting_urls = starting_urls
         self.visited_urls = set()
         self.urls_to_visit = queue.Queue()
@@ -60,25 +60,25 @@ class TourismCrawler:
         # Control de parada
         self.stop_crawling = threading.Event()
         
-        # Procesamiento con Gemini
-        self.enable_gemini_processing = enable_gemini_processing
+        # Procesamiento con Mistral
+        self.enable_mistral_processing = enable_mistral_processing
         self.processor_agent = None
-        if self.enable_gemini_processing:
+        if self.enable_mistral_processing:
             try:
                 from agents.agent_processor import ProcessorAgent
                 self.processor_agent = ProcessorAgent()
-                print("✅ Procesamiento con Gemini habilitado")
+                print("✅ Procesamiento con Mistral habilitado")
             except Exception as e:
-                print(f"⚠️ No se pudo habilitar el procesamiento con Gemini: {e}")
-                self.enable_gemini_processing = False
+                print(f"⚠️ No se pudo habilitar el procesamiento con Mistral: {e}")
+                self.enable_mistral_processing = False
         
         # Procesamiento con GLiNER
         self.enable_gliner_processing = False
         self.gliner_agent = None
         
         # Estadísticas de procesamiento
-        self.gemini_processed = 0
-        self.gemini_errors = 0
+        self.mistral_processed = 0
+        self.mistral_errors = 0
         self.gliner_processed = 0
         self.gliner_errors = 0
         
@@ -101,11 +101,11 @@ class TourismCrawler:
                 return False
         return True
     
-    def disable_gemini(self):
-        """Deshabilita el procesamiento con Gemini"""
-        self.enable_gemini_processing = False
+    def disable_mistral(self):
+        """Deshabilita el procesamiento con Mistral"""
+        self.enable_mistral_processing = False
         self.processor_agent = None
-        print("❌ Procesamiento con Gemini deshabilitado")
+        print("❌ Procesamiento con Mistral deshabilitado")
     
     def _initialize_chunks_file(self) -> str:
         """Inicializa el archivo para guardar los chunks"""
@@ -209,7 +209,7 @@ class TourismCrawler:
                             except:
                                 pass
                     
-                    elif processor == "Gemini":
+                    elif processor == "Mistral":
                         if 'structured_data' in metadata:
                             try:
                                 structured_data = json.loads(metadata['structured_data'])
@@ -596,10 +596,10 @@ class TourismCrawler:
                         # Guardar contenido original como fallback
                         self._save_original_content(content_data, depth, thread_id)
                 
-                # Procesar con Gemini si está habilitado y GLiNER no está activo
-                elif self.enable_gemini_processing and self.processor_agent:
+                # Procesar con Mistral si está habilitado y GLiNER no está activo
+                elif self.enable_mistral_processing and self.processor_agent:
                     try:
-                        # Procesar contenido con Gemini
+                        # Procesar contenido con Mistral
                         processor_response = self.processor_agent.receive({
                             'type': 'process_content',
                             'content_data': content_data
@@ -613,7 +613,7 @@ class TourismCrawler:
                                 # Convertir el JSON estructurado a texto para embeddings
                                 structured_text = self._format_structured_data(processed_data)
                                 
-                                doc_id = f"gemini_doc_{hash(url) % 10000000}_{depth}_{int(time.time())}"
+                                doc_id = f"mistral_doc_{hash(url) % 10000000}_{depth}_{int(time.time())}"
                                 
                                 # Guardar con metadata enriquecida
                                 metadata = {
@@ -622,7 +622,7 @@ class TourismCrawler:
                                     "source": "parallel_tourism_crawler",
                                     "depth": depth,
                                     "thread_id": str(thread_id),
-                                    "processed_by_gemini": True,
+                                    "processed_by_mistral": True,
                                     "structured_data": json.dumps(processed_data, ensure_ascii=False)
                                 }
                                 
@@ -649,7 +649,7 @@ class TourismCrawler:
                                 print(f"   🔗 URL: {content_data['url']}")
                                 print(f"   📄 Título: {content_data['title']}...")
                                 print(f"   📏 Tamaño del texto: {len(structured_text)} caracteres")
-                                print(f"   🏷️ Procesado por: Gemini")
+                                print(f"   🏷️ Procesado por: Mistral")
                                 if 'paises' in metadata:
                                     print(f"   🌍 Países: {metadata['paises']}")
                                 print(f"   📊 Metadata: {len(metadata)} campos")
@@ -666,21 +666,21 @@ class TourismCrawler:
                             
                             with self.stats_lock:
                                 self.pages_added_to_db += 1
-                                self.gemini_processed += 1
+                                self.mistral_processed += 1
                             
-                            print(f"[Thread-{thread_id}] ✅ Contenido procesado con Gemini: {content_data['title'][:50]}...")
+                            print(f"[Thread-{thread_id}] ✅ Contenido procesado con Mistral: {content_data['title'][:50]}...")
                         else:
                             # Si falla el procesamiento, guardar el contenido original
                             self._save_original_content(content_data, depth, thread_id)
                             
                     except Exception as e:
-                        print(f"[Thread-{thread_id}] ⚠️ Error en procesamiento Gemini: {e}")
+                        print(f"[Thread-{thread_id}] ⚠️ Error en procesamiento Mistral: {e}")
                         with self.stats_lock:
-                            self.gemini_errors += 1
+                            self.mistral_errors += 1
                         # Guardar contenido original como fallback
                         self._save_original_content(content_data, depth, thread_id)
                 else:
-                    # Si Gemini no está habilitado, guardar contenido original
+                    # Si Mistral no está habilitado, guardar contenido original
                     self._save_original_content(content_data, depth, thread_id)
                 
                 # Extraer enlaces si no estamos en la profundidad máxima
@@ -792,12 +792,12 @@ class TourismCrawler:
         if self.current_query_keywords:
             print(f"   • URLs filtradas por palabras clave: {self.urls_filtered_out}")
             print(f"   • Palabras clave utilizadas: {self.current_query_keywords}")
-        if self.enable_gemini_processing:
-            print(f"   • Páginas procesadas con Gemini: {self.gemini_processed}")
-            print(f"   • Errores de procesamiento Gemini: {self.gemini_errors}")
+        if self.enable_mistral_processing:
+            print(f"   • Páginas procesadas con Mistral: {self.mistral_processed}")
+            print(f"   • Errores de procesamiento Mistral: {self.mistral_errors}")
             if self.processor_agent:
                 stats = self.processor_agent.get_stats()
-                print(f"   • Tasa de éxito Gemini: {stats['success_rate']:.2%}")
+                print(f"   • Tasa de éxito Mistral: {stats['success_rate']:.2%}")
         if self.enable_gliner_processing:
             print(f"   • Páginas procesadas con GLiNER: {self.gliner_processed}")
             print(f"   • Errores de procesamiento GLiNER: {self.gliner_errors}")
@@ -1546,7 +1546,7 @@ class TourismCrawler:
         return self.run_parallel_crawler()
     
     def _save_original_content(self, content_data: Dict, depth: int, thread_id: int):
-        """Guarda el contenido original sin procesar con Gemini"""
+        """Guarda el contenido original sin procesar con Mistral"""
         with self.collection_lock:
             doc_id = f"parallel_doc_{hash(content_data['url']) % 10000000}_{depth}_{int(time.time())}"
             
@@ -1557,7 +1557,7 @@ class TourismCrawler:
                 "source": "parallel_tourism_crawler",
                 "depth": depth,
                 "thread_id": str(thread_id),
-                "processed_by_gemini": False
+                "processed_by_mistral": False
             }
             
             # IMPRIMIR INFORMACIÓN DEL CHUNK
@@ -1566,7 +1566,7 @@ class TourismCrawler:
             print(f"   🔗 URL: {content_data['url']}")
             print(f"   📄 Título: {content_data['title']}...")
             print(f"   📏 Tamaño del texto: {len(content_data['content'])} caracteres")
-            print(f"   🏷️ Procesado por: Crawler (sin Gemini)")
+            print(f"   🏷️ Procesado por: Crawler (sin Mistral)")
             print(f"   📊 Profundidad: {depth}")
             print(f"   🧵 Thread ID: {thread_id}")
             print(f"   ✅ Chunk guardado exitosamente\n")
@@ -1583,7 +1583,7 @@ class TourismCrawler:
         with self.stats_lock:
             self.pages_added_to_db += 1
         
-        print(f"[Thread-{thread_id}] ✓ Contenido añadido (sin Gemini): {content_data['title'][:50]}...")
+        print(f"[Thread-{thread_id}] ✓ Contenido añadido (sin Mistral): {content_data['title'][:50]}...")
     
     def _format_structured_data(self, processed_data: Dict) -> str:
         """

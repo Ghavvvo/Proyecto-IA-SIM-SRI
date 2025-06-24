@@ -16,14 +16,14 @@ Proyecto-IA-SIM-SRI/
 │   ├── agent_route.py          # Optimización de rutas
 │   ├── agent_tourist_guide.py  # Guía turístico virtual
 │   ├── agent_simulation.py     # Simulación de experiencias
-│   ├── agent_processor.py      # Procesamiento con Gemini
+│   ├── agent_processor.py      # Procesamiento con Mistral
 │   └── agent_gliner.py         # Extracción de entidades con GLiNER
 │
 ├── core/                   # Componentes principales
 │   ├── crawler.py             # Motor de crawling paralelo
 │   ├── rag.py                 # Sistema RAG mejorado
 │   ├── chromadb_singleton.py  # Gestión de base de datos vectorial
-│   └── gemini_config.py       # Configuración de Gemini AI
+│   └── mistral_config.py      # Configuración de Mistral AI
 │
 ├── utils/                  # Utilidades
 │   ├── urls.py               # URLs de inicio para crawling
@@ -61,7 +61,7 @@ Proyecto-IA-SIM-SRI/
 - **Agente de Simulación**: Simula experiencias turísticas con lógica difusa
 
 ### 2. **Tecnologías de IA**
-- **Gemini AI**: Para generación de respuestas y procesamiento de lenguaje natural
+- **Mistral AI**: Para generación de respuestas y procesamiento de lenguaje natural
 - **ChromaDB**: Base de datos vectorial para almacenamiento eficiente
 - **GLiNER**: Extracción de entidades nombradas
 - **Algoritmos Genéticos**: Optimización de selección de documentos
@@ -78,7 +78,7 @@ Proyecto-IA-SIM-SRI/
 ## 📋 Requisitos
 
 - Python 3.8+
-- API Key de Google Gemini
+- API Key de Mistral AI
 - Dependencias listadas en `requirements.txt`
 
 ## 🔧 Instalación
@@ -185,6 +185,6 @@ Este proyecto está bajo la Licencia MIT - ver el archivo LICENSE para más deta
 
 ## 🙏 Agradecimientos
 
-- Google Gemini AI por proporcionar capacidades de generación de lenguaje
+- Mistral AI por proporcionar capacidades de generación de lenguaje
 - ChromaDB por la base de datos vectorial
 - La comunidad de Python por las excelentes librerías

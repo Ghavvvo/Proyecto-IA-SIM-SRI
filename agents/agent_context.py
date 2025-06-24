@@ -1,6 +1,6 @@
 from autogen import Agent
 from typing import List, Dict, Any
-from core.gemini_config import GeminiClient, gemini_generate
+from core.mistral_config import MistralClient, mistral_generate
 from datetime import datetime
 
 class ContextAgent(Agent):
@@ -64,8 +64,8 @@ class ContextAgent(Agent):
             # Debug: Mostrar el contexto que se está usando
             print(f"🔍 Contexto disponible: {context_summary[:100]}...")
             
-            # Usar Gemini para analizar y mejorar la consulta
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Usar Mistral para analizar y mejorar la consulta
+            mistral_client = MistralClient(model_name="flash")
             
             # Prompt más específico y directo
             prompt = f"""
@@ -89,15 +89,15 @@ EJEMPLOS DE MEJORAS:
 RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
 """
             
-            response = model.generate_content(prompt)
-            improved_query = response.text.strip().strip('"\'')
+            response = mistral_client.generate(prompt)
+            improved_query = response.strip().strip('"\'')
             
-            # Debug: Mostrar la respuesta de Gemini
-            print(f"🤖 Respuesta de Gemini: {improved_query}")
+            # Debug: Mostrar la respuesta de Mistral
+            print(f"🤖 Respuesta de Mistral: {improved_query}")
             
             # Validar que la consulta mejorada sea diferente y válida
             if not improved_query or improved_query.lower() == query.lower() or len(improved_query) < 5:
-                # Si Gemini no mejoró la consulta, aplicar mejoras básicas
+                # Si Mistral no mejoró la consulta, aplicar mejoras básicas
                 improved_query = self._apply_basic_improvements(query, context_summary)
                 print(f"🔧 Aplicando mejoras básicas: {improved_query}")
             
@@ -121,7 +121,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
                 
         except Exception as e:
             print(f"❌ Error al analizar consulta con contexto: {e}")
-            # Fallback: aplicar mejoras básicas sin Gemini
+            # Fallback: aplicar mejoras básicas sin Mistral
             improved_query = self._apply_basic_improvements(query, self._build_context_summary())
             
             return {
@@ -221,7 +221,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         Extrae la consulta mejorada del texto de respuesta cuando no es JSON válido.
         
         Args:
-            text: Texto de respuesta de Gemini
+            text: Texto de respuesta de Mistral
             original_query: Consulta original como fallback
             
         Returns:
@@ -304,7 +304,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
     
     def _apply_basic_improvements(self, query: str, context_summary: str) -> str:
         """
-        Aplica mejoras básicas a la consulta cuando Gemini no está disponible o falla.
+        Aplica mejoras básicas a la consulta cuando Mistral no está disponible o falla.
         
         Args:
             query: Consulta original
@@ -551,9 +551,9 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         Returns:
             Dict con tipo y booleano indicando si se debe ofrecer ruta
         """
-        # Usar Gemini para analizar si se debe ofrecer ruta
+        # Usar Mistral para analizar si se debe ofrecer ruta
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
             prompt = f"""
         Eres un experto en análisis de conversaciones para un sistema de guía turístico. 
         Determina si la siguiente respuesta del sistema a una consulta del usuario contiene una lista de lugares de interés que podrían ser visitados en una ruta turística.
@@ -571,8 +571,8 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         - Responde 'false' si la respuesta no menciona lugares o si solo menciona un lugar.
         - Responde 'false' si la respuesta es una negativa (ej: "no encontré información") o si no es relevante para planificar una visita.
             """
-            result = model.generate_content(prompt)
-            decision = result.text.strip().lower()
+            result = mistral_client.generate(prompt)
+            decision = result.strip().lower()
             should_offer = (decision == 'true')
             
             return {
@@ -611,7 +611,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
 
     def _extract_relevant_places(self, response: str) -> Dict[str, Any]:
         """
-        Extrae los lugares relevantes de una respuesta usando Gemini.
+        Extrae los lugares relevantes de una respuesta usando Mistral.
         
         Args:
             response: Respuesta del sistema
@@ -620,7 +620,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             Dict con lista de lugares relevantes
         """
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            mistral_client = MistralClient(model_name="flash")
             prompt = f"""
         Eres un experto en extracción de lugares turísticos. Extrae SOLO los nombres de los lugares turísticos relevantes mencionados en el siguiente texto. 
 
@@ -644,8 +644,8 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
 
         LISTA DE LUGARES:
         """
-            result = model.generate_content(prompt)
-            places_str = result.text.strip()
+            result = mistral_client.generate(prompt)
+            places_str = result.strip()
             
             # Procesar la cadena de lugares
             if not places_str:

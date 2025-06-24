@@ -8,7 +8,7 @@ import json
 
 def test_manual_preferences_extraction():
     """
-    Prueba la extracción manual de preferencias sin usar Gemini
+    Prueba la extracción manual de preferencias sin usar Mistral
     """
     print("=== TEST: Extracción manual de preferencias ===\n")
     
@@ -72,7 +72,7 @@ def test_response_structure():
         'preferred_activities': []
     }
     
-    # Crear respuesta simulada sin llamar a Gemini
+    # Crear respuesta simulada sin llamar a Mistral
     response = {
         'type': 'guide_response',
         'message': 'Resumen simulado',
