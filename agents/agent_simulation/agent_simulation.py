@@ -191,26 +191,26 @@ class TouristSimulationAgent(Agent):
         # Determinar si llueve
         esta_lloviendo = random.random() < prob_lluvia
 
-        # Valoración climática para el sistema difuso (0-10) - equilibrada
+        # Valoración climática para el sistema difuso (0-10) - con mayor variabilidad
         if esta_lloviendo:
-            valor_clima = max(4, 10 - random.randint(3, 6))  # Lluvia moderadamente penalizante
+            valor_clima = max(2, 10 - random.randint(4, 8))  # Mayor variabilidad en lluvia
             descripcion = f"Lluvia, {temperatura}°C"
         else:
-            # Calcular valor climático según la temperatura y preferencia de temporada - equilibrado
+            # Calcular valor climático con mayor variabilidad
             if temporada == "verano":
                 if temperatura < 18:
-                    valor_clima = 6.5  # Penalización moderada por frío
+                    valor_clima = random.uniform(4.5, 7.5)  # Mayor rango de variación
                 elif temperatura > 35:
-                    valor_clima = 6.0  # Penalización moderada por calor
+                    valor_clima = random.uniform(3.5, 6.5)  # Mayor rango de variación
                 else:
-                    valor_clima = min(10, max(7.0, 10 - abs(temperatura - 26) * 0.4))  # Equilibrado
+                    valor_clima = min(10, max(5.5, 10 - abs(temperatura - 26) * random.uniform(0.3, 0.6)))  # Más variabilidad
             elif temporada == "invierno":
                 if temperatura < 0:
-                    valor_clima = 6.0  # Penalización moderada por frío extremo
+                    valor_clima = random.uniform(3.0, 6.5)  # Mayor rango de variación
                 else:
-                    valor_clima = min(10, max(7.0, 10 - abs(temperatura - 12) * 0.4))  # Equilibrado
+                    valor_clima = min(10, max(5.5, 10 - abs(temperatura - 12) * random.uniform(0.3, 0.6)))  # Más variabilidad
             else:  # primavera/otoño
-                valor_clima = min(10, max(7.0, 10 - abs(temperatura - 22) * 0.4))  # Equilibrado
+                valor_clima = min(10, max(5.5, 10 - abs(temperatura - 22) * random.uniform(0.3, 0.6)))  # Más variabilidad
 
             descripcion = f"Despejado, {temperatura}°C"
 
@@ -250,9 +250,9 @@ class TouristSimulationAgent(Agent):
         else:
             modificador_hora = 1.0
 
-        # Calcular nivel de crowding con componente aleatorio
+        # Calcular nivel de crowding con mayor componente aleatorio
         nivel_base = popularidad_base * modificador_dia * modificador_hora
-        variacion = random.uniform(-1.8, 1.2)  # Ligeramente menos favorable
+        variacion = random.uniform(-2.5, 2.0)  # Mayor variabilidad
         nivel_crowding = max(0, min(10, nivel_base + variacion))
 
         # Descripción cualitativa
@@ -296,9 +296,9 @@ class TouristSimulationAgent(Agent):
 
         nivel_base = niveles_base.get(tipo_lugar.lower(), 6.8)  # Ligeramente reducido de 7.2
 
-        # Añadir variación aleatoria equilibrada
-        variacion = random.normalvariate(0.1, 1.3)  # Menos sesgo positivo
-        nivel_atencion = max(3.5, min(10, nivel_base + variacion))
+        # Añadir variación aleatoria con mayor variabilidad
+        variacion = random.normalvariate(0, 1.8)  # Mayor variabilidad, sin sesgo
+        nivel_atencion = max(2.5, min(10, nivel_base + variacion))
 
         # Descripción cualitativa
         if nivel_atencion < 3:
@@ -524,12 +524,6 @@ class TouristSimulationAgent(Agent):
             self.simulation.input['atencion'] = valor_atencion
             self.simulation.input['tiempo_espera'] = minutos_espera
             self.simulation.input['interes_lugar'] = interes
-
-            # Debug: imprimir valores de entrada (sin emojis para evitar problemas de encoding)
-            # Comentado para evitar output innecesario
-            # if __debug__:  # Solo en modo debug
-            #     print(f"  Valores fuzzy - Clima: {valor_clima}, Crowding: {valor_crowding}, Atencion: {valor_atencion}")
-            #     print(f"     Tiempo espera: {minutos_espera} min, Interes: {interes}")
 
             self.simulation.compute()
 

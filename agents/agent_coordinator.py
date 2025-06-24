@@ -794,7 +794,7 @@ class CoordinatorAgent(Agent):
             optimized_routes = {}
             if extraction_result['type'] == 'extracted_places' and len(extraction_result['places']) >= 2:
                 places = extraction_result['places']
-                print(f"📍 Lugares identificados: {', '.join(places)}")
+
 
                 # Optimizar rutas usando el RouteAgent
                 print("🚀 Optimizando rutas con el agente de rutas...")
@@ -928,7 +928,7 @@ class CoordinatorAgent(Agent):
             if self.simulation_agent:
                 print("🧩 Enviando itinerario al agente de simulación...")
                 print("🧩 JSON para simulación:")
-                print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
+
                 simulation_result = self._run_simulation(simulation_json)
                 
                 # Add simulation results to the itinerary
@@ -936,9 +936,6 @@ class CoordinatorAgent(Agent):
                     formatted_itinerary += f"\n\n{simulation_result}"
             else:
                 print("⚠️ Agente de simulación no disponible")
-                print("🧩 JSON para simulación:")
-                print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
-
             return formatted_itinerary
 
         except Exception as e:
@@ -1405,7 +1402,6 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             if self.simulation_agent:
                 print("🧩 Enviando itinerario al agente de simulación...")
                 print("🧩 JSON para simulación:")
-                print(json.dumps(simulation_json, ensure_ascii=False, indent=2))
                 simulation_result = self._run_simulation(simulation_json)
 
                 # Add simulation results to the itinerary
