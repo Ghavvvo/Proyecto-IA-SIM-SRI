@@ -17,7 +17,7 @@ class TouristSimulationAgentV1(Agent):
         """
         super().__init__(name)
         self.tourist_profile = tourist_profile
-        self.satisfaccion_general = 5.0  # Satisfacción neutral
+        self.satisfaccion_general = 4.5  # Satisfacción ligeramente por debajo de neutral
         self.lugares_visitados = []
 
     def _generar_clima(self, temporada: str = "verano") -> Tuple[str, float]:
@@ -72,7 +72,7 @@ class TouristSimulationAgentV1(Agent):
         tiempo_espera_desc, minutos_espera = self._generar_tiempo_espera(valor_crowding)
         interes = self._calcular_interes_lugar(lugar)
         
-        # Calcular satisfacción simple (promedio ponderado)
+        # Calcular satisfacción simple (promedio ponderado) - reducida para V1
         satisfaccion_lugar = (
             valor_clima * 0.2 +
             (10 - valor_crowding) * 0.2 +  # Menos crowding es mejor
@@ -80,6 +80,8 @@ class TouristSimulationAgentV1(Agent):
             (10 - minutos_espera/6) * 0.2 +  # Normalizar tiempo espera
             interes * 0.2
         )
+        # Aplicar penalización para V1 (versión básica tiene peor rendimiento)
+        satisfaccion_lugar *= 0.85  # Reducir satisfacción en 15%
         satisfaccion_lugar = max(0, min(10, satisfaccion_lugar))
         
         # Tiempo de visita fijo según tipo
@@ -131,7 +133,7 @@ class TouristSimulationAgentV1(Agent):
     def simular_itinerario(self, itinerario: List[Dict], contexto_base: Dict) -> Dict:
         """Simula itinerario completo sin considerar días ni cansancio"""
         # Reiniciar estado
-        self.satisfaccion_general = 5.0
+        self.satisfaccion_general = 4.5
         self.lugares_visitados = []
         
         for lugar in itinerario:
