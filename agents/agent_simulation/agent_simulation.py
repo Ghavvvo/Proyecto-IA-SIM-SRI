@@ -526,9 +526,10 @@ class TouristSimulationAgent(Agent):
             self.simulation.input['interes_lugar'] = interes
 
             # Debug: imprimir valores de entrada (sin emojis para evitar problemas de encoding)
-            if __debug__:  # Solo en modo debug
-                print(f"  Valores fuzzy - Clima: {valor_clima}, Crowding: {valor_crowding}, Atencion: {valor_atencion}")
-                print(f"     Tiempo espera: {minutos_espera} min, Interes: {interes}")
+            # Comentado para evitar output innecesario
+            # if __debug__:  # Solo en modo debug
+            #     print(f"  Valores fuzzy - Clima: {valor_clima}, Crowding: {valor_crowding}, Atencion: {valor_atencion}")
+            #     print(f"     Tiempo espera: {minutos_espera} min, Interes: {interes}")
 
             self.simulation.compute()
 
