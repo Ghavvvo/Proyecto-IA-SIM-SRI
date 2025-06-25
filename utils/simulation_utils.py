@@ -4,6 +4,7 @@ import statistics
 import math
 from typing import Dict, Any, List
 from core.mistral_config import MistralClient
+import json
 
 def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str, Any]:
     """
@@ -76,7 +77,7 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
         end_idx = json_str.rfind('}') + 1
         if start_idx != -1 and end_idx > start_idx:
             json_str = json_str[start_idx:end_idx]
-            import json
+
             simulation_data = json.loads(json_str)
             
             
@@ -309,89 +310,89 @@ def run_simulation_replicas(simulation_agent, simulation_json: dict, num_replica
 def aggregate_simulation_results(all_results: list) -> dict:
     """
     Agrega los resultados de múltiples réplicas de simulación
-    
+
     Args:
         all_results: Lista de diccionarios con resultados de cada réplica
-        
+
     Returns:
         Diccionario con resultados agregados
     """
     if not all_results:
         return {}
-    
-    
+
+
     satisfacciones = [r.get('satisfaccion_general', 0) for r in all_results]
     cansan_final = [r.get('cansancio_final', 0) for r in all_results]
     duraciones = [r.get('duracion_total_hrs', 0) for r in all_results]
     dias_simulados = [r.get('dias_simulados', 1) for r in all_results]
-    
+
     aggregated = {
         'perfil_turista': all_results[0].get('perfil_turista', 'average'),
         'num_replicas': len(all_results),
-        
-        
+
+
         'satisfaccion_promedio': statistics.mean(satisfacciones),
         'satisfaccion_mediana': statistics.median(satisfacciones),
         'satisfaccion_min': min(satisfacciones),
         'satisfaccion_max': max(satisfacciones),
         'satisfaccion_desv_std': statistics.stdev(satisfacciones) if len(satisfacciones) > 1 else 0,
-        
-        
+
+
         'cansancio_promedio': statistics.mean(cansan_final),
         'cansancio_mediana': statistics.median(cansan_final),
         'cansancio_min': min(cansan_final),
         'cansancio_max': max(cansan_final),
         'cansancio_desv_std': statistics.stdev(cansan_final) if len(cansan_final) > 1 else 0,
-        
-        
+
+
         'duracion_promedio': statistics.mean(duraciones),
         'duracion_mediana': statistics.median(duraciones),
         'duracion_min': min(duraciones),
         'duracion_max': max(duraciones),
-        
-        
+
+
         'dias_promedio': statistics.mean(dias_simulados),
         'dias_max': max(dias_simulados),
-        
-        
+
+
         'satisfaccion_general': statistics.mean(satisfacciones),
         'cansancio_final': statistics.mean(cansan_final),
         'duracion_total_hrs': statistics.mean(duraciones),
         'dias_simulados': max(dias_simulados),
     }
-    
-    
+
+
     all_places = []
     lugares_por_dia_agregado = {}
-    
+
     for result in all_results:
         places = result.get('lugares_visitados', [])
         all_places.extend(places)
-        
-        
+
+
         lugares_por_dia = result.get('lugares_por_dia', {})
         for dia, lugares in lugares_por_dia.items():
             if dia not in lugares_por_dia_agregado:
                 lugares_por_dia_agregado[dia] = []
             lugares_por_dia_agregado[dia].extend(lugares)
-    
-    
+
+
     if all_places:
         place_satisfactions = [p.get('satisfaccion', 0) for p in all_places]
         place_wait_times = [p.get('tiempo_espera_min', 0) for p in all_places]
-        
+
         aggregated.update({
             'total_visitas': len(all_places),
             'satisfaccion_lugares_promedio': statistics.mean(place_satisfactions),
             'tiempo_espera_promedio': statistics.mean(place_wait_times),
-            'lugares_visitados': all_places,  
+            'lugares_visitados': all_places,
             'lugares_por_dia': lugares_por_dia_agregado
         })
-    
-    
+
+
     satisfaccion_prom = aggregated['satisfaccion_promedio']
     desv_std = aggregated['satisfaccion_desv_std']
-    
+
     if satisfaccion_prom >= 8:
         if desv_std < 1:
             valoracion = f"¡Experiencia consistentemente excepcional! Con una satisfacción promedio de {satisfaccion_prom:.1f}/10 y baja variabilidad ({desv_std:.1f}), este itinerario ofrece una experiencia turística de alta calidad y confiable."
@@ -403,27 +404,27 @@ def aggregate_simulation_results(all_results: list) -> dict:
         valoracion = f"Experiencia aceptable pero inconsistente. Satisfacción promedio de {satisfaccion_prom:.1f}/10 con alta variabilidad ({desv_std:.1f}) indica necesidad de mejoras."
     else:
         valoracion = f"Itinerario problemático con satisfacción promedio de {satisfaccion_prom:.1f}/10. Se requiere revisión completa del itinerario."
-    
+
     aggregated['valoracion_viaje'] = valoracion
-    
+
     return aggregated
 
 
 def format_aggregated_simulation_results(aggregated_results: dict, num_replicas: int) -> str:
     """
     Formatea los resultados agregados de múltiples réplicas de simulación
-    
+
     Args:
         aggregated_results: Diccionario con resultados agregados
         num_replicas: Número de réplicas ejecutadas
-        
+
     Returns:
         String formateado con el resumen de la simulación agregada
     """
     try:
         profile = aggregated_results.get('perfil_turista', 'average')
-        
-        
+
+
         summary = f"""
 🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA - ANÁLISIS DE {num_replicas} RÉPLICAS**
 
@@ -451,71 +452,71 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
 💭 **Valoración Agregada:**
 {aggregated_results.get('valoracion_viaje', 'Sin valoración disponible')}"""
 
-        
+
         satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
         cansancio_std = aggregated_results.get('cansancio_desv_std', 0)
-        
+
         summary += "\n\n🔍 **Análisis de Consistencia:**"
-        
+
         if satisfaccion_std < 1:
             summary += "\n- ✅ Experiencia muy consistente (baja variabilidad en satisfacción)"
         elif satisfaccion_std < 2:
             summary += "\n- ⚠️ Experiencia moderadamente consistente"
         else:
             summary += "\n- ❌ Experiencia inconsistente (alta variabilidad en satisfacción)"
-        
+
         if cansancio_std < 1:
             summary += "\n- ✅ Nivel de cansancio predecible"
         else:
             summary += "\n- ⚠️ Nivel de cansancio variable entre réplicas"
-        
-        
+
+
         if aggregated_results.get('total_visitas', 0) > 0:
             total_visitas = aggregated_results.get('total_visitas', 0)
             satisfaccion_lugares = aggregated_results.get('satisfaccion_lugares_promedio', 0)
             tiempo_espera = aggregated_results.get('tiempo_espera_promedio', 0)
-            
+
             summary += f"\n\n📍 **Estadísticas de Lugares:**"
             summary += f"\n- Total de visitas simuladas: {total_visitas}"
             summary += f"\n- Satisfacción promedio por lugar: {satisfaccion_lugares:.1f}/10"
             summary += f"\n- Tiempo de espera promedio: {tiempo_espera:.0f} minutos"
             summary += f"\n- Visitas por réplica: {total_visitas/num_replicas:.1f}"
-        
-        
+
+
         summary += "\n\n💡 **Recomendaciones Basadas en el Análisis:**"
-        
+
         satisfaccion_prom = aggregated_results.get('satisfaccion_promedio', 0)
         cansancio_prom = aggregated_results.get('cansancio_promedio', 0)
-        
+
         if satisfaccion_prom >= 8 and satisfaccion_std < 1:
             summary += "\n- 🎯 Itinerario óptimo: alta satisfacción y consistente"
         elif satisfaccion_prom >= 7 and satisfaccion_std > 1.5:
             summary += "\n- 🔧 Considerar ajustes para reducir variabilidad"
         elif satisfaccion_prom < 6:
             summary += "\n- ⚠️ Revisar itinerario: satisfacción por debajo del umbral aceptable"
-        
+
         if cansancio_prom > 8:
             summary += "\n- 😴 Reducir intensidad del itinerario o agregar más descansos"
         elif cansancio_prom < 3:
             summary += "\n- 🚀 Posibilidad de agregar más actividades sin sobrecargar"
-        
+
         if satisfaccion_std > 2:
             summary += "\n- 📊 Alta variabilidad sugiere factores externos impredecibles"
-        
-        
+
+
         satisfaccion_prom = aggregated_results.get('satisfaccion_promedio', 0)
         satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
-        
+
         if num_replicas >= 10 and satisfaccion_std > 0:
             error_std = satisfaccion_std / math.sqrt(num_replicas)
             ic_inferior = satisfaccion_prom - 1.96 * error_std
             ic_superior = satisfaccion_prom + 1.96 * error_std
-            
+
             summary += f"\n\n📊 **Intervalo de Confianza (95%):**"
             summary += f"\n- Satisfacción esperada: {ic_inferior:.1f} - {ic_superior:.1f}/10"
-        
+
         return summary
-        
+
     except Exception as e:
         print(f"Error formateando resultados agregados: {e}")
         return f"\n\n⚠️ Error al procesar resultados agregados de {num_replicas} réplicas."
@@ -524,15 +525,15 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
 def format_simulation_results(results: dict) -> str:
     """
     Formatea los resultados de una simulación individual en un texto legible
-    
+
     Args:
         results: Diccionario con los resultados de la simulación
-        
+
     Returns:
         String formateado con el resumen de la simulación
     """
     try:
-        
+
         profile = results.get('perfil_turista', 'average')
         general_satisfaction = results.get('satisfaccion_general', 0)
         final_fatigue = results.get('cansancio_final', 0)
@@ -541,8 +542,8 @@ def format_simulation_results(results: dict) -> str:
         places_visited = results.get('lugares_visitados', [])
         dias_simulados = results.get('dias_simulados', 1)
         lugares_por_dia = results.get('lugares_por_dia', {})
-        
-        
+
+
         summary = f"""
 🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA**
 
@@ -556,71 +557,71 @@ def format_simulation_results(results: dict) -> str:
 💭 **Valoración del viaje:**
 {overall_rating}"""
 
-        
+
         if dias_simulados > 1 and lugares_por_dia:
             summary += "\n\n📅 **Experiencia por día:**"
             for dia, lugares in sorted(lugares_por_dia.items()):
                 summary += f"\n\n**Día {dia}:**"
                 summary += f"\n- Lugares visitados: {len(lugares)}"
-                
-                
+
+
                 lugares_dia = [p for p in places_visited if p.get('dia', 1) == dia]
                 if lugares_dia:
                     avg_satisfaction = sum(p.get('satisfaccion', 0) for p in lugares_dia) / len(lugares_dia)
                     summary += f"\n- Satisfacción promedio: {avg_satisfaction:.1f}/10"
-                    
-                    
+
+
                     best_place = max(lugares_dia, key=lambda x: x.get('satisfaccion', 0))
                     summary += f"\n- Mejor experiencia: {best_place['lugar']} ({best_place['satisfaccion']}/10)"
 
         summary += "\n\n🏆 **Mejores experiencias del viaje:**"
-        
-        
+
+
         if places_visited:
             sorted_places = sorted(places_visited, key=lambda x: x.get('satisfaccion', 0), reverse=True)
             top_places = sorted_places[:3]
-            
+
             for place in top_places:
                 dia_info = f" (Día {place.get('dia', 1)})" if dias_simulados > 1 else ""
                 summary += f"\n- {place['lugar']}{dia_info}: {place['satisfaccion']}/10 - {place.get('comentario', 'Sin comentarios')}"
-        
-        
+
+
         warnings = []
         if final_fatigue > 8:
             warnings.append("⚠️ El itinerario es muy agotador. Considera reducir actividades o agregar más descansos entre días.")
-        
+
         if general_satisfaction < 6:
             warnings.append("⚠️ La satisfacción general es baja. Revisa los tiempos de espera y la distribución de actividades.")
-        
-        
+
+
         problem_places = [p for p in places_visited if p.get('satisfaccion', 0) < 5]
         if problem_places:
             warnings.append(f"⚠️ {len(problem_places)} lugares con baja satisfacción. Considera alternativas.")
-        
-        
+
+
         if lugares_por_dia:
             for dia, lugares in lugares_por_dia.items():
                 if len(lugares) > 5:
                     warnings.append(f"⚠️ El día {dia} tiene demasiadas actividades ({len(lugares)}). Considera distribuir mejor.")
-        
+
         if warnings:
             summary += "\n\n⚠️ **Recomendaciones de mejora:**"
             for warning in warnings:
                 summary += f"\n{warning}"
-        
-        
+
+
         if places_visited:
             avg_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited) / len(places_visited)
             total_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited)
-            
+
             summary += f"\n\n📈 **Estadísticas adicionales:**"
             summary += f"\n- Tiempo promedio de espera: {avg_wait_time:.0f} minutos"
             summary += f"\n- Tiempo total en esperas: {total_wait_time:.0f} minutos"
             summary += f"\n- Total de lugares visitados: {len(places_visited)}"
             summary += f"\n- Promedio de lugares por día: {len(places_visited)/dias_simulados:.1f}"
-        
+
         return summary
-        
+
     except Exception as e:
         print(f"Error formateando resultados de simulación: {e}")
         return "\n\n⚠️ No se pudieron procesar los resultados de la simulación."
