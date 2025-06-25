@@ -19,46 +19,46 @@ class TestDataGenerator:
         self.seed = seed
         random.seed(seed)
         
-        # Base de lugares turísticos
+        
         self.lugares_base = [
-            # Museos
+            
             {"nombre": "Museo Nacional de Arte", "tipo": "museo", "popularidad": 8},
             {"nombre": "Museo de Historia Natural", "tipo": "museo", "popularidad": 7},
             {"nombre": "Museo de Arte Moderno", "tipo": "museo", "popularidad": 6},
             
-            # Restaurantes
+            
             {"nombre": "La Terraza Gourmet", "tipo": "restaurante", "popularidad": 9},
             {"nombre": "Café del Centro", "tipo": "restaurante", "popularidad": 6},
             {"nombre": "Restaurante Tradicional", "tipo": "restaurante", "popularidad": 7},
             
-            # Parques
+            
             {"nombre": "Parque Central", "tipo": "parque", "popularidad": 8},
             {"nombre": "Jardín Botánico", "tipo": "parque", "popularidad": 7},
             {"nombre": "Parque de la Ciudad", "tipo": "parque", "popularidad": 6},
             
-            # Monumentos
+            
             {"nombre": "Monumento Nacional", "tipo": "monumento", "popularidad": 9},
             {"nombre": "Plaza Histórica", "tipo": "monumento", "popularidad": 7},
             {"nombre": "Estatua de la Libertad Local", "tipo": "monumento", "popularidad": 8},
             
-            # Playas
+            
             {"nombre": "Playa del Sol", "tipo": "playa", "popularidad": 9},
             {"nombre": "Playa Tranquila", "tipo": "playa", "popularidad": 6},
             
-            # Centros comerciales
+            
             {"nombre": "Mall Plaza", "tipo": "centro_comercial", "popularidad": 8},
             {"nombre": "Centro Comercial Downtown", "tipo": "centro_comercial", "popularidad": 7},
             
-            # Teatros
+            
             {"nombre": "Teatro Nacional", "tipo": "teatro", "popularidad": 8},
             {"nombre": "Teatro Municipal", "tipo": "teatro", "popularidad": 6},
             
-            # Zoológicos
+            
             {"nombre": "Zoológico de la Ciudad", "tipo": "zoo", "popularidad": 8},
             {"nombre": "Acuario Municipal", "tipo": "zoo", "popularidad": 7}
         ]
         
-        # Perfiles de clientes con diferentes preferencias
+        
         self.perfiles_cliente = [
             {
                 "nombre": "Cliente Cultural",
@@ -86,7 +86,7 @@ class TestDataGenerator:
             }
         ]
         
-        # Contextos de temporada
+        
         self.contextos_temporada = [
             {"temporada": "verano", "prob_lluvia": 0.1},
             {"temporada": "invierno", "prob_lluvia": 0.4},
@@ -94,7 +94,7 @@ class TestDataGenerator:
             {"temporada": "otoño", "prob_lluvia": 0.3}
         ]
         
-        # Días de la semana
+        
         self.dias_semana = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
     
     def generar_itinerario_corto(self) -> Dict:
@@ -142,7 +142,7 @@ class TestDataGenerator:
         lugares_por_dia = random.randint(3, 4)
         total_lugares = num_dias * lugares_por_dia
         
-        # Asegurar que no se repitan lugares
+        
         lugares_seleccionados = random.sample(
             self.lugares_base, 
             min(total_lugares, len(self.lugares_base))
@@ -155,15 +155,15 @@ class TestDataGenerator:
         for i, lugar in enumerate(lugares_seleccionados):
             lugar_copia = lugar.copy()
             
-            # Cambiar de día si es necesario
+            
             if lugares_en_dia >= lugares_por_dia:
                 dia_actual += 1
                 lugares_en_dia = 0
             
             lugar_copia["dia"] = dia_actual
             
-            # Distancias
-            if lugares_en_dia == 0:  # Primer lugar del día
+            
+            if lugares_en_dia == 0:  
                 lugar_copia["distancia_anterior"] = 0
                 lugar_copia["distancia_inicio"] = random.uniform(3, 10)
             else:
@@ -199,13 +199,13 @@ class TestDataGenerator:
         num_dias = random.randint(4, 5)
         lugares_por_dia = random.randint(3, 4)
         
-        # Para itinerarios largos, permitimos repetir algunos tipos de lugares
+        
         itinerario = []
         dia_actual = 1
         lugares_en_dia = 0
         
         for dia in range(1, num_dias + 1):
-            # Seleccionar lugares para este día
+            
             num_lugares_dia = random.randint(3, 4)
             lugares_dia = random.sample(self.lugares_base, num_lugares_dia)
             
@@ -213,12 +213,12 @@ class TestDataGenerator:
                 lugar_copia = lugar.copy()
                 lugar_copia["dia"] = dia
                 
-                # Modificar nombre para evitar duplicados exactos
+                
                 if dia > 1:
                     lugar_copia["nombre"] = f"{lugar['nombre']} (Día {dia})"
                 
-                # Distancias
-                if i == 0:  # Primer lugar del día
+                
+                if i == 0:  
                     lugar_copia["distancia_anterior"] = 0
                     lugar_copia["distancia_inicio"] = random.uniform(3, 12)
                 else:
@@ -254,10 +254,10 @@ class TestDataGenerator:
             Diccionario con itinerario y contexto
         """
         if tipo_extremo == "optimo":
-            # Escenario óptimo: lugares populares, buen clima, preferencias alineadas
+            
             lugares = [l for l in self.lugares_base if l["popularidad"] >= 8][:5]
             
-            # Cliente con preferencias que coinciden con los lugares
+            
             preferencias = []
             for lugar in lugares:
                 if lugar["tipo"] == "museo":
@@ -276,11 +276,11 @@ class TestDataGenerator:
                 "nombre_cliente": "Cliente Ideal"
             }
             
-        else:  # pesimo
-            # Escenario pésimo: lugares poco populares, mal clima, preferencias opuestas
+        else:  
+            
             lugares = [l for l in self.lugares_base if l["popularidad"] <= 6][:5]
             
-            # Cliente con preferencias opuestas
+            
             preferencias = ["deportes extremos", "vida nocturna", "tecnología"]
             
             contexto = {
@@ -292,7 +292,7 @@ class TestDataGenerator:
                 "nombre_cliente": "Cliente Difícil"
             }
         
-        # Construir itinerario
+        
         itinerario = []
         for i, lugar in enumerate(lugares):
             lugar_copia = lugar.copy()

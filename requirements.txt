@@ -1,4 +1,4 @@
-# Bibliotecas principales utilizadas en el proyecto
+
 python-dotenv==1.0.0
 chromadb==1.0.12
 autogen-agentchat==0.6.1
@@ -9,21 +9,20 @@ requests==2.32.3
 numpy>=1.21.0
 scikit-learn==1.6.1
 tiktoken==0.9.0
-duckduckgo-search==3.5.0  # Requerido para búsquedas web
+duckduckgo-search==3.5.0  
 
-# Dependencias necesarias para las bibliotecas principales
-pyyaml==6.0.2  # Requerido por chromadb
-kubernetes>=28.1.0  # Requerido por chromadb
-pillow==11.2.1  # Requerido por sentence-transformers (dependencia de chromadb)
-scipy==1.15.3  # Requerido por sentence-transformers y scikit-learn
-wrapt==1.17.2  # Requerido por opentelemetry (dependencia de chromadb)
-protobuf==5.29.3  # Requerido por google-generativeai y chromadb
-sympy  # Requerido por onnxruntime (dependencia de chromadb)
 
-# Dependencias para el sistema de experimentación
-matplotlib>=3.5.0  # Para generación de gráficos
-seaborn>=0.12.0  # Para visualizaciones estadísticas
-pandas>=1.3.0  # Para manejo de datos tabulares
+pyyaml==6.0.2  
+kubernetes>=28.1.0  
+pillow==11.2.1  
+scipy==1.15.3  
+wrapt==1.17.2  
+protobuf==5.29.3  
+sympy  
 
-# Opcional - solo si se usa agent_gliner.py
-# gliner
+
+matplotlib>=3.5.0  
+seaborn>=0.12.0  
+pandas>=1.3.0  
+
+

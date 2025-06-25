@@ -12,14 +12,14 @@ def test_preferences_extraction():
     """
     print("=== TEST: Extracción de preferencias del último mensaje ===\n")
     
-    # Crear agente turístico
+    
     guide = TouristGuideAgent("TestGuide")
     
-    # Iniciar conversación
+    
     response = guide.receive({'type': 'start_conversation'}, None)
     print(f"Guía: {response['message']}\n")
     
-    # Simular conversación
+    
     messages = [
         "Quiero ir a Cuba",
         "Me interesan las playas y los museos",
@@ -31,7 +31,7 @@ def test_preferences_extraction():
         response = guide.receive({'type': 'user_message', 'message': msg}, None)
         print(f"Guía: {response['message']}")
         
-        # Mostrar preferencias actuales
+        
         current_prefs = response.get('current_preferences', {})
         print(f"\nPreferencias actuales:")
         print(f"- Destino: {current_prefs.get('destination')}")
@@ -39,14 +39,14 @@ def test_preferences_extraction():
         print(f"- Recopilación completa: {response.get('preferences_collected', False)}")
         print("-" * 50 + "\n")
     
-    # Verificar preferencias finales
+    
     final_response = guide.receive({'type': 'get_preferences'}, None)
     final_prefs = final_response['preferences']
     
     print("\n=== PREFERENCIAS FINALES ===")
     print(json.dumps(final_prefs, indent=2, ensure_ascii=False))
     
-    # Verificar que se incluyeron todos los intereses
+    
     expected_interests = ['beaches', 'museums', 'restaurants']
     actual_interests = final_prefs.get('interests', [])
     
@@ -54,7 +54,7 @@ def test_preferences_extraction():
     print(f"Intereses esperados: {expected_interests}")
     print(f"Intereses detectados: {actual_interests}")
     
-    # Verificar que todos los intereses esperados están presentes
+    
     missing_interests = []
     for interest in expected_interests:
         if interest not in actual_interests:
@@ -73,13 +73,13 @@ def test_preferences_in_coordinator_flow():
     """
     print("\n\n=== TEST: Flujo completo con preferencias ===\n")
     
-    # Crear agente turístico
+    
     guide = TouristGuideAgent("TestGuide")
     
-    # Simular flujo de planificación
+    
     guide.receive({'type': 'start_conversation'}, None)
     
-    # Mensajes del usuario
+    
     messages = [
         "Cuba",
         "playas y museos", 
@@ -90,7 +90,7 @@ def test_preferences_in_coordinator_flow():
     for msg in messages:
         last_response = guide.receive({'type': 'user_message', 'message': msg}, None)
     
-    # Verificar que el último response incluye las preferencias actuales
+    
     print("=== Verificando último response ===")
     print(f"preferences_collected: {last_response.get('preferences_collected')}")
     print(f"final_preferences presente: {'final_preferences' in last_response}")
@@ -108,7 +108,7 @@ def test_preferences_in_coordinator_flow():
         print(f"- Destino: {final.get('destination')}")
         print(f"- Intereses: {final.get('interests')}")
     
-    # Verificar que ambos contienen la información completa
+    
     success = True
     if last_response.get('preferences_collected'):
         prefs = last_response.get('current_preferences') or last_response.get('final_preferences')
@@ -126,7 +126,7 @@ def test_preferences_in_coordinator_flow():
     return success
 
 if __name__ == "__main__":
-    # Ejecutar pruebas
+    
     test1_passed = test_preferences_extraction()
     test2_passed = test_preferences_in_coordinator_flow()
     

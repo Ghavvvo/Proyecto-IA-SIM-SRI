@@ -18,12 +18,12 @@ class TouristGuideAgent(Agent):
     def __init__(self, name: str):
         super().__init__(name)
         
-        # Usar cliente Mistral centralizado
+        
         self.mistral_client = MistralClient(model_name="flash")
         
-        # Estado de la conversación
+        
         self.conversation_state = {
-            'phase': 'greeting',  # greeting, destination, interests, details, summary
+            'phase': 'greeting',  
             'preferences': {
                 'destination': None,
                 'interests': [],
@@ -39,7 +39,7 @@ class TouristGuideAgent(Agent):
             'extraction_attempts': 0
         }
         
-        # Plantillas de conversación
+        
         self.conversation_templates = {
             'greeting': """
             Eres un guía turístico experto y amigable. Tu objetivo es ayudar al usuario a planificar sus vacaciones perfectas.
@@ -120,7 +120,7 @@ class TouristGuideAgent(Agent):
             """
         }
         
-        # Palabras clave para identificar elementos
+        
         self.keywords_mapping = {
             'accommodation': ['hotel', 'hostal', 'airbnb', 'alojamiento', 'hospedaje', 'resort', 'apartamento'],
             'beaches': ['playa', 'playas', 'costa', 'mar', 'beach', 'beaches', 'litoral'],
@@ -167,7 +167,7 @@ class TouristGuideAgent(Agent):
             
             greeting = response.strip()
             
-            # Actualizar estado
+            
             self.conversation_state['phase'] = 'destination'
             self.conversation_state['conversation_history'].append({
                 'role': 'assistant',
@@ -193,35 +193,35 @@ class TouristGuideAgent(Agent):
         Procesa el mensaje del usuario según la fase de la conversación
         """
         try:
-            # Agregar mensaje del usuario al historial
+            
             self.conversation_state['conversation_history'].append({
                 'role': 'user',
                 'content': user_message,
                 'timestamp': datetime.now().isoformat()
             })
             
-            # IMPORTANTE: Extraer información del mensaje ANTES de verificar si quiere proceder
-            # Esto asegura que capturemos cualquier preferencia mencionada, incluso si el usuario
-            # indica que no quiere dar más información en el mismo mensaje
+            
+            
+            
             self._extract_preferences(user_message)
             
-            # Verificar si el usuario quiere proceder con la información actual
+            
             if self._wants_to_proceed_with_current_info(user_message):
-                # Marcar que el usuario quiere proceder
+                
                 self._user_wants_to_proceed = True
                 
-                # Si tenemos información mínima, proceder al resumen
+                
                 if self._has_minimum_preferences():
                     self.conversation_state['phase'] = 'summary'
                     return self._handle_summary_phase(user_message)
                 else:
-                    # Si no tenemos información mínima, explicar qué falta
+                    
                     return self._explain_missing_info()
             
-            # Determinar siguiente fase
+            
             current_phase = self.conversation_state['phase']
             
-            # Generar respuesta según la fase
+            
             if current_phase == 'destination':
                 response = self._handle_destination_phase(user_message)
             elif current_phase == 'interests':
@@ -277,26 +277,26 @@ class TouristGuideAgent(Agent):
             IMPORTANTE: Devuelve SOLO el JSON, sin explicaciones adicionales.
             """
             
-            # Usar mistral_json para extraer preferencias
+            
             extracted_data = mistral_json(extraction_prompt)
             
             if extracted_data:
-                # Actualizar preferencias
+                
                 for key, value in extracted_data.items():
                     if key in self.conversation_state['preferences']:
                         if isinstance(self.conversation_state['preferences'][key], list):
-                            # Para listas, agregar elementos nuevos
+                            
                             if isinstance(value, list):
                                 self.conversation_state['preferences'][key].extend(value)
                             else:
                                 self.conversation_state['preferences'][key].append(value)
-                            # Eliminar duplicados
+                            
                             self.conversation_state['preferences'][key] = list(set(self.conversation_state['preferences'][key]))
                         else:
-                            # Para valores simples, reemplazar
+                            
                             self.conversation_state['preferences'][key] = value
             else:
-                # Si no se puede extraer, intentar extracción manual básica
+                
                 self._manual_extraction(user_message)
                 
         except Exception as e:
@@ -309,7 +309,7 @@ class TouristGuideAgent(Agent):
         """
         message_lower = user_message.lower()
         
-        # Buscar intereses por palabras clave
+        
         for category, keywords in self.keywords_mapping.items():
             for keyword in keywords:
                 if keyword in message_lower:
@@ -320,11 +320,11 @@ class TouristGuideAgent(Agent):
         """
         Maneja la fase de selección de destino
         """
-        # Verificar si ya tenemos destino
+        
         if self.conversation_state['preferences']['destination']:
             self.conversation_state['phase'] = 'interests'
         
-        # Generar respuesta
+        
         prompt = self.conversation_templates['destination'].format(
             conversation_history=self._format_conversation_history(),
             user_message=user_message
@@ -333,7 +333,7 @@ class TouristGuideAgent(Agent):
         response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
-        # Actualizar historial
+        
         self.conversation_state['conversation_history'].append({
             'role': 'assistant',
             'content': guide_response,
@@ -352,11 +352,11 @@ class TouristGuideAgent(Agent):
         """
         Maneja la fase de recopilación de intereses
         """
-        # Si ya tenemos suficientes intereses, pasar a detalles
+        
         if len(self.conversation_state['preferences']['interests']) >= 2:
             self.conversation_state['phase'] = 'details'
         
-        # Generar respuesta
+        
         prompt = self.conversation_templates['interests'].format(
             destination=self.conversation_state['preferences']['destination'],
             conversation_history=self._format_conversation_history(),
@@ -366,7 +366,7 @@ class TouristGuideAgent(Agent):
         response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
-        # Actualizar historial
+        
         self.conversation_state['conversation_history'].append({
             'role': 'assistant',
             'content': guide_response,
@@ -385,11 +385,11 @@ class TouristGuideAgent(Agent):
         """
         Maneja la fase de recopilación de detalles
         """
-        # Verificar si tenemos suficiente información
+        
         if self._has_minimum_preferences():
             self.conversation_state['phase'] = 'summary'
         
-        # Generar respuesta
+        
         prompt = self.conversation_templates['details'].format(
             destination=self.conversation_state['preferences']['destination'],
             interests=', '.join(self.conversation_state['preferences']['interests']),
@@ -400,7 +400,7 @@ class TouristGuideAgent(Agent):
         response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
-        # Actualizar historial
+        
         self.conversation_state['conversation_history'].append({
             'role': 'assistant',
             'content': guide_response,
@@ -419,7 +419,7 @@ class TouristGuideAgent(Agent):
         """
         Maneja la fase de resumen
         """
-        # Generar resumen
+        
         prompt = self.conversation_templates['summary'].format(
             preferences=json.dumps(self.conversation_state['preferences'], indent=2, ensure_ascii=False)
         )
@@ -427,7 +427,7 @@ class TouristGuideAgent(Agent):
         response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
-        # Actualizar historial
+        
         self.conversation_state['conversation_history'].append({
             'role': 'assistant',
             'content': guide_response,
@@ -440,7 +440,7 @@ class TouristGuideAgent(Agent):
             'phase': 'complete',
             'preferences_collected': True,
             'final_preferences': self.conversation_state['preferences'],
-            'current_preferences': self.conversation_state['preferences']  # Incluir también como current_preferences
+            'current_preferences': self.conversation_state['preferences']  
         }
     
     def _handle_general_conversation(self, user_message: str) -> Dict:
@@ -460,7 +460,7 @@ class TouristGuideAgent(Agent):
         response = self.mistral_client.generate(prompt)
         guide_response = response.strip()
         
-        # Actualizar historial
+        
         self.conversation_state['conversation_history'].append({
             'role': 'assistant',
             'content': guide_response,
@@ -480,7 +480,7 @@ class TouristGuideAgent(Agent):
         Formatea el historial de conversación para los prompts
         """
         history = []
-        # Tomar solo los últimos 6 mensajes para no sobrecargar el prompt
+        
         recent_history = self.conversation_state['conversation_history'][-6:]
         
         for entry in recent_history:
@@ -495,15 +495,15 @@ class TouristGuideAgent(Agent):
         """
         prefs = self.conversation_state['preferences']
         
-        # Si el usuario insiste en proceder, ser más flexible con los requisitos
+        
         if hasattr(self, '_user_wants_to_proceed'):
-            # Solo requerir destino O al menos un interés
+            
             return (
                 prefs['destination'] is not None or
                 len(prefs['interests']) >= 1
             )
         
-        # Requisitos normales: destino y al menos 2 intereses
+        
         return (
             prefs['destination'] is not None and
             len(prefs['interests']) >= 2
@@ -522,9 +522,9 @@ class TouristGuideAgent(Agent):
         """
         Detecta si el usuario quiere proceder con la información actual sin proporcionar más detalles
         """
-        # Frases que indican que el usuario quiere proceder
+        
         proceed_phrases = [
-            # Frases directas
+            
             'eso es todo',
             'es todo',
             'con eso es suficiente',
@@ -557,7 +557,7 @@ class TouristGuideAgent(Agent):
             'deja de preguntar',
             'muchas preguntas',
             'ya basta de preguntas',
-            # Nuevas frases agregadas
+            
             'quiero el itinerario',
             'dame el itinerario',
             'muéstrame el itinerario',
@@ -604,12 +604,12 @@ class TouristGuideAgent(Agent):
         
         message_lower = user_message.lower().strip()
         
-        # Verificar si el mensaje contiene alguna frase de proceder
+        
         for phrase in proceed_phrases:
             if phrase in message_lower:
                 return True
         
-        # Verificar patrones de impaciencia con expresiones regulares
+        
         impatience_patterns = [
             r'\b(ya|basta|suficiente|no más|no mas)\b',
             r'\b(dale|anda|vamos|venga)\b',
@@ -622,18 +622,18 @@ class TouristGuideAgent(Agent):
         import re
         for pattern in impatience_patterns:
             if re.search(pattern, message_lower):
-                # Verificar contexto para evitar falsos positivos
-                if len(message_lower.split()) <= 5:  # Mensajes cortos con estas palabras suelen indicar impaciencia
+                
+                if len(message_lower.split()) <= 5:  
                     return True
         
-        # Verificar si es una respuesta muy corta que indica impaciencia
+        
         words = message_lower.split()
         if len(words) <= 3:
             impatience_words = ['ya', 'no', 'basta', 'suficiente', 'listo', 'dale', 'ok', 'bueno', 'si', 'sí']
             if any(word in impatience_words for word in words):
                 return True
         
-        # Verificar si el usuario está siendo evasivo o no quiere dar información
+        
         evasive_patterns = [
             r'no\s*(importa|interesa)',
             r'(cualquier|cualquiera)\s*(cosa|lugar|sitio)',
@@ -648,7 +648,7 @@ class TouristGuideAgent(Agent):
             if re.search(pattern, message_lower):
                 return True
         
-        # Usar Mistral para detectar intención de proceder con análisis más sofisticado
+        
         try:
             prompt = f"""
             Analiza el siguiente mensaje del usuario en el contexto de una conversación sobre planificación de viajes.
@@ -677,7 +677,7 @@ class TouristGuideAgent(Agent):
             return 'true' in result
             
         except Exception:
-            # Si falla Mistral, usar solo la detección por frases y patrones
+            
             return False
     
     def _explain_missing_info(self) -> Dict:
@@ -686,32 +686,32 @@ class TouristGuideAgent(Agent):
         """
         prefs = self.conversation_state['preferences']
         
-        # Si no tenemos absolutamente nada de información
+        
         if not prefs['destination'] and len(prefs['interests']) == 0:
             message = "Entiendo que quieres proceder rápidamente. Solo necesito saber a dónde quieres viajar o qué tipo de actividades te interesan para poder ayudarte. ¿Puedes darme al menos uno de estos datos?"
         
-        # Si tenemos algo pero no es suficiente según los criterios flexibles
+        
         elif not prefs['destination'] and len(prefs['interests']) > 0:
-            # Tenemos intereses pero no destino - podemos trabajar con esto
+            
             interests_text = ", ".join(prefs['interests'])
             message = f"Perfecto, veo que te interesan: {interests_text}. Buscaré las mejores opciones para estas actividades. ¡Empecemos con tu itinerario!"
             self.conversation_state['phase'] = 'summary'
             return self._handle_summary_phase("")
         
         elif prefs['destination'] and len(prefs['interests']) == 0:
-            # Tenemos destino pero no intereses - podemos sugerir opciones generales
+            
             message = f"Entendido, prepararé un itinerario general para {prefs['destination']} con las atracciones más populares. ¡Vamos allá!"
-            # Agregar algunos intereses genéricos para la búsqueda
+            
             prefs['interests'] = ['restaurants', 'activities', 'museums']
             self.conversation_state['phase'] = 'summary'
             return self._handle_summary_phase("")
         
         else:
-            # Si tiene lo mínimo pero quiere proceder, ir al resumen
+            
             self.conversation_state['phase'] = 'summary'
             return self._handle_summary_phase("")
         
-        # Actualizar historial
+        
         self.conversation_state['conversation_history'].append({
             'role': 'assistant',
             'content': message,
@@ -758,20 +758,20 @@ class TouristGuideAgent(Agent):
         """
         prefs = self.conversation_state['preferences']
         
-        # Construir palabras clave para la búsqueda
+        
         keywords = []
         
-        # Agregar destino
+        
         if prefs['destination']:
             keywords.append(prefs['destination'])
         
-        # Agregar intereses
+        
         keywords.extend(prefs['interests'])
         
-        # Agregar actividades preferidas
+        
         keywords.extend(prefs['preferred_activities'])
         
-        # Construir consulta mejorada
+        
         query_parts = []
         if prefs['destination']:
             query_parts.append(f"turismo en {prefs['destination']}")
@@ -792,12 +792,12 @@ class TouristGuideAgent(Agent):
         improved_query = " ".join(query_parts)
         
         return {
-            'keywords': list(set(keywords)),  # Eliminar duplicados
+            'keywords': list(set(keywords)),  
             'improved_query': improved_query,
             'raw_preferences': prefs,
             'search_context': {
                 'destination': prefs['destination'],
-                'main_interests': prefs['interests'][:3],  # Top 3 intereses
+                'main_interests': prefs['interests'][:3],  
                 'budget': prefs['budget'],
                 'duration': prefs['duration']
             }

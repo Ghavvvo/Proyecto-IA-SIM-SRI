@@ -18,73 +18,73 @@ class GLiNERAgent(Agent):
     def __init__(self, name: str = "GLiNERAgent", model_name: str = "urchade/gliner_multi-v2.1"):
         super().__init__(name)
         
-        # Inicializar el modelo GLiNER
+        
         print(f"🔄 Cargando modelo GLiNER: {model_name}...")
         self.model = GLiNER.from_pretrained(model_name)
         print("✅ Modelo GLiNER cargado exitosamente")
         
-        # Definir las etiquetas de entidades para turismo
+        
         self.tourism_labels = [
-            # Lugares y destinos
+            
             "PAÍS", "CIUDAD", "REGIÓN", "DESTINO_TURÍSTICO",
             "PLAYA", "MONTAÑA", "ISLA", "PUEBLO",
             
-            # Alojamiento
+            
             "HOTEL", "RESORT", "HOSTAL", "ALOJAMIENTO",
             "CADENA_HOTELERA",
             
-            # Atracciones y lugares de interés
+            
             "ATRACCIÓN_TURÍSTICA", "MUSEO", "MONUMENTO",
             "PARQUE", "SITIO_HISTÓRICO", "PATRIMONIO",
             "CENTRO_COMERCIAL", "MERCADO",
             
-            # Servicios y actividades
+            
             "RESTAURANTE", "BAR", "CAFÉ",
             "TOUR", "EXCURSIÓN", "ACTIVIDAD",
             "EVENTO", "FESTIVAL",
             
-            # Transporte
+            
             "AEROPUERTO", "ESTACIÓN", "PUERTO",
             "LÍNEA_AÉREA", "CRUCERO",
             
-            # Información práctica
+            
             "PRECIO", "MONEDA", "HORARIO",
             "TEMPORADA", "CLIMA",
             
-            # Organizaciones
+            
             "AGENCIA_VIAJES", "OPERADOR_TURÍSTICO",
             "OFICINA_TURISMO"
         ]
         
-        # Etiquetas en inglés para mejor compatibilidad
+        
         self.english_labels = [
-            # Places and destinations
+            
             "COUNTRY", "CITY", "REGION", "TOURIST_DESTINATION",
             "BEACH", "MOUNTAIN", "ISLAND", "TOWN",
             
-            # Accommodation
+            
             "HOTEL", "RESORT", "HOSTEL", "ACCOMMODATION",
             "HOTEL_CHAIN",
             
-            # Attractions and points of interest
+            
             "TOURIST_ATTRACTION", "MUSEUM", "MONUMENT",
             "PARK", "HISTORICAL_SITE", "HERITAGE_SITE",
             "SHOPPING_CENTER", "MARKET",
             
-            # Services and activities
+            
             "RESTAURANT", "BAR", "CAFE",
             "TOUR", "EXCURSION", "ACTIVITY",
             "EVENT", "FESTIVAL",
             
-            # Transportation
+            
             "AIRPORT", "STATION", "PORT",
             "AIRLINE", "CRUISE",
             
-            # Practical information
+            
             "PRICE", "CURRENCY", "SCHEDULE",
             "SEASON", "WEATHER",
             
-            # Organizations
+            
             "TRAVEL_AGENCY", "TOUR_OPERATOR",
             "TOURISM_OFFICE"
         ]
@@ -95,7 +95,7 @@ class GLiNERAgent(Agent):
     def receive(self, message, sender):
         """Recibe y procesa mensajes del crawler"""
         if message['type'] == 'process_content':
-            # Procesar contenido individual
+            
             content_data = message.get('content_data')
             if not content_data:
                 return {'type': 'error', 'msg': 'No se proporcionó contenido para procesar'}
@@ -108,7 +108,7 @@ class GLiNERAgent(Agent):
             }
             
         elif message['type'] == 'process_batch':
-            # Procesar múltiples contenidos
+            
             contents = message.get('contents', [])
             processed_results = []
             
@@ -140,22 +140,22 @@ class GLiNERAgent(Agent):
             if not content or len(content) < 50:
                 return None
             
-            # Combinar título y contenido para mejor extracción
+            
             full_text = f"{title}\n\n{content}"
             
-            # Limitar el texto para evitar problemas de memoria
+            
             max_length = 2000
             if len(full_text) > max_length:
                 full_text = full_text[:max_length]
             
-            # Extraer entidades con GLiNER
+            
             entities_spanish = self._extract_entities(full_text, self.tourism_labels)
             entities_english = self._extract_entities(full_text, self.english_labels)
             
-            # Combinar resultados
+            
             all_entities = self._merge_entities(entities_spanish, entities_english)
             
-            # Estructurar la información extraída
+            
             structured_data = self._structure_entities(all_entities, content_data)
             
             if structured_data:
@@ -176,10 +176,10 @@ class GLiNERAgent(Agent):
         Extrae entidades del texto usando GLiNER
         """
         try:
-            # Configurar umbral de confianza
+            
             threshold = 0.5
             
-            # Predecir entidades
+            
             entities = self.model.predict_entities(
                 text, 
                 labels, 
@@ -199,7 +199,7 @@ class GLiNERAgent(Agent):
         all_entities = []
         seen_texts = set()
         
-        # Mapeo de etiquetas español-inglés
+        
         label_mapping = {
             "PAÍS": "COUNTRY",
             "CIUDAD": "CITY",
@@ -228,12 +228,12 @@ class GLiNERAgent(Agent):
             "OFICINA_TURISMO": "TOURISM_OFFICE"
         }
         
-        # Procesar entidades en español
+        
         for entity in entities_spanish:
             text = entity.get('text', '').strip()
             if text and text.lower() not in seen_texts:
                 seen_texts.add(text.lower())
-                # Normalizar etiqueta a inglés
+                
                 label = entity.get('label', '')
                 normalized_label = label_mapping.get(label, label)
                 all_entities.append({
@@ -242,7 +242,7 @@ class GLiNERAgent(Agent):
                     'score': entity.get('score', 0)
                 })
         
-        # Procesar entidades en inglés
+        
         for entity in entities_english:
             text = entity.get('text', '').strip()
             if text and text.lower() not in seen_texts:
@@ -274,20 +274,20 @@ class GLiNERAgent(Agent):
             'raw_entities': []
         }
         
-        # Categorizar entidades
+        
         for entity in entities:
             text = entity.get('text', '')
             label = entity.get('label', '')
             score = entity.get('score', 0)
             
-            # Añadir a entidades crudas
+            
             structured['raw_entities'].append({
                 'text': text,
                 'type': label,
                 'confidence': score
             })
             
-            # Categorizar por tipo
+            
             if label == 'COUNTRY':
                 structured['entities']['countries'].append(text)
             elif label == 'CITY':
@@ -334,10 +334,10 @@ class GLiNERAgent(Agent):
                     'type': label.lower()
                 })
         
-        # Eliminar listas vacías
+        
         structured['entities'] = {k: v for k, v in structured['entities'].items() if v}
         
-        # Generar resumen
+        
         structured['summary'] = self._generate_summary(structured['entities'])
         
         return structured

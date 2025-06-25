@@ -29,10 +29,10 @@ class SingletonMeta(type):
         Si ya existe una instancia, la retorna. Si no, crea una nueva
         de forma thread-safe.
         """
-        # Double-checked locking pattern para mejorar el rendimiento
+        
         if cls not in cls._instances:
             with cls._lock:
-                # Verificar nuevamente dentro del lock
+                
                 if cls not in cls._instances:
                     instance = super().__call__(*args, **kwargs)
                     cls._instances[cls] = instance
@@ -55,7 +55,7 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
         Args:
             persist_directory: Directorio donde se almacenarán los datos persistentes
         """
-        # Verificar si ya fue inicializado
+        
         if hasattr(self, '_initialized'):
             return
             
@@ -65,19 +65,19 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
         self._embedding_functions: Dict[str, Any] = {}
         self._lock = threading.Lock()
         
-        # Crear el cliente ChromaDB
+        
         self._initialize_client()
         
-        # Marcar como inicializado
+        
         self._initialized = True
     
     def _initialize_client(self):
         """Inicializa el cliente ChromaDB de forma segura."""
         try:
-            # Crear directorio si no existe
+            
             os.makedirs(self._persist_directory, exist_ok=True)
             
-            # Crear cliente persistente
+            
             self._client = chromadb.PersistentClient(path=self._persist_directory)
             print(f"✅ Cliente ChromaDB inicializado en: {self._persist_directory}")
             
@@ -115,25 +115,25 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
             Colección de ChromaDB
         """
         with self._lock:
-            # Verificar si la colección ya existe en caché
+            
             if name in self._collections:
                 return self._collections[name]
             
-            # Obtener o crear función de embedding
+            
             embedding_function = self._get_or_create_embedding_function(
                 embedding_function_name, 
                 model_name
             )
             
             try:
-                # Intentar obtener o crear la colección
+                
                 collection = self._client.get_or_create_collection(
                     name=name,
                     embedding_function=embedding_function,
                     **kwargs
                 )
                 
-                # Guardar en caché
+                
                 self._collections[name] = collection
                 print(f"✅ Colección '{name}' obtenida/creada exitosamente")
                 
@@ -161,7 +161,7 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
         if cache_key in self._embedding_functions:
             return self._embedding_functions[cache_key]
         
-        # Crear nueva función de embedding según el tipo
+        
         if function_name == "sentence-transformer":
             embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
                 model_name=model_name
@@ -175,12 +175,12 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
                 model_name=model_name
             )
         else:
-            # Por defecto usar sentence-transformer
+            
             embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
                 model_name="all-MiniLM-L6-v2"
             )
         
-        # Guardar en caché
+        
         self._embedding_functions[cache_key] = embedding_function
         
         return embedding_function
@@ -196,12 +196,12 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
             Colección si existe, None en caso contrario
         """
         with self._lock:
-            # Verificar caché primero
+            
             if name in self._collections:
                 return self._collections[name]
             
             try:
-                # Intentar obtener del cliente
+                
                 collection = self._client.get_collection(name=name)
                 self._collections[name] = collection
                 return collection
@@ -222,7 +222,7 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
             try:
                 self._client.delete_collection(name=name)
                 
-                # Eliminar de caché si existe
+                
                 if name in self._collections:
                     del self._collections[name]
                 
@@ -279,17 +279,17 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
         """
         with self._lock:
             if self._client:
-                # Limpiar caché
+                
                 self._collections.clear()
                 self._embedding_functions.clear()
                 
-                # Cerrar cliente si es posible
+                
                 if hasattr(self._client, 'close'):
                     self._client.close()
                 
                 self._client = None
                 
-                # Eliminar la instancia del registro de la metaclase
+                
                 if self.__class__ in SingletonMeta._instances:
                     del SingletonMeta._instances[self.__class__]
                 
@@ -302,7 +302,7 @@ class ChromaDBSingleton(metaclass=SingletonMeta):
                 f"collections={collections_count})")
 
 
-# Función de conveniencia para obtener la instancia
+
 def get_chromadb_instance(persist_directory: str = "chroma_db") -> ChromaDBSingleton:
     """
     Obtiene la instancia singleton de ChromaDB.
@@ -316,41 +316,41 @@ def get_chromadb_instance(persist_directory: str = "chroma_db") -> ChromaDBSingl
     return ChromaDBSingleton(persist_directory)
 
 
-# Ejemplo de uso
+
 if __name__ == "__main__":
-    # Demostración del patrón Singleton
+    
     print("=== Demostración del Patrón Singleton con ChromaDB ===\n")
     
-    # Crear primera instancia
+    
     db1 = ChromaDBSingleton()
     print(f"Primera instancia: {id(db1)}")
     
-    # Intentar crear segunda instancia
+    
     db2 = ChromaDBSingleton()
     print(f"Segunda instancia: {id(db2)}")
     
-    # Verificar que son la misma instancia
+    
     print(f"¿Son la misma instancia? {db1 is db2}")
     
-    # Usar función de conveniencia
+    
     db3 = get_chromadb_instance()
     print(f"Tercera instancia (via función): {id(db3)}")
     print(f"¿Es la misma que las anteriores? {db1 is db3}")
     
-    # Crear una colección de ejemplo
+    
     print("\n=== Operaciones con Colecciones ===")
     collection = db1.get_or_create_collection("test_collection")
     print(f"Colección creada: {collection.name}")
     
-    # Listar colecciones
+    
     collections = db1.list_collections()
     print(f"Colecciones disponibles: {collections}")
     
-    # Obtener información de la colección
+    
     info = db1.get_collection_info("test_collection")
     print(f"Información de la colección: {info}")
     
-    # Demostrar thread-safety
+    
     print("\n=== Prueba de Thread-Safety ===")
     import concurrent.futures
     

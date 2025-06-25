@@ -7,22 +7,22 @@ def test_gliner_crawler():
     """
     Ejemplo de uso del crawler con GLiNER para procesar información turística
     """
-    # URLs de ejemplo para crawling
+    
     starting_urls = [
         "https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html"
     ]
     
-    # Crear instancia del crawler con Mistral deshabilitado por defecto
+    
     crawler = TourismCrawler(
         starting_urls=starting_urls,
         chroma_collection_name="tourism_gliner_test",
         max_pages=10,
         max_depth=2,
         num_threads=3,
-        enable_mistral_processing=False  # Deshabilitamos Mistral
+        enable_mistral_processing=False  
     )
     
-    # Habilitar GLiNER
+    
     print("\n🔄 Habilitando procesamiento con GLiNER...")
     if crawler.enable_gliner():
         print("✅ GLiNER habilitado exitosamente")
@@ -30,13 +30,13 @@ def test_gliner_crawler():
         print("❌ No se pudo habilitar GLiNER")
         return
     
-    # Ejecutar crawler
+    
     print("\n🚀 Iniciando crawler con GLiNER...")
     pages_added = crawler.run_parallel_crawler()
     
     print(f"\n✅ Proceso completado. {pages_added} páginas añadidas a la base de datos.")
     
-    # Mostrar algunas estadísticas
+    
     print("\n📊 Estadísticas de procesamiento:")
     print(f"   • Páginas procesadas con GLiNER: {crawler.gliner_processed}")
     print(f"   • Errores de GLiNER: {crawler.gliner_errors}")
@@ -49,12 +49,12 @@ def test_gliner_with_keywords():
     """
     Ejemplo de uso del crawler con GLiNER usando búsqueda por palabras clave
     """
-    # Palabras clave para buscar
+    
     keywords = ["hoteles cuba", "varadero beach resort"]
     
-    # Crear instancia del crawler
+    
     crawler = TourismCrawler(
-        starting_urls=[],  # No necesitamos URLs iniciales
+        starting_urls=[],  
         chroma_collection_name="tourism_gliner_keywords",
         max_pages=15,
         max_depth=1,
@@ -62,13 +62,13 @@ def test_gliner_with_keywords():
         enable_mistral_processing=False
     )
     
-    # Habilitar GLiNER
+    
     print("\n🔄 Habilitando procesamiento con GLiNER...")
     if not crawler.enable_gliner():
         print("❌ No se pudo habilitar GLiNER")
         return
     
-    # Ejecutar crawler con palabras clave
+    
     print(f"\n🔍 Buscando información sobre: {keywords}")
     pages_added = crawler.run_parallel_crawler_from_keywords(
         keywords=keywords,
@@ -86,7 +86,7 @@ def compare_processors():
     
     print("\n=== COMPARACIÓN DE PROCESADORES ===\n")
     
-    # Test con Mistral
+    
     print("1️⃣ Procesando con Mistral...")
     crawler_mistral = TourismCrawler(
         starting_urls=test_url,
@@ -98,7 +98,7 @@ def compare_processors():
     )
     pages_mistral = crawler_mistral.run_parallel_crawler()
     
-    # Test con GLiNER
+    
     print("\n2️⃣ Procesando con GLiNER...")
     crawler_gliner = TourismCrawler(
         starting_urls=test_url,
@@ -111,7 +111,7 @@ def compare_processors():
     crawler_gliner.enable_gliner()
     pages_gliner = crawler_gliner.run_parallel_crawler()
     
-    # Comparar resultados
+    
     print("\n📊 RESULTADOS DE LA COMPARACIÓN:")
     print(f"\nMistral:")
     print(f"  • Páginas procesadas: {crawler_mistral.mistral_processed}")

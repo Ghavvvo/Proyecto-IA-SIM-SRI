@@ -17,7 +17,7 @@ class TouristSimulationAgentV1(Agent):
         """
         super().__init__(name)
         self.tourist_profile = tourist_profile
-        self.satisfaccion_general = 4.5  # Satisfacción ligeramente por debajo de neutral
+        self.satisfaccion_general = 4.5  
         self.lugares_visitados = []
 
     def _generar_clima(self, temporada: str = "verano") -> Tuple[str, float]:
@@ -43,14 +43,14 @@ class TouristSimulationAgentV1(Agent):
 
     def _generar_atencion(self, tipo_lugar: str) -> Tuple[str, float]:
         """Genera calidad de atención simple"""
-        # Todos los lugares tienen atención similar
+        
         valor_atencion = random.uniform(5, 8)
         descripcion = "Buena atención" if valor_atencion > 6.5 else "Atención regular"
         return descripcion, round(valor_atencion, 1)
 
     def _generar_tiempo_espera(self, valor_crowding: float) -> Tuple[str, float]:
         """Genera tiempo de espera simple"""
-        # Tiempo proporcional al crowding
+        
         tiempo_espera = valor_crowding * 5 + random.uniform(-10, 10)
         tiempo_espera = max(0, min(60, tiempo_espera))
         
@@ -65,26 +65,26 @@ class TouristSimulationAgentV1(Agent):
 
     def simular_visita(self, lugar: Dict, contexto: Dict) -> Dict:
         """Simula visita con cálculos simples"""
-        # Generar factores
+        
         clima_desc, valor_clima = self._generar_clima(contexto.get("temporada", "verano"))
         crowding_desc, valor_crowding = self._generar_crowding(lugar)
         atencion_desc, valor_atencion = self._generar_atencion(lugar.get("tipo", "otro"))
         tiempo_espera_desc, minutos_espera = self._generar_tiempo_espera(valor_crowding)
         interes = self._calcular_interes_lugar(lugar)
         
-        # Calcular satisfacción simple (promedio ponderado) - reducida para V1
+        
         satisfaccion_lugar = (
             valor_clima * 0.2 +
-            (10 - valor_crowding) * 0.2 +  # Menos crowding es mejor
+            (10 - valor_crowding) * 0.2 +  
             valor_atencion * 0.2 +
-            (10 - minutos_espera/6) * 0.2 +  # Normalizar tiempo espera
+            (10 - minutos_espera/6) * 0.2 +  
             interes * 0.2
         )
-        # Aplicar penalización para V1 (versión básica tiene peor rendimiento)
-        satisfaccion_lugar *= 0.85  # Reducir satisfacción en 15%
+        
+        satisfaccion_lugar *= 0.85  
         satisfaccion_lugar = max(0, min(10, satisfaccion_lugar))
         
-        # Tiempo de visita fijo según tipo
+        
         tiempos_visita = {
             "museo": 1.5,
             "restaurante": 1.0,
@@ -97,13 +97,13 @@ class TouristSimulationAgentV1(Agent):
         }
         tiempo_visita = tiempos_visita.get(lugar.get("tipo", "otro").lower(), 1.0)
         
-        # Actualizar satisfacción general (promedio simple)
+        
         if self.lugares_visitados:
             self.satisfaccion_general = (self.satisfaccion_general + satisfaccion_lugar) / 2
         else:
             self.satisfaccion_general = satisfaccion_lugar
         
-        # Registrar visita
+        
         visita = {
             "lugar": lugar.get("nombre", "Lugar sin nombre"),
             "tipo": lugar.get("tipo", "otro"),
@@ -115,12 +115,12 @@ class TouristSimulationAgentV1(Agent):
             "tiempo_visita_hrs": tiempo_visita,
             "interes": round(interes, 1),
             "satisfaccion": round(satisfaccion_lugar, 1),
-            "cansancio": 0  # No se considera cansancio
+            "cansancio": 0  
         }
         
         self.lugares_visitados.append(visita)
         
-        # Comentario simple
+        
         if satisfaccion_lugar > 7:
             visita["comentario"] = f"Buena experiencia en {lugar.get('nombre')}."
         elif satisfaccion_lugar > 5:
@@ -132,24 +132,24 @@ class TouristSimulationAgentV1(Agent):
 
     def simular_itinerario(self, itinerario: List[Dict], contexto_base: Dict) -> Dict:
         """Simula itinerario completo sin considerar días ni cansancio"""
-        # Reiniciar estado
+        
         self.satisfaccion_general = 4.5
         self.lugares_visitados = []
         
         for lugar in itinerario:
             self.simular_visita(lugar, contexto_base)
         
-        # Calcular duración total simple
+        
         duracion_total_hrs = sum(v["tiempo_visita_hrs"] for v in self.lugares_visitados)
         
-        # Resultados
+        
         resultados = {
             "perfil_turista": self.tourist_profile,
             "lugares_visitados": self.lugares_visitados,
             "satisfaccion_general": round(self.satisfaccion_general, 1),
-            "cansancio_final": 0,  # No se considera
+            "cansancio_final": 0,  
             "duracion_total_hrs": duracion_total_hrs,
-            "dias_simulados": 1,  # Siempre un día
+            "dias_simulados": 1,  
             "lugares_por_dia": {1: [v["lugar"] for v in self.lugares_visitados]},
             "valoracion_viaje": self._generar_valoracion_final()
         }

@@ -28,7 +28,7 @@ def test_preferences_flow():
     print("🧪 Iniciando prueba de flujo de preferencias sin búsqueda automática...")
     print("=" * 80)
     
-    # Inicializar agentes
+    
     crawler_agent = CrawlerAgent(
         name="crawler_agent", 
         starting_urls=starting_urls, 
@@ -52,17 +52,17 @@ def test_preferences_flow():
         tourist_guide_agent
     )
     
-    # Inicializar el sistema
+    
     print("🚀 Inicializando sistema...")
     coordinator.start()
     time.sleep(2)
     
-    # Simular conversación de planificación
+    
     print("\n📝 Iniciando planificación de vacaciones...")
     response = coordinator.ask("quiero planificar vacaciones")
     print(f"\n🤖 Sistema: {response}")
     
-    # Simular respuestas del usuario con preferencias
+    
     print("\n👤 Usuario: Cuba")
     response = coordinator.ask("Cuba")
     print(f"\n🤖 Sistema: {response}")
@@ -71,7 +71,7 @@ def test_preferences_flow():
     response = coordinator.ask("playas y museos")
     print(f"\n🤖 Sistema: {response}")
     
-    # Indicar que queremos proceder con la información actual
+    
     print("\n👤 Usuario: con eso es suficiente, genera el itinerario")
     print("\n⏳ Observando el comportamiento del sistema...")
     print("   - Debería primero consultar la BD local")
@@ -79,7 +79,7 @@ def test_preferences_flow():
     print("\n" + "=" * 80)
     
     response = coordinator.ask("con eso es suficiente, genera el itinerario")
-    print(f"\n🤖 Sistema: {response[:500]}...")  # Mostrar solo parte de la respuesta
+    print(f"\n🤖 Sistema: {response[:500]}...")  
     
     print("\n" + "=" * 80)
     print("✅ Prueba completada")

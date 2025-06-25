@@ -237,31 +237,31 @@ class RouteAgent(Agent):
                     'msg': "Se necesitan al menos 2 lugares para generar un itinerario"
                 }
             
-            # Estimar días si no se especifica
+            
             if days == 1 and len(places) > 6:
                 days = self._estimate_days_needed(len(places), preferences.get('duration', ''))
             
-            # Distribuir lugares por días
+            
             places_per_day = self._distribute_places_by_days(places, days)
             
-            # Optimizar rutas para cada día
+            
             optimized_routes = {}
             total_distance = 0
             total_travel_time = 0
             
             for day_num, day_places in enumerate(places_per_day, 1):
                 if len(day_places) >= 2:
-                    # Optimizar ruta del día
+                    
                     route_result = self._handle_optimize_route({
                         'places': day_places,
                         'parameters': {}
                     })
                     
                     if route_result['type'] == 'route_result':
-                        # Calcular tiempos de viaje entre lugares
+                        
                         travel_times = self._calculate_travel_times(route_result['order'])
                         
-                        # Calcular tiempo total de viaje del día
+                        
                         day_travel_time = sum(t['time_minutes'] for t in travel_times.values())
                         
                         optimized_routes[f'day_{day_num}'] = {
@@ -274,7 +274,7 @@ class RouteAgent(Agent):
                         total_distance += route_result['total_distance_km']
                         total_travel_time += day_travel_time
                 else:
-                    # Si solo hay un lugar en el día
+                    
                     optimized_routes[f'day_{day_num}'] = {
                         'places': day_places,
                         'distance_km': 0,
@@ -283,14 +283,14 @@ class RouteAgent(Agent):
                         'total_travel_time_min': 0
                     }
             
-            # Generar itinerario formateado
+            
             formatted_itinerary = self._format_itinerary_with_routes(
                 optimized_routes, 
                 preferences,
                 total_distance
             )
             
-            # Generar JSON para simulación
+            
             simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
             
             return {
@@ -313,7 +313,7 @@ class RouteAgent(Agent):
         """Estima el número de días necesarios basado en la cantidad de lugares"""
         import re
         
-        # Si hay duración especificada, intentar extraerla
+        
         if duration_str and duration_str != 'No especificada':
             numbers = re.findall(r'\d+', str(duration_str).lower())
             if numbers:
@@ -323,7 +323,7 @@ class RouteAgent(Agent):
             elif 'fin de semana' in duration_str.lower():
                 return 2
         
-        # Estimar basado en número de lugares (3-4 lugares por día)
+        
         return max(1, (num_places + 2) // 3)
     
     def _distribute_places_by_days(self, places: List[str], days: int) -> List[List[str]]:
@@ -381,17 +381,17 @@ class RouteAgent(Agent):
             key = f"{origin} → {destination}"
             
             try:
-                # Obtener coordenadas de ambos lugares
+                
                 origin_coords = self._get_coordinates(origin)
                 dest_coords = self._get_coordinates(destination)
                 
-                # Calcular distancia en kilómetros
+                
                 distance_km = geodesic(origin_coords, dest_coords).kilometers
                 
-                # Calcular tiempo según el medio de transporte
-                # Asumimos una combinación de caminar y transporte público en ciudad
+                
+                
                 if distance_km <= 1.0:
-                    # Distancias cortas: caminar (5 km/h)
+                    
                     time_minutes = (distance_km / 5) * 60
                     travel_times[key] = {
                         'distance_km': round(distance_km, 2),
@@ -399,7 +399,7 @@ class RouteAgent(Agent):
                         'mode': 'walking'
                     }
                 elif distance_km <= 5.0:
-                    # Distancias medias: transporte público (20 km/h promedio)
+                    
                     time_minutes = (distance_km / 20) * 60
                     travel_times[key] = {
                         'distance_km': round(distance_km, 2),
@@ -407,7 +407,7 @@ class RouteAgent(Agent):
                         'mode': 'public_transport'
                     }
                 else:
-                    # Distancias largas: taxi/auto (30 km/h promedio en ciudad)
+                    
                     time_minutes = (distance_km / 30) * 60
                     travel_times[key] = {
                         'distance_km': round(distance_km, 2),
@@ -416,11 +416,11 @@ class RouteAgent(Agent):
                     }
                     
             except Exception as e:
-                # Si no se pueden obtener coordenadas, estimar tiempo basado en promedio
+                
                 print(f"Error calculando tiempo entre {origin} y {destination}: {e}")
                 travel_times[key] = {
-                    'distance_km': 2.0,  # Distancia promedio estimada
-                    'time_minutes': 15,   # Tiempo promedio estimado
+                    'distance_km': 2.0,  
+                    'time_minutes': 15,   
                     'mode': 'estimated'
                 }
         
@@ -433,7 +433,7 @@ class RouteAgent(Agent):
         try:
             model = genai.GenerativeModel('gemini-1.5-flash')
             
-            # Preparar información de rutas con tiempos de viaje calculados
+            
             routes_info = ""
             travel_times_info = ""
             
@@ -447,7 +447,7 @@ class RouteAgent(Agent):
                 routes_info += f"\n  - Distancia total: {distance:.1f} km"
                 routes_info += f"\n  - Tiempo total de desplazamiento: {total_time} minutos"
                 
-                # Detallar tiempos de viaje entre lugares
+                
                 travel_times_info += f"\n\nTiempos de desplazamiento Día {day_num}:"
                 for segment, time_data in route_data.get('travel_times', {}).items():
                     travel_times_info += f"\n- {segment}:"
@@ -530,7 +530,7 @@ class RouteAgent(Agent):
             return response.text.strip()
             
         except Exception as e:
-            # Fallback en caso de error
+            
             print(f"Error formateando con Gemini: {e}")
             return self._format_itinerary_fallback(routes, preferences, total_distance)
     
@@ -541,7 +541,7 @@ class RouteAgent(Agent):
         itinerary += f"- Días: {len(routes)}\n"
         itinerary += f"- Distancia total: {total_distance:.1f} km\n"
         
-        # Calcular tiempo total de viaje
+        
         total_travel_time = sum(r.get('total_travel_time_min', 0) for r in routes.values())
         itinerary += f"- Tiempo total de desplazamiento: {total_travel_time} minutos ({total_travel_time/60:.1f} horas)\n\n"
         
@@ -552,7 +552,7 @@ class RouteAgent(Agent):
             itinerary += f"📏 Distancia del día: {route_data['distance_km']:.1f} km\n"
             itinerary += f"⏱️ Tiempo de desplazamiento: {route_data.get('total_travel_time_min', 0)} minutos\n"
             
-            # Detallar tiempos entre lugares si están disponibles
+            
             if route_data.get('travel_times'):
                 itinerary += "\n🚶 Desplazamientos:\n"
                 for segment, time_data in route_data['travel_times'].items():

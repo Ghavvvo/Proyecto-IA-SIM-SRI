@@ -22,45 +22,45 @@ class TourismCrawler:
         self.urls_to_visit = queue.Queue()
         self.chroma_client = chromadb.PersistentClient(path="chroma_db")
 
-        # Usar el embedding model de Sentence Transformers
+        
         self.sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name="all-MiniLM-L6-v2"
         )
 
-        # Crear o obtener la colección
+        
         self.collection = self.chroma_client.get_or_create_collection(
             name=chroma_collection_name,
             embedding_function=self.sentence_transformer_ef
         )
 
-        # Configuración del crawler
+        
         self.max_pages = max_pages
         self.max_depth = max_depth
         self.num_threads = num_threads
         
-        # Palabras clave de la consulta actual (para filtrar URLs)
+        
         self.current_query_keywords = []
 
-        # Inicializar URLs en la cola
+        
         for url in starting_urls:
-            self.urls_to_visit.put((url, 0))  # (url, depth)
+            self.urls_to_visit.put((url, 0))  
 
-        # Thread-safe structures
+        
         self.visited_lock = threading.Lock()
         self.collection_lock = threading.Lock()
         self.stats_lock = threading.Lock()
-        self.queue_lock = threading.Lock()  # Para controlar el acceso a la cola
+        self.queue_lock = threading.Lock()  
         
-        # Estadísticas
+        
         self.pages_processed = 0
         self.pages_added_to_db = 0
         self.errors_count = 0
-        self.urls_filtered_out = 0  # URLs filtradas por no tener palabras en común
+        self.urls_filtered_out = 0  
         
-        # Control de parada
+        
         self.stop_crawling = threading.Event()
         
-        # Procesamiento con Mistral
+        
         self.enable_mistral_processing = enable_mistral_processing
         self.processor_agent = None
         if self.enable_mistral_processing:
@@ -72,17 +72,17 @@ class TourismCrawler:
                 print(f"⚠️ No se pudo habilitar el procesamiento con Mistral: {e}")
                 self.enable_mistral_processing = False
         
-        # Procesamiento con GLiNER
+        
         self.enable_gliner_processing = False
         self.gliner_agent = None
         
-        # Estadísticas de procesamiento
+        
         self.mistral_processed = 0
         self.mistral_errors = 0
         self.gliner_processed = 0
         self.gliner_errors = 0
         
-        # Archivo para guardar chunks
+        
         self.chunks_file_path = self._initialize_chunks_file()
         self.file_lock = threading.Lock()
     
@@ -110,7 +110,7 @@ class TourismCrawler:
     def _initialize_chunks_file(self) -> str:
         """Inicializa el archivo para guardar los chunks"""
         try:
-            # Crear directorio de logs si no existe
+            
             logs_dir = "crawler_logs"
             logs_path = os.path.abspath(logs_dir)
             
@@ -118,17 +118,17 @@ class TourismCrawler:
                 os.makedirs(logs_path)
                 print(f"📁 Directorio creado: {logs_path}")
             
-            # Crear nombre de archivo con timestamp
+            
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = os.path.join(logs_path, f"chunks_{timestamp}.txt")
             
-            # Escribir encabezado
+            
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write("=" * 80 + "\n")
                 f.write(f"CHUNKS DE CRAWLER - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write("=" * 80 + "\n\n")
             
-            # Verificar que el archivo se creó correctamente
+            
             if os.path.exists(filename):
                 file_size = os.path.getsize(filename)
                 print(f"📄 Archivo de chunks creado exitosamente:")
@@ -143,7 +143,7 @@ class TourismCrawler:
             print(f"❌ Error al inicializar archivo de chunks: {e}")
             import traceback
             traceback.print_exc()
-            # Retornar una ruta por defecto
+            
             return "chunks_error.txt"
     
     def _save_chunk_to_file(self, doc_id: str, content: str, metadata: dict, processor: str):
@@ -155,7 +155,7 @@ class TourismCrawler:
         
         with self.file_lock:
             try:
-                # Verificar que el archivo existe antes de escribir
+                
                 if not os.path.exists(self.chunks_file_path):
                     print(f"⚠️ El archivo no existe, creándolo: {self.chunks_file_path}")
                     os.makedirs(os.path.dirname(self.chunks_file_path), exist_ok=True)
@@ -165,34 +165,29 @@ class TourismCrawler:
                     f.write("INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB\n")
                     f.write("=" * 100 + "\n\n")
                     
-                    # INFORMACIÓN DEL DOCUMENTO
                     f.write("### INFORMACIÓN DEL DOCUMENTO ###\n")
                     f.write(f"ID: {doc_id}\n")
                     f.write(f"TIMESTAMP: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                     f.write(f"PROCESADOR: {processor}\n\n")
                     
-                    # METADATA COMPLETA (como se guarda en ChromaDB)
                     f.write("### METADATA (como se guarda en ChromaDB) ###\n")
                     f.write("{\n")
                     for key, value in sorted(metadata.items()):
                         if isinstance(value, str) and '\n' in value:
-                            # Para valores multilinea, usar formato JSON
+                            
                             f.write(f'  "{key}": {json.dumps(value, ensure_ascii=False)},\n')
                         else:
                             f.write(f'  "{key}": {json.dumps(value, ensure_ascii=False)},\n')
                     f.write("}\n\n")
                     
-                    # CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB)
                     f.write("### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###\n")
                     f.write(f"Tamaño: {len(content)} caracteres\n")
                     f.write("-" * 80 + "\n")
                     f.write(content)
                     f.write("\n" + "-" * 80 + "\n\n")
                     
-                    # RESUMEN DE INFORMACIÓN CLAVE
                     f.write("### RESUMEN DE INFORMACIÓN CLAVE ###\n")
                     
-                    # Información según el procesador
                     if processor == "GLiNER":
                         if 'entities_data' in metadata:
                             try:
@@ -239,7 +234,7 @@ class TourismCrawler:
                     
                 print(f"✅ Chunk guardado exitosamente en archivo")
                 
-                # Verificar el tamaño del archivo después de escribir
+                
                 if os.path.exists(self.chunks_file_path):
                     file_size = os.path.getsize(self.chunks_file_path)
                     print(f"   📏 Tamaño actual del archivo: {file_size:,} bytes")
@@ -258,7 +253,7 @@ class TourismCrawler:
         except:
             return False
 
-        # Filtrar URLs de recursos estáticos
+        
         unwanted_extensions = [
             '.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.pdf', '.svg',
             '.mp3', '.mp4', '.avi', '.mov', '.webp', '.ico', '.xml', '.zip'
@@ -266,7 +261,7 @@ class TourismCrawler:
         if any(url.lower().endswith(ext) for ext in unwanted_extensions):
             return False
 
-        # Patrones específicamente permitidos/valorados para turismo
+        
         valuable_patterns = [
             '/destination', '/travel', '/tourism', '/tour', '/visit', '/vacation',
             '/holiday', '/hotel', '/accommodation', '/attractions', '/guide',
@@ -280,7 +275,7 @@ class TourismCrawler:
         if any(pattern in url.lower() for pattern in valuable_patterns):
             return True
 
-        # Filtrar URLs no relevantes para turismo
+        
         unwanted_patterns = [
             '/login', '/signin', '/signup', '/register', '/account', '/cart',
             '/checkout', '/payment', '/admin', '/wp-admin', '/wp-login',
@@ -309,15 +304,15 @@ class TourismCrawler:
             bool: True si tiene palabras en común, False en caso contrario
         """
         if not self.current_query_keywords:
-            return True  # Si no hay palabras clave definidas, permitir todas las URLs
+            return True  
         
-        # Combinar URL y contenido para la verificación
+        
         combined_text = f"{url.lower()} {text_content.lower()}"
         
-        # Expandir palabras clave con sinónimos y variaciones
+        
         expanded_keywords = self._expand_keywords(self.current_query_keywords)
         
-        # Verificar si alguna palabra clave expandida está presente
+        
         for keyword in expanded_keywords:
             keyword_lower = keyword.lower().strip()
             if keyword_lower and keyword_lower in combined_text:
@@ -329,9 +324,9 @@ class TourismCrawler:
         """
         Expande las palabras clave con sinónimos y variaciones para mejorar el matching.
         """
-        expanded = set(keywords)  # Incluir palabras originales
+        expanded = set(keywords)  
         
-        # Diccionario de sinónimos y variaciones comunes
+        
         synonyms = {
             'hoteles': ['hotel', 'hotels', 'accommodation', 'alojamiento', 'hospedaje', 'lodging', 'resort', 'inn'],
             'turismo': ['tourism', 'tourist', 'travel', 'trip', 'vacation', 'holiday', 'viaje', 'destination'],
@@ -345,17 +340,17 @@ class TourismCrawler:
         for keyword in keywords:
             keyword_lower = keyword.lower().strip()
             
-            # Añadir sinónimos directos
+            
             if keyword_lower in synonyms:
                 expanded.update(synonyms[keyword_lower])
             
-            # Añadir variaciones (plural/singular)
-            if keyword_lower.endswith('s') and len(keyword_lower) > 3:
-                expanded.add(keyword_lower[:-1])  # Singular
-            else:
-                expanded.add(keyword_lower + 's')  # Plural
             
-            # Añadir variaciones sin acentos
+            if keyword_lower.endswith('s') and len(keyword_lower) > 3:
+                expanded.add(keyword_lower[:-1])  
+            else:
+                expanded.add(keyword_lower + 's')  
+            
+            
             accent_map = str.maketrans('áéíóúñü', 'aeiounn')
             no_accent = keyword_lower.translate(accent_map)
             if no_accent != keyword_lower:
@@ -375,13 +370,13 @@ class TourismCrawler:
         """
         link_text = a_tag.get_text(strip=True)
         
-        # Obtener texto del título si existe
+        
         title_text = a_tag.get('title', '')
         
-        # Obtener texto del elemento padre para contexto adicional
+        
         parent_text = ""
         if a_tag.parent:
-            parent_text = a_tag.parent.get_text(strip=True)[:100]  # Limitar a 100 caracteres
+            parent_text = a_tag.parent.get_text(strip=True)[:100]  
         
         return f"{link_text} {title_text} {parent_text}"
 
@@ -397,12 +392,12 @@ class TourismCrawler:
 
             absolute_url = urljoin(base_url, href)
             if self.is_valid_url(absolute_url):
-                # Verificar si la URL tiene palabras en común con la consulta
+                
                 link_text = self._extract_link_text(a_tag)
                 if self._has_common_keywords(absolute_url, link_text):
                     links.append(absolute_url)
                 else:
-                    # Incrementar contador de URLs filtradas
+                    
                     with self.stats_lock:
                         self.urls_filtered_out += 1
 
@@ -483,18 +478,18 @@ class TourismCrawler:
         url, depth = url_data
         thread_id = threading.current_thread().ident
         
-        # Verificar si ya visitamos esta URL (thread-safe)
+        
         with self.visited_lock:
             if url in self.visited_urls:
                 return None
             self.visited_urls.add(url)
         
-        # Actualizar estadísticas
+        
         with self.stats_lock:
             self.pages_processed += 1
             current_processed = self.pages_processed
             
-            # Verificar si hemos alcanzado el límite
+            
             if current_processed >= self.max_pages:
                 self.stop_crawling.set()
                 return None
@@ -516,10 +511,10 @@ class TourismCrawler:
             content_data = self.extract_content(url, soup)
             
             if content_data:
-                # Procesar con GLiNER si está habilitado
+                
                 if self.enable_gliner_processing and self.gliner_agent:
                     try:
-                        # Procesar contenido con GLiNER
+                        
                         gliner_response = self.gliner_agent.receive({
                             'type': 'process_content',
                             'content_data': content_data
@@ -528,14 +523,14 @@ class TourismCrawler:
                         if gliner_response.get('success') and gliner_response.get('data'):
                             processed_data = gliner_response['data']
                             
-                            # Guardar el contenido procesado con entidades extraídas
+                            
                             with self.collection_lock:
-                                # Convertir los datos estructurados a texto para embeddings
+                                
                                 structured_text = self._format_gliner_data(processed_data)
                                 
                                 doc_id = f"gliner_doc_{hash(url) % 10000000}_{depth}_{int(time.time())}"
                                 
-                                # Guardar con metadata enriquecida
+                                
                                 metadata = {
                                     "url": content_data["url"],
                                     "title": content_data["title"],
@@ -546,7 +541,7 @@ class TourismCrawler:
                                     "entities_data": json.dumps(processed_data, ensure_ascii=False)
                                 }
                                 
-                                # Añadir información de entidades principales
+                                
                                 if 'entities' in processed_data:
                                     entities = processed_data['entities']
                                     if 'countries' in entities and entities['countries']:
@@ -557,7 +552,7 @@ class TourismCrawler:
                                         hotel_names = [h['name'] for h in entities['hotels']]
                                         metadata['hotels'] = ', '.join(hotel_names[:5])
                                 
-                                # IMPRIMIR INFORMACIÓN DEL CHUNK
+                                
                                 print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
                                 print(f"   📌 ID: {doc_id}")
                                 print(f"   🔗 URL: {content_data['url']}")
@@ -577,7 +572,7 @@ class TourismCrawler:
                                     ids=[doc_id]
                                 )
                                 
-                                # Guardar también en archivo de texto
+                                
                                 self._save_chunk_to_file(doc_id, structured_text, metadata, "GLiNER")
                             
                             with self.stats_lock:
@@ -586,20 +581,20 @@ class TourismCrawler:
                             
                             print(f"[Thread-{thread_id}] ✅ Contenido procesado con GLiNER: {content_data['title'][:50]}...")
                         else:
-                            # Si falla el procesamiento, guardar el contenido original
+                            
                             self._save_original_content(content_data, depth, thread_id)
                             
                     except Exception as e:
                         print(f"[Thread-{thread_id}] ⚠️ Error en procesamiento GLiNER: {e}")
                         with self.stats_lock:
                             self.gliner_errors += 1
-                        # Guardar contenido original como fallback
+                        
                         self._save_original_content(content_data, depth, thread_id)
                 
-                # Procesar con Mistral si está habilitado y GLiNER no está activo
+                
                 elif self.enable_mistral_processing and self.processor_agent:
                     try:
-                        # Procesar contenido con Mistral
+                        
                         processor_response = self.processor_agent.receive({
                             'type': 'process_content',
                             'content_data': content_data
@@ -608,14 +603,14 @@ class TourismCrawler:
                         if processor_response.get('success') and processor_response.get('data'):
                             processed_data = processor_response['data']
                             
-                            # Guardar el contenido procesado estructurado
+                            
                             with self.collection_lock:
-                                # Convertir el JSON estructurado a texto para embeddings
+                                
                                 structured_text = self._format_structured_data(processed_data)
                                 
                                 doc_id = f"mistral_doc_{hash(url) % 10000000}_{depth}_{int(time.time())}"
                                 
-                                # Guardar con metadata enriquecida
+                                
                                 metadata = {
                                     "url": content_data["url"],
                                     "title": content_data["title"],
@@ -626,24 +621,24 @@ class TourismCrawler:
                                     "structured_data": json.dumps(processed_data, ensure_ascii=False)
                                 }
                                 
-                                # Añadir información estructurada a los metadatos
+                                
                                 if 'pais' in processed_data:
                                     metadata['pais'] = processed_data['pais']
                                 if 'ciudad' in processed_data:
                                     metadata['ciudad'] = processed_data['ciudad']
                                 
-                                # Extraer tipos de lugares únicos
+                                
                                 if 'lugares' in processed_data and processed_data['lugares']:
                                     tipos_lugares = list(set([lugar.get('tipo', '') for lugar in processed_data['lugares'] if lugar.get('tipo')]))
                                     if tipos_lugares:
                                         metadata['tipos_lugares'] = ', '.join(tipos_lugares)
                                     
-                                    # Extraer nombres de lugares importantes (primeros 5)
+                                    
                                     nombres_lugares = [lugar.get('nombre', '') for lugar in processed_data['lugares'][:5] if lugar.get('nombre')]
                                     if nombres_lugares:
                                         metadata['lugares_principales'] = ', '.join(nombres_lugares)
                                 
-                                # IMPRIMIR INFORMACIÓN DEL CHUNK
+                                
                                 print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
                                 print(f"   📌 ID: {doc_id}")
                                 print(f"   🔗 URL: {content_data['url']}")
@@ -661,7 +656,7 @@ class TourismCrawler:
                                     ids=[doc_id]
                                 )
                                 
-                                # Guardar también en archivo de texto
+                                
                                 self._save_chunk_to_file(doc_id, structured_text, metadata, "GLiNER")
                             
                             with self.stats_lock:
@@ -670,25 +665,25 @@ class TourismCrawler:
                             
                             print(f"[Thread-{thread_id}] ✅ Contenido procesado con Mistral: {content_data['title'][:50]}...")
                         else:
-                            # Si falla el procesamiento, guardar el contenido original
+                            
                             self._save_original_content(content_data, depth, thread_id)
                             
                     except Exception as e:
                         print(f"[Thread-{thread_id}] ⚠️ Error en procesamiento Mistral: {e}")
                         with self.stats_lock:
                             self.mistral_errors += 1
-                        # Guardar contenido original como fallback
+                        
                         self._save_original_content(content_data, depth, thread_id)
                 else:
-                    # Si Mistral no está habilitado, guardar contenido original
+                    
                     self._save_original_content(content_data, depth, thread_id)
                 
-                # Extraer enlaces si no estamos en la profundidad máxima
+                
                 new_links = []
                 if depth < self.max_depth:
                     links = self.get_links(url, soup)
-                    # Filtrar y limitar enlaces
-                    filtered_links = links[:10]  # Máximo 10 enlaces por página
+                    
+                    filtered_links = links[:10]  
                     new_links = [(link, depth + 1) for link in filtered_links]
                 
                 return {
@@ -723,7 +718,7 @@ class TourismCrawler:
             
             while self.pages_processed < self.max_pages and not self.stop_crawling.is_set():
                 
-                # Limpiar futures completados y procesar resultados
+                
                 completed_futures = []
                 for future in active_futures:
                     if future.done():
@@ -731,7 +726,7 @@ class TourismCrawler:
                         try:
                             result = future.result()
                             if result and result.get("success"):
-                                # Añadir nuevos enlaces a la cola
+                                
                                 for new_link_data in result.get("new_links", []):
                                     new_url, new_depth = new_link_data
                                     with self.visited_lock:
@@ -740,11 +735,11 @@ class TourismCrawler:
                         except Exception as e:
                             print(f"Error procesando resultado: {str(e)}")
                 
-                # Remover futures completados
+                
                 for future in completed_futures:
                     active_futures.remove(future)
                 
-                # Añadir nuevos trabajos si hay espacio
+                
                 while (len(active_futures) < self.num_threads and 
                        not self.urls_to_visit.empty() and 
                        not self.stop_crawling.is_set()):
@@ -756,7 +751,7 @@ class TourismCrawler:
                     except queue.Empty:
                         break
                 
-                # Mostrar progreso cada 5 segundos
+                
                 current_time = time.time()
                 if current_time - last_progress_time > 5.0:
                     elapsed = current_time - start_time
@@ -766,20 +761,20 @@ class TourismCrawler:
                           f"- {rate:.1f} páginas/seg - {len(active_futures)} hilos activos")
                     last_progress_time = current_time
                 
-                # Si no hay trabajos activos y la cola está vacía, salir
+                
                 if not active_futures and self.urls_to_visit.empty():
                     break
                 
-                # Pequeña pausa para evitar uso excesivo de CPU
+                
                 time.sleep(0.1)
                 
-                # Timeout de seguridad
-                if time.time() - start_time > 300:  # 5 minutos máximo
+                
+                if time.time() - start_time > 300:  
                     print("⏰ Timeout de seguridad alcanzado, finalizando crawler...")
                     self.stop_crawling.set()
                     break
         
-        # Estadísticas finales
+        
         elapsed_time = time.time() - start_time
         avg_rate = self.pages_processed / elapsed_time if elapsed_time > 0 else 0
         
@@ -822,16 +817,16 @@ class TourismCrawler:
         if not keywords and not improved_query:
             return []
 
-        # Si hay una consulta mejorada, usarla preferentemente
+        
         if improved_query:
             print(f"🔍 Búsqueda con consulta mejorada: '{improved_query}'")
-            # Convertir la consulta mejorada en lista para compatibilidad
+            
             search_keywords = [improved_query]
         else:
             print(f"🔍 Búsqueda para palabras clave del usuario: {keywords}")
             search_keywords = keywords
         
-        # Intentar con diferentes motores de búsqueda
+        
         search_engines = [
             ("DuckDuckGo", self._search_duckduckgo_links),
             ("Bing", self._search_bing_links),
@@ -852,7 +847,7 @@ class TourismCrawler:
                 print(f"❌ Error con {engine_name}: {e}")
                 continue
         
-        # Si ningún motor funciona
+        
         print("\n❌ No se pudieron obtener resultados de ningún motor de búsqueda")
         print(f"   - Palabras clave utilizadas: {search_keywords}")
         print("   - Todos los motores de búsqueda fallaron o están bloqueados")
@@ -864,7 +859,7 @@ class TourismCrawler:
         """
         direct_urls = []
         
-        # Plantillas de URLs para búsqueda directa
+        
         url_templates = [
             "https://www.tripadvisor.com/Search?q={keyword}",
             "https://www.booking.com/searchresults.html?ss={keyword}",
@@ -876,8 +871,8 @@ class TourismCrawler:
             "https://www.airbnb.com/s/{keyword}/homes"
         ]
         
-        # Para cada palabra clave, generar URLs directas
-        for keyword in keywords[:3]:  # Limitar a 3 keywords
+        
+        for keyword in keywords[:3]:  
             keyword_encoded = keyword.replace(' ', '+')
             
             for template in url_templates:
@@ -887,11 +882,11 @@ class TourismCrawler:
                 except:
                     continue
         
-        # Agregar algunas URLs de búsqueda específicas según el tipo de keyword
+        
         for keyword in keywords:
             keyword_lower = keyword.lower()
             
-            # Si es un país o ciudad, agregar URLs específicas
+            
             if any(term in keyword_lower for term in ['cuba', 'habana', 'havana', 'varadero']):
                 direct_urls.extend([
                     "https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html",
@@ -911,7 +906,7 @@ class TourismCrawler:
                     "https://www.booking.com/country/ao.html"
                 ])
         
-        return list(set(direct_urls))  # Eliminar duplicados
+        return list(set(direct_urls))  
     
     def _search_duckduckgo_links(self, keywords: list, num_results_per_query: int = 8) -> list:
         """
@@ -920,27 +915,27 @@ class TourismCrawler:
         all_urls = set()
         
         try:
-            # Intentar usar la librería duckduckgo_search si está disponible
+            
             from duckduckgo_search import DDGS
             
             print("  🦆 Usando DuckDuckGo Search API...")
             
-            # Crear instancia del buscador
+            
             with DDGS() as ddgs:
-                # Buscar con todas las palabras clave juntas
+                
                 query = ' '.join(keywords)
                 print(f"  🔍 Buscando: '{query}'")
                 
                 try:
-                    # Realizar búsqueda
+                    
                     results = list(ddgs.text(
                         query, 
                         max_results=num_results_per_query,
                         safesearch='off',
-                        region='wt-wt'  # Mundial
+                        region='wt-wt'  
                     ))
                     
-                    # Extraer URLs de los resultados
+                    
                     for result in results:
                         if 'href' in result:
                             all_urls.add(result['href'])
@@ -954,7 +949,7 @@ class TourismCrawler:
             
         except ImportError:
             print("  ⚠️ Librería duckduckgo_search no disponible, usando método alternativo...")
-            # Fallback al método anterior mejorado
+            
             return self._search_with_requests(keywords, num_results_per_query)
     
     def _search_with_requests(self, keywords: list, num_results_per_query: int = 8) -> list:
@@ -966,13 +961,13 @@ class TourismCrawler:
         
         all_urls = set()
         
-        # Usar directamente las palabras clave del usuario
-        search_queries = [' '.join(keywords)]  # Búsqueda con todas las palabras
-        # También buscar cada palabra individualmente si hay múltiples
-        if len(keywords) > 1:
-            search_queries.extend(keywords[:2])  # Solo las primeras 2 palabras individuales
         
-        # Configurar sesión para búsquedas
+        search_queries = [' '.join(keywords)]  
+        
+        if len(keywords) > 1:
+            search_queries.extend(keywords[:2])  
+        
+        
         search_session = requests.Session()
         search_session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -984,43 +979,43 @@ class TourismCrawler:
             'Upgrade-Insecure-Requests': '1'
         })
         
-        for query in search_queries[:5]:  # Limitar consultas
+        for query in search_queries[:5]:  
             try:
                 print(f"  🔍 Buscando: '{query}'")
                 
-                # Preparar URL de búsqueda
+                
                 encoded_query = quote_plus(query)
                 search_url = f"https://html.duckduckgo.com/html/?q={encoded_query}"
                 
-                # Realizar búsqueda con timeout más largo
+                
                 response = search_session.get(search_url, timeout=30, allow_redirects=True)
                 
-                # Manejar diferentes códigos de respuesta
+                
                 if response.status_code in [200, 202, 301, 302]:
-                    # Si es una redirección, seguirla
+                    
                     if response.status_code in [301, 302] and 'location' in response.headers:
                         redirect_url = response.headers['location']
                         response = search_session.get(redirect_url, timeout=30)
                     
                     soup = BeautifulSoup(response.text, 'html.parser')
                     
-                    # Debug: ver qué contiene la respuesta
+                    
                     if len(response.text) < 1000:
                         print(f"    ⚠️ Respuesta muy corta: {len(response.text)} caracteres")
                     
-                    # Buscar específicamente los resultados de DuckDuckGo
+                    
                     results_found = 0
                     
-                    # Método 1: Buscar enlaces en divs con clase 'result'
+                    
                     result_divs = soup.find_all('div', class_='result')
                     print(f"    📦 Encontrados {len(result_divs)} divs de resultados")
                     
                     for div in result_divs:
-                        # Buscar el enlace principal del resultado
+                        
                         link = div.find('a', class_='result__a')
                         if link and link.get('href'):
                             href = link['href']
-                            # Procesar URL si es necesario
+                            
                             if 'duckduckgo.com/l/?uddg=' in href:
                                 try:
                                     from urllib.parse import parse_qs, urlparse, unquote
@@ -1034,7 +1029,7 @@ class TourismCrawler:
                                 all_urls.add(href)
                                 results_found += 1
                     
-                    # Método 2: Si no hay resultados, buscar todos los enlaces
+                    
                     if results_found == 0:
                         all_links = soup.find_all('a', href=True)
                         print(f"    🔗 Total de enlaces en la página: {len(all_links)}")
@@ -1042,7 +1037,7 @@ class TourismCrawler:
                     for link in all_links:
                         href = link.get('href', '')
                         
-                        # Procesar URLs de redirección de DuckDuckGo
+                        
                         if 'duckduckgo.com/l/?uddg=' in href:
                             try:
                                 from urllib.parse import parse_qs, urlparse, unquote
@@ -1053,13 +1048,13 @@ class TourismCrawler:
                             except:
                                 continue
                         
-                        # Verificar si es una URL válida
+                        
                         if (href and 
                             href.startswith('http') and 
                             'duckduckgo.com' not in href and
                             len(href) > 15):
                             
-                            # No filtrar por relevancia turística, dejar que el usuario decida
+                            
                             all_urls.add(href)
                             results_found += 1
                             
@@ -1070,7 +1065,7 @@ class TourismCrawler:
                 else:
                     print(f"    ⚠️ Respuesta HTTP {response.status_code}")
                 
-                # Pausa entre búsquedas
+                
                 time.sleep(random.uniform(1.5, 2.5))
                 
             except Exception as e:
@@ -1090,7 +1085,7 @@ class TourismCrawler:
         query = ' '.join(keywords)
         
         try:
-            # URL de búsqueda de Bing
+            
             encoded_query = quote_plus(query)
             search_url = f"https://www.bing.com/search?q={encoded_query}&count={num_results_per_query}"
             
@@ -1114,8 +1109,8 @@ class TourismCrawler:
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 
-                # Método 1: Buscar en los resultados principales de Bing
-                # Los resultados están en elementos <li> con clase "b_algo"
+                
+                
                 for li in soup.find_all('li', class_='b_algo'):
                     h2 = li.find('h2')
                     if h2:
@@ -1123,7 +1118,7 @@ class TourismCrawler:
                         if link and link['href'].startswith('http'):
                             all_urls.add(link['href'])
                 
-                # Método 2: Buscar en divs con id "b_results"
+                
                 results_div = soup.find('div', id='b_results')
                 if results_div:
                     for link in results_div.find_all('a', href=True):
@@ -1137,16 +1132,16 @@ class TourismCrawler:
                             if len(all_urls) >= num_results_per_query:
                                 break
                 
-                # Método 3: Buscar con regex para URLs
+                
                 if len(all_urls) < 5:
-                    # Buscar patrones de URL en el texto
+                    
                     url_pattern = re.compile(r'https?://[^\s<>"{}|\\^`\[\]]+')
                     potential_urls = url_pattern.findall(str(soup))
                     for url in potential_urls:
                         if ('bing.com' not in url and 
                             'microsoft.com' not in url and
                             len(url) > 30 and
-                            url.count('/') >= 3):  # URLs reales tienen varias barras
+                            url.count('/') >= 3):  
                             all_urls.add(url)
                             if len(all_urls) >= num_results_per_query:
                                 break
@@ -1169,7 +1164,7 @@ class TourismCrawler:
         all_urls = set()
         query = ' '.join(keywords)
         
-        # Lista de instancias públicas de Searx
+        
         searx_instances = [
             "https://searx.be",
             "https://searx.info",
@@ -1199,10 +1194,10 @@ class TourismCrawler:
                     
                     if all_urls:
                         print(f"    ✓ Encontrados {len(all_urls)} resultados en {instance}")
-                        break  # Si encontramos resultados, no probar más instancias
+                        break  
                         
             except Exception as e:
-                continue  # Probar siguiente instancia
+                continue  
         
         if not all_urls:
             print("    ⚠️ No se encontraron resultados en ninguna instancia de Searx")
@@ -1215,7 +1210,7 @@ class TourismCrawler:
         """
         direct_urls = []
         
-        # Sitios web populares de turismo
+        
         tourism_sites = {
             'tripadvisor': 'https://www.tripadvisor.com/Search?q={}',
             'booking': 'https://www.booking.com/searchresults.html?ss={}',
@@ -1227,7 +1222,7 @@ class TourismCrawler:
             'kayak': 'https://www.kayak.com/hotels/{}'
         }
         
-        # Generar URLs para cada palabra clave
+        
         for keyword in keywords:
             keyword_encoded = keyword.replace(' ', '+')
             for site_name, url_template in tourism_sites.items():
@@ -1237,10 +1232,10 @@ class TourismCrawler:
                 except:
                     continue
         
-        # Agregar algunas URLs específicas basadas en las palabras clave
+        
         query = ' '.join(keywords).lower()
         
-        # Detectar países/ciudades específicos y agregar URLs relevantes
+        
         location_urls = {
             'panama': [
                 'https://www.visitpanama.com/',
@@ -1268,8 +1263,8 @@ class TourismCrawler:
             if location in query:
                 direct_urls.extend(urls)
         
-        # Eliminar duplicados y limitar resultados
-        unique_urls = list(dict.fromkeys(direct_urls))  # Preservar orden
+        
+        unique_urls = list(dict.fromkeys(direct_urls))  
         
         print(f"    ✓ Generadas {len(unique_urls)} URLs directas")
         return unique_urls[:num_results_per_query]
@@ -1282,13 +1277,13 @@ class TourismCrawler:
         alternative_urls = set()
         
         try:
-            # Intentar con búsqueda en Google
-            for keyword in keywords[:3]:  # Limitar a 3 keywords
+            
+            for keyword in keywords[:3]:  
                 try:
                     query = f"{keyword} tourism travel guide"
                     encoded_query = quote_plus(query)
                     
-                    # Usar un proxy de búsqueda o API alternativa
+                    
                     search_url = f"https://www.google.com/search?q={encoded_query}&num=10"
                     
                     headers = {
@@ -1302,14 +1297,14 @@ class TourismCrawler:
                     response = requests.get(search_url, headers=headers, timeout=10)
                     
                     if response.status_code == 200:
-                        # Extraer URLs del HTML de Google (método básico)
+                        
                         import re
-                        # Buscar patrones de URL en el HTML
+                        
                         url_pattern = r'href="(https?://[^"]+)"'
                         found_urls = re.findall(url_pattern, response.text)
                         
                         for url in found_urls:
-                            # Filtrar URLs de Google y otras no deseadas
+                            
                             if ('google.com' not in url and 
                                 'googleusercontent' not in url and
                                 self._is_tourism_relevant_url(url)):
@@ -1317,7 +1312,7 @@ class TourismCrawler:
                                 if len(alternative_urls) >= 15:
                                     break
                     
-                    time.sleep(2)  # Pausa entre búsquedas
+                    time.sleep(2)  
                     
                 except Exception as e:
                     print(f"    Error en búsqueda alternativa para '{keyword}': {e}")
@@ -1326,7 +1321,7 @@ class TourismCrawler:
         except Exception as e:
             print(f"  Error general en búsqueda alternativa: {e}")
         
-        # Si aún no hay resultados, usar URLs predefinidas basadas en keywords
+        
         if len(alternative_urls) < 5:
             print("  Complementando con URLs predefinidas...")
             predefined = self._get_predefined_urls(keywords)
@@ -1340,16 +1335,16 @@ class TourismCrawler:
         """
         queries = []
         
-        # Términos de turismo para combinar
+        
         tourism_terms = ['tourism', 'travel', 'visit', 'guide', 'attractions', 'hotels']
         
         for keyword in keywords:
-            # Consultas básicas
+            
             queries.append(f"{keyword} tourism")
             queries.append(f"{keyword} travel guide")
             queries.append(f"visit {keyword}")
             
-            # Consultas específicas según el tipo de keyword
+            
             keyword_lower = keyword.lower()
             if any(term in keyword_lower for term in ['hotel', 'accommodation', 'hospedaje']):
                 queries.append(f"best hotels {keyword}")
@@ -1359,9 +1354,9 @@ class TourismCrawler:
             else:
                 queries.append(f"{keyword} attractions")
         
-        # Consulta combinada si hay múltiples keywords
+        
         if len(keywords) > 1:
-            combined = ' '.join(keywords[:2])  # Máximo 2 palabras
+            combined = ' '.join(keywords[:2])  
             queries.append(f"{combined} tourism")
         
         return queries
@@ -1373,7 +1368,7 @@ class TourismCrawler:
         """
         url_lower = url.lower()
         
-        # Dominios conocidos de turismo
+        
         tourism_domains = [
             'tripadvisor', 'booking', 'expedia', 'hotels', 'airbnb',
             'lonelyplanet', 'frommers', 'roughguides', 'nationalgeographic',
@@ -1382,7 +1377,7 @@ class TourismCrawler:
             'marriott', 'hilton', 'hyatt', 'ihg', 'accor'
         ]
         
-        # Patrones relevantes expandidos
+        
         tourism_patterns = [
             'tourism', 'travel', 'vacation', 'destination', 'attractions',
             'things-to-do', 'guide', 'visit', 'hotel', 'restaurant',
@@ -1393,28 +1388,28 @@ class TourismCrawler:
             'beach', 'playa', 'museum', 'museo', 'park', 'parque'
         ]
         
-        # Verificar dominios
+        
         if any(domain in url_lower for domain in tourism_domains):
             return True
         
-        # Verificar patrones
+        
         if any(pattern in url_lower for pattern in tourism_patterns):
             return True
         
-        # Verificar si contiene palabras clave de la consulta actual
+        
         if self.current_query_keywords:
             for keyword in self.current_query_keywords:
                 if keyword.lower() in url_lower:
                     return True
         
-        # Ser más permisivo con URLs que parecen ser de contenido
-        # (no son recursos estáticos ni páginas de sistema)
+        
+        
         unwanted_extensions = ['.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.pdf']
         unwanted_patterns = ['/login', '/signin', '/register', '/api/', '/cdn-cgi/']
         
         if not any(ext in url_lower for ext in unwanted_extensions) and \
            not any(pattern in url_lower for pattern in unwanted_patterns):
-            # Si la URL parece ser contenido regular, darle una oportunidad
+            
             return True
         
         return False
@@ -1435,7 +1430,7 @@ class TourismCrawler:
                 'https://www.tripadvisor.com/Tourism-g293819-Angola-Vacations.html',
                 'https://www.booking.com/country/ao.html'
             ],
-            'angoola': [  # Variación específica
+            'angoola': [  
                 'https://www.lonelyplanet.com/angola',
                 'https://www.tripadvisor.com/Tourism-g293819-Angola-Vacations.html'
             ],
@@ -1464,7 +1459,7 @@ class TourismCrawler:
                 if key in keyword_lower or keyword_lower in key:
                     links.extend(urls)
         
-        # URLs generales si no hay coincidencias específicas
+        
         if not links:
             links = [
                 'https://www.tripadvisor.com/',
@@ -1482,14 +1477,14 @@ class TourismCrawler:
         if improved_query:
             print(f"🔍 Con consulta mejorada: '{improved_query}'")
         
-        # Establecer las palabras clave para filtrar URLs
+        
         self.current_query_keywords = keywords
         print(f"🎯 Filtrado de URLs activado para palabras clave: {keywords}")
         
-        # Resetear estadísticas de filtrado
+        
         self.urls_filtered_out = 0
         
-        # Buscar URLs iniciales con la consulta mejorada si está disponible
+        
         initial_urls = self.google_search_links(keywords, num_results=20, improved_query=improved_query)
         
         if not initial_urls:
@@ -1498,46 +1493,46 @@ class TourismCrawler:
         
         print(f"✅ Encontradas {len(initial_urls)} URLs iniciales")
         
-        # Limpiar la cola y añadir nuevas URLs
+        
         while not self.urls_to_visit.empty():
             try:
                 self.urls_to_visit.get_nowait()
             except queue.Empty:
                 break
         
-        # Añadir URLs iniciales a la cola
+        
         for url in initial_urls:
             self.urls_to_visit.put((url, 0))
         
-        # Ajustar configuración para búsqueda por keywords
+        
         original_max_depth = self.max_depth
         self.max_depth = max_depth
         
-        # Ejecutar crawler paralelo
+        
         result = self.run_parallel_crawler()
         
-        # Restaurar configuración original
+        
         self.max_depth = original_max_depth
         
         return result
 
-    # Métodos de compatibilidad para mantener la interfaz existente
+    
     def crawl_from_links(self, links: list, max_depth: int = 2):
         """Método de compatibilidad - redirige al crawler paralelo"""
         print("⚠️ Usando crawler paralelo en lugar del método legacy crawl_from_links")
         
-        # Limpiar la cola y añadir los enlaces proporcionados
+        
         while not self.urls_to_visit.empty():
             try:
                 self.urls_to_visit.get_nowait()
             except queue.Empty:
                 break
         
-        # Añadir enlaces a la cola
-        for url in links[:20]:  # Limitar a 20 URLs
+        
+        for url in links[:20]:  
             self.urls_to_visit.put((url, 0))
         
-        # Ejecutar crawler paralelo
+        
         return self.run_parallel_crawler()
 
     def run_crawler(self):
@@ -1550,7 +1545,7 @@ class TourismCrawler:
         with self.collection_lock:
             doc_id = f"parallel_doc_{hash(content_data['url']) % 10000000}_{depth}_{int(time.time())}"
             
-            # Preparar metadata
+            
             metadata = {
                 "url": content_data["url"],
                 "title": content_data["title"],
@@ -1560,7 +1555,7 @@ class TourismCrawler:
                 "processed_by_mistral": False
             }
             
-            # IMPRIMIR INFORMACIÓN DEL CHUNK
+            
             print(f"\n📝 GUARDANDO CHUNK EN CHROMADB:")
             print(f"   📌 ID: {doc_id}")
             print(f"   🔗 URL: {content_data['url']}")
@@ -1577,7 +1572,7 @@ class TourismCrawler:
                 ids=[doc_id]
             )
             
-            # Guardar también en archivo de texto
+            
             self._save_chunk_to_file(doc_id, content_data["content"], metadata, "Crawler (sin procesamiento)")
         
         with self.stats_lock:
@@ -1591,23 +1586,23 @@ class TourismCrawler:
         """
         formatted_text = []
         
-        # Información de la fuente
+        
         if 'source_title' in processed_data:
             formatted_text.append(f"Título: {processed_data['source_title']}")
         
-        # País y ciudad
+        
         if 'pais' in processed_data:
             formatted_text.append(f"\nPaís: {processed_data['pais']}")
         if 'ciudad' in processed_data:
             formatted_text.append(f"Ciudad: {processed_data['ciudad']}")
         
-        # Procesar lugares
+        
         if 'lugares' in processed_data and processed_data['lugares']:
             formatted_text.append("\nLugares:")
             for lugar in processed_data['lugares']:
                 lugar_info = []
                 
-                # Nombre y tipo
+                
                 if 'nombre' in lugar:
                     lugar_info.append(f"\n- {lugar['nombre']}")
                 if 'tipo' in lugar:
@@ -1615,7 +1610,7 @@ class TourismCrawler:
                 if 'subtipo' in lugar:
                     lugar_info.append(f" - {lugar['subtipo']}")
                 
-                # Ubicación
+                
                 if 'ubicacion' in lugar:
                     ubicacion = lugar['ubicacion']
                     if 'zona' in ubicacion:
@@ -1623,11 +1618,11 @@ class TourismCrawler:
                     if 'direccion' in ubicacion:
                         lugar_info.append(f"  Dirección: {ubicacion['direccion']}")
                 
-                # Descripción
+                
                 if 'descripcion' in lugar:
                     lugar_info.append(f"  Descripción: {lugar['descripcion']}")
                 
-                # Precios
+                
                 if 'precios' in lugar:
                     precios = lugar['precios']
                     precio_info = []
@@ -1640,19 +1635,19 @@ class TourismCrawler:
                     if precio_info:
                         lugar_info.append(f"  Precios: {', '.join(precio_info)}")
                 
-                # Calificación
+                
                 if 'calificacion' in lugar:
                     calif = lugar['calificacion']
                     if 'puntuacion' in calif:
                         lugar_info.append(f"  Calificación: {calif['puntuacion']}/{calif.get('escala', '5')}")
                 
-                # Servicios
+                
                 if 'servicios' in lugar and lugar['servicios']:
                     lugar_info.append(f"  Servicios: {', '.join(lugar['servicios'])}")
                 
                 formatted_text.extend(lugar_info)
         
-        # Información general
+        
         if 'informacion_general' in processed_data:
             info = processed_data['informacion_general']
             formatted_text.append("\nInformación General:")
@@ -1668,7 +1663,7 @@ class TourismCrawler:
             if 'tips_viajeros' in info and info['tips_viajeros']:
                 formatted_text.append(f"- Tips: {', '.join(info['tips_viajeros'])}")
         
-        # Actividades populares
+        
         if 'actividades_populares' in processed_data and processed_data['actividades_populares']:
             formatted_text.append("\nActividades Populares:")
             for actividad in processed_data['actividades_populares']:
@@ -1680,7 +1675,7 @@ class TourismCrawler:
                         act_info.append(f"(Duración: {actividad['duracion']})")
                     formatted_text.append(' '.join(act_info))
         
-        # Gastronomía
+        
         if 'gastronomia' in processed_data:
             gastro = processed_data['gastronomia']
             if 'platos_tipicos' in gastro and gastro['platos_tipicos']:
@@ -1688,11 +1683,11 @@ class TourismCrawler:
             if 'bebidas_tipicas' in gastro and gastro['bebidas_tipicas']:
                 formatted_text.append(f"Bebidas típicas: {', '.join(gastro['bebidas_tipicas'])}")
         
-        # Si es contenido no turístico
+        
         if 'tipo_contenido' in processed_data and processed_data['tipo_contenido'] == 'no_turistico':
             return "Contenido no relacionado con turismo"
         
-        # Si no hay información estructurada, incluir cualquier otra información
+        
         if not formatted_text and isinstance(processed_data, dict):
             for key, value in processed_data.items():
                 if key not in ['source_url', 'source_title', 'processed_by'] and value:
@@ -1706,27 +1701,27 @@ class TourismCrawler:
         """
         formatted_text = []
         
-        # Información de la fuente
+        
         if 'source_title' in processed_data:
             formatted_text.append(f"Título: {processed_data['source_title']}")
         
-        # Resumen si existe
+        
         if 'summary' in processed_data:
             formatted_text.append(f"\nResumen: {processed_data['summary']}")
         
-        # Procesar entidades extraídas
+        
         if 'entities' in processed_data:
             entities = processed_data['entities']
             
-            # Países
+            
             if 'countries' in entities and entities['countries']:
                 formatted_text.append(f"\nPaíses: {', '.join(entities['countries'])}")
             
-            # Ciudades
+            
             if 'cities' in entities and entities['cities']:
                 formatted_text.append(f"Ciudades: {', '.join(entities['cities'])}")
             
-            # Destinos
+            
             if 'destinations' in entities and entities['destinations']:
                 dest_text = []
                 for dest in entities['destinations']:
@@ -1736,7 +1731,7 @@ class TourismCrawler:
                     dest_text.append(dest_info)
                 formatted_text.append(f"\nDestinos turísticos: {', '.join(dest_text)}")
             
-            # Hoteles
+            
             if 'hotels' in entities and entities['hotels']:
                 hotel_text = []
                 for hotel in entities['hotels']:
@@ -1746,7 +1741,7 @@ class TourismCrawler:
                     hotel_text.append(hotel_info)
                 formatted_text.append(f"\nHoteles y alojamientos: {', '.join(hotel_text)}")
             
-            # Atracciones
+            
             if 'attractions' in entities and entities['attractions']:
                 attr_text = []
                 for attr in entities['attractions']:
@@ -1756,7 +1751,7 @@ class TourismCrawler:
                     attr_text.append(attr_info)
                 formatted_text.append(f"\nAtracciones turísticas: {', '.join(attr_text)}")
             
-            # Restaurantes
+            
             if 'restaurants' in entities and entities['restaurants']:
                 rest_text = []
                 for rest in entities['restaurants']:
@@ -1766,14 +1761,14 @@ class TourismCrawler:
                     rest_text.append(rest_info)
                 formatted_text.append(f"\nRestaurantes: {', '.join(rest_text)}")
             
-            # Precios
+            
             if 'prices' in entities and entities['prices']:
                 price_text = []
                 for price in entities['prices']:
                     price_text.append(price['text'])
                 formatted_text.append(f"\nInformación de precios: {', '.join(price_text)}")
             
-            # Actividades
+            
             if 'activities' in entities and entities['activities']:
                 act_text = []
                 for act in entities['activities']:
@@ -1783,7 +1778,7 @@ class TourismCrawler:
                     act_text.append(act_info)
                 formatted_text.append(f"\nActividades: {', '.join(act_text)}")
             
-            # Transporte
+            
             if 'transport' in entities and entities['transport']:
                 trans_text = []
                 for trans in entities['transport']:
@@ -1793,7 +1788,7 @@ class TourismCrawler:
                     trans_text.append(trans_info)
                 formatted_text.append(f"\nTransporte: {', '.join(trans_text)}")
             
-            # Organizaciones
+            
             if 'organizations' in entities and entities['organizations']:
                 org_text = []
                 for org in entities['organizations']:
@@ -1803,12 +1798,12 @@ class TourismCrawler:
                     org_text.append(org_info)
                 formatted_text.append(f"\nOrganizaciones turísticas: {', '.join(org_text)}")
         
-        # Incluir entidades crudas si no hay texto formateado
+        
         if not formatted_text and 'raw_entities' in processed_data:
             raw_entities = processed_data['raw_entities']
             if raw_entities:
                 entity_texts = []
-                for entity in raw_entities[:20]:  # Limitar a 20 entidades
+                for entity in raw_entities[:20]:  
                     entity_texts.append(f"{entity['text']} ({entity['type']})")
                 formatted_text.append(f"Entidades encontradas: {', '.join(entity_texts)}")
         

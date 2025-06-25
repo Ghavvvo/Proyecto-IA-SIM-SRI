@@ -24,11 +24,11 @@ class CoordinatorAgent(Agent):
         self.tourist_guide_agent = tourist_guide_agent
         self.simulation_agent = simulation_agent
         
-        # Estado del flujo de planificación
+        
         self.planning_state = {
-            'mode': 'normal',  # 'normal' o 'planning'
+            'mode': 'normal',  
             'preferences': None,
-            'aco_depth': 1,  # Profundidad inicial para ACO
+            'aco_depth': 1,  
             'iterations': 0,
             'max_iterations': 5
         }
@@ -38,24 +38,24 @@ class CoordinatorAgent(Agent):
             'component': self.name,
             'action': 'initializing'
         })
-        # Verificar si la colección ya tiene datos antes de correr el crawler
+        
         if hasattr(self.crawler_agent.crawler.collection, 'count'):
             try:
                 count = self.crawler_agent.crawler.collection.count()
             except Exception:
                 count = 0
         else:
-            # Fallback si no existe el método count
+            
             try:
                 results = self.crawler_agent.crawler.collection.query(query_texts=["test"], n_results=1)
                 count = len(results.get('documents', [[]])[0])
             except Exception:
                 count = 0
         if count > 0:
-            # Si ya hay datos, inicializar el RAG directamente
+            
             self.rag_agent.receive({'type': 'init_collection', 'collection': self.crawler_agent.crawler.collection},
                                    self)
-        else:            # Si no hay datos, correr el crawler
+        else:            
             crawl_result = self.crawler_agent.receive({'type': 'crawl'}, self)
             self._notify_interface('crawler_start', {
                 'reason': 'no_existing_data'
@@ -65,14 +65,14 @@ class CoordinatorAgent(Agent):
 
 
     def ask(self, query):
-        # PRIMERO: Si estamos en modo planificación, manejar dentro del flujo de planificación
+        
         if self.planning_state['mode'] == 'planning':
             return self._handle_planning_mode(query)
 
-        # DESPUÉS: Detectar intención del usuario solo si NO estamos en modo planificación
+        
         user_intent = self._detect_user_intent(query)
 
-        # Manejar según la intención detectada
+        
         if user_intent == 'plan_vacation':
             return self._start_vacation_planning()
 
@@ -82,15 +82,15 @@ class CoordinatorAgent(Agent):
         elif user_intent == 'need_more_info':
             return self._search_more_information(query)
 
-        # Paso 0: Manejar solicitudes directas de rutas
+        
         if self._is_direct_route_request(query):
             return self._handle_direct_route_request(query)
 
-        # Paso 0.5: Verificar si es confirmación de ruta basada en contexto
+        
         if self._is_route_confirmation(query):
             return self._generate_route_from_context()
 
-        # Paso 1: Analizar y mejorar la consulta usando el contexto
+        
         print("🧠 Analizando consulta con contexto conversacional...")
         context_analysis = self.context_agent.receive({'type': 'analyze_query', 'query': query}, self)
 
@@ -107,11 +107,11 @@ class CoordinatorAgent(Agent):
             if analysis.get('improvements_made'):
                 print(f"✨ Mejoras aplicadas: {', '.join(analysis['improvements_made'])}")
         else:
-            # Si hay error en el análisis, usar la consulta original
+            
             improved_query = query
             print("⚠️ Error en análisis de contexto, usando consulta original")
 
-        # Paso 2: Consultar al agente RAG con la consulta mejorada
+        
         self._notify_interface('query_received', {
             'query': improved_query,
             'original_query': query,
@@ -120,7 +120,7 @@ class CoordinatorAgent(Agent):
         response = self.rag_agent.receive({'type': 'query', 'query': improved_query}, self)
 
         if response['type'] == 'answer':
-            # Paso 3: Guardar la interacción en el contexto
+            
             final_answer = response['answer']
             self.context_agent.receive({
                 'type': 'add_interaction',
@@ -128,39 +128,39 @@ class CoordinatorAgent(Agent):
                 'response': final_answer
             }, self)
 
-            # Utilizar Gemini para evaluar si la respuesta es útil
+            
             evaluation = self._evaluate_response_usefulness(query, final_answer)
             if not evaluation:
-                # Extraer palabras clave problemáticas cuando la consulta no es relevante
+                
                 problematic_keywords = self._extract_problematic_keywords(query, response['answer'])
 
                 print(f"La respuesta proporcionada por el sistema RAG no es útil para la consulta.")
                 print(f"Palabras clave problemáticas identificadas: {', '.join(problematic_keywords)}")
                 print("🐜 Iniciando búsqueda inteligente con Ant Colony Optimization...")
 
-                # NUEVO FLUJO: Búsqueda en Google + Exploración ACO
-                # Crear búsquedas específicas si hay múltiples palabras clave
+                
+                
                 if len(problematic_keywords) > 1:
-                    # Detectar si hay un destino en las palabras clave
+                    
                     destination = None
                     interests = []
 
-                    # Intentar identificar destino vs intereses
+                    
                     for keyword in problematic_keywords:
-                        # Palabras que típicamente son destinos
+                        
                         if any(place in keyword.lower() for place in ['cuba', 'habana', 'varadero', 'panama', 'angola', 'méxico', 'argentina', 'españa']):
                             destination = keyword
                         else:
                             interests.append(keyword)
 
-                    # Si no se detectó destino pero hay múltiples keywords, usar el primero como destino
+                    
                     if not destination and len(problematic_keywords) > 1:
                         destination = problematic_keywords[0]
                         interests = problematic_keywords[1:]
                     elif not interests and destination:
                         interests = problematic_keywords
 
-                    # Crear búsquedas específicas
+                    
                     search_queries = self._create_specific_search_queries(destination, interests)
 
                     print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
@@ -169,7 +169,7 @@ class CoordinatorAgent(Agent):
 
                     total_content_extracted = 0
 
-                    # Realizar búsqueda separada para cada consulta
+                    
                     for search_query in search_queries:
                         print(f"\n🔍 Buscando: '{search_query}'")
 
@@ -177,7 +177,7 @@ class CoordinatorAgent(Agent):
                             'type': 'search_google_aco',
                             'keywords': [search_query],
                             'improved_query': search_query,
-                            'max_urls': 5,  # Menos URLs por búsqueda
+                            'max_urls': 5,  
                             'max_depth': 2
                         }, self)
 
@@ -186,7 +186,7 @@ class CoordinatorAgent(Agent):
                             total_content_extracted += content_count
                             print(f"   ✅ Extraídas {content_count} páginas")
 
-                    # Usar el total para el flujo siguiente
+                    
                     if total_content_extracted > 0:
                         aco_result = {
                             'type': 'aco_completed',
@@ -196,7 +196,7 @@ class CoordinatorAgent(Agent):
                     else:
                         aco_result = {'type': 'error'}
                 else:
-                    # Si solo hay una palabra clave, búsqueda normal
+                    
                     aco_result = self.crawler_agent.receive({
                         'type': 'search_google_aco',
                         'keywords': problematic_keywords,
@@ -215,7 +215,7 @@ class CoordinatorAgent(Agent):
                     print(f"🕸️ Senderos de feromonas creados: {aco_stats.get('pheromone_trails_count', 0)}")
 
                     if content_count > 0:
-                        # Paso 2: Consultar nuevamente al RAG con la información actualizada
+                        
                         print("🔄 Consultando RAG con información obtenida por ACO...")
                         new_response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
 
@@ -231,13 +231,13 @@ class CoordinatorAgent(Agent):
                             return new_response.get('msg', 'Error en la nueva consulta después de exploración ACO')
                     else:
                         print("⚠️ ACO no extrajo contenido útil, intentando método alternativo...")
-                        # Fallback a método anterior
+                        
                         return self._fallback_search_method(problematic_keywords, query, improved_query)
                 else:
                     print("❌ Error en exploración ACO, intentando método alternativo...")
                     return self._fallback_search_method(problematic_keywords, query, improved_query)
 
-            # Manejar sugerencia de ruta si es relevante            
+            
             return self._handle_route_suggestion(query, final_answer)
 
         return response.get('msg', 'Error al consultar la base de datos')
@@ -304,11 +304,11 @@ class CoordinatorAgent(Agent):
             response = mistral_client.generate(prompt)
             result = response.lower().strip()
 
-            # Determinar si la respuesta es útil basada en el texto generado
+            
             return 'true' in result
         except Exception as e:
             print(f"Error al evaluar la utilidad de la respuesta: {e}")
-            # En caso de error, asumimos que la respuesta es útil
+            
             return True
 
     def _extract_problematic_keywords(self, query, answer):
@@ -343,11 +343,11 @@ class CoordinatorAgent(Agent):
             response = mistral_client.generate(prompt)
             result = response.strip()
 
-            # Procesar la respuesta
+            
             if result.lower() == "ninguna" or not result:
                 return []
 
-            # Dividir por comas y limpiar espacios
+            
             keywords = [keyword.strip() for keyword in result.split(',') if keyword.strip()]
 
             return keywords
@@ -362,7 +362,7 @@ class CoordinatorAgent(Agent):
         """
         print("🔄 Ejecutando método de búsqueda alternativo...")
 
-        # Usar el método anterior como fallback con consulta mejorada
+        
         crawl_result = self.crawler_agent.receive({
             'type': 'crawl_keywords',
             'keywords': problematic_keywords,
@@ -430,26 +430,26 @@ class CoordinatorAgent(Agent):
             else:
                 return "Lo siento, no pude generar una ruta en este momento."
 
-        # Si no hay suficientes lugares, dar instrucciones claras
+        
         if places:
             return f"Necesito al menos 2 lugares para generar una ruta. Solo identifiqué: {', '.join(places)}"
         return "Por favor, mencione al menos dos lugares para generar una ruta."
 
     def _is_route_confirmation(self, query: str) -> bool:
         """Determina si la consulta es una confirmación de ruta basada en contexto"""
-        # Obtener el último mensaje del sistema
+        
         last_response = self.context_agent.receive({'type': 'get_last_response'}, self)
-        # Verificar si el último mensaje contenía una sugerencia de ruta
+        
         if not last_response or "optimice una ruta" not in last_response:
             return False
 
-        # Verificar si la consulta actual es una confirmación simple
+        
         confirmations = ['sí', 'si', 's', 'yes', 'y', 'por favor', 'claro', 'adelante', 'ok', 'deseo', 'genial']
         return any(conf in query.lower() for conf in confirmations)
 
     def _generate_route_from_context(self) -> str:
         """Genera ruta basada en los lugares almacenados en contexto"""
-        # Obtener lugares relevantes del contexto
+        
         places_result = self.context_agent.receive({
             'type': 'get_relevant_places_from_context'
         }, self)
@@ -457,7 +457,7 @@ class CoordinatorAgent(Agent):
         if places_result['type'] != 'extracted_places' or len(places_result['places']) < 2:
             return "Lo siento, no tengo suficientes lugares para generar una ruta."
 
-        # Generar ruta optimizada
+        
         route_result = self.route_agent.receive({
             'type': 'optimize_route',
             'places': places_result['places']
@@ -469,7 +469,7 @@ class CoordinatorAgent(Agent):
 
     def _handle_route_suggestion(self, query: str, current_answer: str) -> str:
         """Añade sugerencia de ruta si es relevante"""
-        # Detectar si debemos ofrecer ruta
+        
         offer_decision = self.context_agent.receive({
             'type': 'should_offer_route',
             'query': query,
@@ -479,7 +479,7 @@ class CoordinatorAgent(Agent):
         if offer_decision['type'] != 'route_offer_decision' or not offer_decision['should_offer']:
             return current_answer
 
-        # Extraer lugares relevantes
+        
         extraction_result = self.context_agent.receive({
             'type': 'extract_relevant_places',
             'response': current_answer
@@ -488,13 +488,13 @@ class CoordinatorAgent(Agent):
         if extraction_result['type'] != 'extracted_places' or len(extraction_result['places']) < 2:
             return current_answer
 
-        # Guardar lugares en contexto
+        
         self.context_agent.receive({
             'type': 'store_relevant_places',
             'places': extraction_result['places']
         }, self)
 
-        # Añadir invitación
+        
         places_list = ", ".join(extraction_result['places'][:3])
         if len(extraction_result['places']) > 3:
             places_list += f" y {len(extraction_result['places']) - 3} más"
@@ -540,7 +540,7 @@ class CoordinatorAgent(Agent):
             return response.strip()
 
         except Exception as e:
-            # Fallback en caso de error
+            
             print(f"Error al generar descripción con Mistral: {e}")
             route_str = "🗺️ **Ruta optimizada**:\n"
             for i, place in enumerate(places):
@@ -576,12 +576,12 @@ class CoordinatorAgent(Agent):
         if not self.tourist_guide_agent:
             return "Lo siento, el servicio de planificación de vacaciones no está disponible en este momento."
 
-        # Cambiar a modo planificación
+        
         self.planning_state['mode'] = 'planning'
         self.planning_state['iterations'] = 0
         self.planning_state['aco_depth'] = 1
 
-        # Iniciar conversación con el guía turístico
+        
         response = self.tourist_guide_agent.receive({'type': 'start_conversation'}, self)
 
         if response['type'] == 'guide_response':
@@ -595,35 +595,35 @@ class CoordinatorAgent(Agent):
         """
         Maneja las interacciones en modo planificación
         """
-        # Verificar si el usuario quiere salir del modo planificación
+        
         if self._wants_to_exit_planning(user_message):
             self.planning_state['mode'] = 'normal'
             return "He salido del modo planificación. Ahora puedes hacerme consultas normales sobre turismo."
 
-        # Procesar mensaje con el guía turístico
+        
         response = self.tourist_guide_agent.receive({
             'type': 'user_message',
             'message': user_message
         }, self)
 
         if response['type'] == 'guide_response':
-            # Si se completó la recopilación de preferencias
+            
             if response.get('preferences_collected', False):
                 print("✅ Preferencias recopiladas, iniciando búsqueda con ACO")
-                # Guardar las preferencias en el estado
+                
                 final_prefs = response.get('final_preferences')
                 if final_prefs:
                     self.planning_state['preferences'] = final_prefs
                     return self._execute_aco_search_with_preferences(final_prefs)
                 else:
-                    # Si no hay preferencias finales, usar las preferencias actuales del response
-                    # que ya incluyen la información del último mensaje
+                    
+                    
                     current_prefs = response.get('current_preferences')
                     if current_prefs:
                         self.planning_state['preferences'] = current_prefs
                         return self._execute_aco_search_with_preferences(current_prefs)
                     else:
-                        # Como último recurso, obtenerlas del agente
+                        
                         prefs_response = self.tourist_guide_agent.receive({'type': 'get_preferences'}, self)
                         if prefs_response['type'] == 'preferences':
                             self.planning_state['preferences'] = prefs_response['preferences']
@@ -639,11 +639,11 @@ class CoordinatorAgent(Agent):
         """
         Detecta si el usuario quiere salir del modo planificación
         """
-        # Solo detectar cancelación explícita, no palabras que podrían ser parte de respuestas normales
+        
         exit_keywords = ['cancelar', 'cancelar planificación', 'salir del modo planificación']
         message_lower = message.lower().strip()
 
-        # Verificar coincidencia exacta o al inicio de la frase
+        
         for keyword in exit_keywords:
             if message_lower == keyword or message_lower.startswith(keyword):
                 return True
@@ -655,7 +655,7 @@ class CoordinatorAgent(Agent):
         Ejecuta búsqueda con las preferencias recopiladas
         IMPORTANTE: Primero intenta usar la información de la BD local antes de buscar en DuckDuckGo
         """
-        # Obtener palabras clave estructuradas
+        
         structured_prefs = self.tourist_guide_agent.get_structured_preferences()
 
         destination = preferences.get('destination', '')
@@ -664,31 +664,31 @@ class CoordinatorAgent(Agent):
         print(f"🎯 Destino: {destination}")
         print(f"🎯 Intereses: {interests}")
 
-        # PASO 1: Primero intentar generar el itinerario con la información existente en la BD
+        
         print("📚 Consultando información existente en la base de datos...")
 
-        # Construir consulta para el itinerario
+        
         itinerary_query = f"Crear itinerario turístico para {destination}"
         if interests:
             itinerary_query += f" incluyendo {', '.join(interests)}"
 
-        # Consultar al RAG con la información existente
+        
         response = self.rag_agent.receive({'type': 'query', 'query': itinerary_query}, self)
 
         if response['type'] == 'answer':
-            # Evaluar si la respuesta es útil
+            
             evaluation = self._evaluate_response_usefulness(itinerary_query, response['answer'])
 
             if evaluation:
-                # Si la respuesta es útil, generar el itinerario directamente
+                
                 print("✅ Encontré suficiente información en la base de datos local")
                 return self._generate_travel_itinerary(preferences, structured_prefs)
             else:
-                # Si la respuesta no es útil, entonces buscar en DuckDuckGo
+                
                 print("⚠️ La información en la base de datos no es suficiente")
                 print("🔍 Iniciando búsqueda en DuckDuckGo para obtener más información...")
 
-                # Crear búsquedas específicas para cada interés
+                
                 search_queries = self._create_specific_search_queries(destination, interests)
 
                 print(f"📋 Se realizarán {len(search_queries)} búsquedas específicas:")
@@ -697,16 +697,16 @@ class CoordinatorAgent(Agent):
 
                 total_content_extracted = 0
 
-                # Realizar búsqueda separada para cada consulta
+                
                 for query in search_queries:
                     print(f"\n🔍 Buscando: '{query}'")
 
-                    # Ejecutar búsqueda ACO para esta consulta específica
+                    
                     aco_result = self.crawler_agent.receive({
                         'type': 'search_google_aco',
-                        'keywords': [query],  # Usar la consulta completa como keyword
+                        'keywords': [query],  
                         'improved_query': query,
-                        'max_urls': 8,  # Menos URLs por búsqueda ya que haremos varias
+                        'max_urls': 8,  
                         'max_depth': self.planning_state['aco_depth']
                     }, self)
 
@@ -720,22 +720,22 @@ class CoordinatorAgent(Agent):
                 if total_content_extracted > 0:
                     print(f"\n✅ Total de páginas extraídas: {total_content_extracted}")
 
-                    # Incrementar profundidad para próxima iteración
+                    
                     self.planning_state['aco_depth'] += 1
                     self.planning_state['iterations'] += 1
 
-                    # Generar itinerario con la información recopilada
+                    
                     return self._generate_travel_itinerary(preferences, structured_prefs)
                 else:
-                    # Si no se encontró información en DuckDuckGo, usar lo que hay en la BD
+                    
                     print("⚠️ No se encontró información adicional en DuckDuckGo")
                     print("📚 Generando itinerario con la información disponible en la base de datos...")
                     return self._generate_travel_itinerary(preferences, structured_prefs)
         else:
-            # Si hay error al consultar la BD, intentar buscar en DuckDuckGo
+            
             print("❌ Error al consultar la base de datos, buscando en DuckDuckGo...")
 
-            # Crear búsquedas específicas para cada interés
+            
             search_queries = self._create_specific_search_queries(destination, interests)
 
             total_content_extracted = 0
@@ -763,7 +763,7 @@ class CoordinatorAgent(Agent):
         Genera un itinerario de viaje basado en las preferencias y la información recopilada
         IMPORTANTE: Usa información de la BD local y optimiza rutas con RouteAgent
         """
-        # Validar que preferences no sea None
+        
         if not preferences:
             preferences = self.planning_state.get('preferences', {})
 
@@ -774,17 +774,17 @@ class CoordinatorAgent(Agent):
         interests = preferences.get('interests', [])
         duration = preferences.get('duration', 'No especificada')
 
-        # Construir consulta para el itinerario
+        
         itinerary_query = f"Crear itinerario turístico para {destination}"
         if interests:
             itinerary_query += f" incluyendo {', '.join(interests)}"
 
-        # Consultar al RAG con la información actualizada
+        
         print("📅 Generando itinerario personalizado desde la base de datos...")
         response = self.rag_agent.receive({'type': 'query', 'query': itinerary_query}, self)
 
         if response['type'] == 'answer':
-            # Extraer lugares del itinerario para optimizar rutas
+            
             print("🗺️ Extrayendo lugares para optimizar rutas...")
             extraction_result = self.context_agent.receive({
                 'type': 'extract_relevant_places',
@@ -796,14 +796,14 @@ class CoordinatorAgent(Agent):
                 places = extraction_result['places']
 
 
-                # Optimizar rutas usando el RouteAgent
+                
                 print("🚀 Optimizando rutas con el agente de rutas...")
 
-                # Estimar días necesarios
+                
                 days_info = self._estimate_days_needed(len(places), duration)
 
                 if days_info['days'] > 1:
-                    # Dividir lugares por días
+                    
                     places_per_day = self._distribute_places_by_days(places, days_info['days'])
 
                     for day_num, day_places in enumerate(places_per_day, 1):
@@ -819,7 +819,7 @@ class CoordinatorAgent(Agent):
                                     'distance_km': route_result['total_distance_km']
                                 }
                 else:
-                    # Un solo día, optimizar todos los lugares
+                    
                     route_result = self.route_agent.receive({
                         'type': 'optimize_route',
                         'places': places
@@ -833,29 +833,29 @@ class CoordinatorAgent(Agent):
 
                 print(f"✅ Rutas optimizadas para {len(optimized_routes)} día(s)")
 
-            # Formatear la respuesta como itinerario
+            
             if optimized_routes:
-                # Si hay rutas optimizadas, usar el formato con rutas
+                
                 itinerary = self._format_as_itinerary_with_routes(
                     response['answer'],
                     preferences,
                     optimized_routes
                 )
             else:
-                # Si no hay rutas, usar el formato simple
+                
                 itinerary = self._format_as_itinerary(
                     response['answer'],
                     preferences
                 )
 
-            # Guardar en contexto
+            
             self.context_agent.receive({
                 'type': 'add_interaction',
                 'query': f"Itinerario para {destination}",
                 'response': itinerary
             }, self)
 
-            # Resetear estado de planificación
+            
             self.planning_state['mode'] = 'normal'
             self.planning_state['preferences'] = None
             self.planning_state['aco_depth'] = 1
@@ -921,17 +921,17 @@ class CoordinatorAgent(Agent):
             response = mistral_client.generate(prompt)
             formatted_itinerary = response.strip()
 
-            # Call simulation utils and send to simulation agent
+            
             simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
             
-            # Send to simulation agent if available
+            
             if self.simulation_agent:
                 print("🧩 Enviando itinerario al agente de simulación...")
                 print("🧩 JSON para simulación:")
 
                 simulation_result = self._run_simulation(simulation_json)
                 
-                # Add simulation results to the itinerary
+                
                 if simulation_result:
                     formatted_itinerary += f"\n\n{simulation_result}"
             else:
@@ -940,7 +940,7 @@ class CoordinatorAgent(Agent):
 
         except Exception as e:
             print(f"Error formateando itinerario: {e}")
-            # Fallback: devolver respuesta con formato básico
+            
             return f"""
 🌟 ITINERARIO PARA {preferences.get('destination', 'TU DESTINO').upper()}
 
@@ -955,7 +955,7 @@ class CoordinatorAgent(Agent):
         """
         Añade una oferta para optimizar rutas si el itinerario contiene lugares específicos
         """
-        # Extraer lugares del itinerario
+        
         extraction_result = self.context_agent.receive({
             'type': 'extract_relevant_places',
             'response': itinerary
@@ -988,11 +988,11 @@ Si deseas que optimice las rutas para visitarlos de la manera más eficiente, so
         try:
             mistral_client = MistralClient(model_name="flash")
 
-            # Obtener contexto de la conversación
+            
             context_result = self.context_agent.receive({'type': 'get_context'}, self)
             recent_history = ""
             if context_result['type'] == 'context_data':
-                history = context_result.get('history', [])[-3:]  # Últimas 3 interacciones
+                history = context_result.get('history', [])[-3:]  
                 for interaction in history:
                     recent_history += f"Usuario: {interaction['query']}\nSistema: {interaction['response'][:200]}...\n\n"
 
@@ -1027,12 +1027,12 @@ Si deseas que optimice las rutas para visitarlos de la manera más eficiente, so
             response = mistral_client.generate(prompt)
             intent = response.strip().lower()
 
-            # Validar que la respuesta sea una de las opciones válidas
+            
             valid_intents = ['plan_vacation', 'create_itinerary', 'need_more_info', 'normal_query']
             if intent in valid_intents:
                 return intent
 
-            # Si no es válida, intentar detectar por palabras clave
+            
             query_lower = query.lower()
 
             if self._is_vacation_planning_request(query):
@@ -1046,26 +1046,26 @@ Si deseas que optimice las rutas para visitarlos de la manera más eficiente, so
 
         except Exception as e:
             print(f"Error detectando intención: {e}")
-            # Fallback a detección por palabras clave
+            
             return 'normal_query'
 
     def _create_itinerary_with_current_info(self) -> str:
         """
         Crea un itinerario con la información actual disponible
         """
-        # Verificar si tenemos preferencias guardadas
+        
         if self.planning_state.get('preferences'):
             preferences = self.planning_state['preferences']
             print("📋 Creando itinerario con las preferencias guardadas...")
             return self._generate_travel_itinerary(preferences, {})
 
-        # Si no hay preferencias guardadas, intentar extraerlas del contexto
+        
         context_result = self.context_agent.receive({'type': 'get_context'}, self)
         if context_result['type'] == 'context_data':
-            # Analizar el historial para extraer información de viaje
+            
             history = context_result.get('history', [])
 
-            # Usar Mistral para extraer preferencias del historial
+            
             preferences = self._extract_preferences_from_history(history)
 
             if preferences and (preferences.get('destination') or preferences.get('interests')):
@@ -1086,7 +1086,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         """
         print("🔍 Detectada necesidad de más información...")
 
-        # Extraer el tema específico de la consulta
+        
         topic_keywords = self._extract_topic_keywords(query)
 
         if not topic_keywords:
@@ -1094,7 +1094,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
 
         print(f"🐜 Buscando información adicional sobre: {', '.join(topic_keywords)}")
 
-        # Ejecutar búsqueda ACO
+        
         aco_result = self.crawler_agent.receive({
             'type': 'search_google_aco',
             'keywords': topic_keywords,
@@ -1107,13 +1107,13 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             content_count = aco_result.get('content_extracted', 0)
             print(f"✅ Encontré {content_count} fuentes de información adicional")
 
-            # Consultar al RAG con la nueva información
+            
             response = self.rag_agent.receive({'type': 'query', 'query': query}, self)
 
             if response['type'] == 'answer':
                 final_answer = response['answer']
 
-                # Guardar en contexto
+                
                 self.context_agent.receive({
                     'type': 'add_interaction',
                     'query': query,
@@ -1134,9 +1134,9 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         try:
             mistral_client = MistralClient(model_name="flash")
 
-            # Construir el historial como texto
+            
             history_text = ""
-            for interaction in history[-5:]:  # Últimas 5 interacciones
+            for interaction in history[-5:]:  
                 history_text += f"Usuario: {interaction['query']}\n"
                 history_text += f"Sistema: {interaction['response'][:300]}...\n\n"
 
@@ -1162,7 +1162,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             response = mistral_client.generate(prompt)
             json_str = response.strip()
 
-            # Buscar el JSON en la respuesta
+            
             start_idx = json_str.find('{')
             end_idx = json_str.rfind('}') + 1
 
@@ -1224,7 +1224,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         """
         search_queries = []
 
-        # Mapeo de intereses a términos de búsqueda más específicos
+        
         interest_mapping = {
             'accommodation': ['mejores hoteles', 'alojamiento recomendado', 'donde hospedarse'],
             'hotels': ['mejores hoteles', 'hoteles recomendados', 'alojamiento'],
@@ -1238,34 +1238,34 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             'culture': ['sitios culturales', 'patrimonio cultural', 'lugares históricos']
         }
 
-        # Si hay destino, crear consultas específicas para cada interés
+        
         if destination:
             for interest in interests:
-                # Obtener términos de búsqueda para este interés
+                
                 search_terms = interest_mapping.get(interest.lower(), [interest])
 
-                # Crear múltiples consultas para cada interés
+                
                 for term in search_terms:
                     query = f"{term} en {destination}"
                     search_queries.append(query)
 
-                # También agregar una consulta simple
+                
                 if interest not in interest_mapping:
                     search_queries.append(f"{interest} en {destination}")
 
-        # Si no hay destino pero hay intereses, buscar por intereses generales
+        
         elif interests:
             for interest in interests:
                 search_terms = interest_mapping.get(interest.lower(), [interest])
                 for term in search_terms:
                     search_queries.append(f"{term} turismo")
 
-        # Agregar consulta general si hay destino
+        
         if destination:
             search_queries.append(f"guía turística {destination}")
             search_queries.append(f"qué visitar en {destination}")
 
-        # Eliminar duplicados manteniendo el orden
+        
         seen = set()
         unique_queries = []
         for query in search_queries:
@@ -1273,19 +1273,19 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                 seen.add(query)
                 unique_queries.append(query)
 
-        # Limitar a un máximo razonable de consultas
+        
         return unique_queries[:10]
 
     def _estimate_days_needed(self, num_places: int, duration_str: str) -> dict:
         """
         Estima el número de días necesarios basado en la cantidad de lugares y duración especificada
         """
-        # Intentar extraer días de la duración especificada
+        
         import re
-        days = 1  # Por defecto un día
+        days = 1  
 
         if duration_str and duration_str != 'No especificada':
-            # Buscar números en la duración
+            
             numbers = re.findall(r'\d+', str(duration_str).lower())
             if numbers:
                 days = int(numbers[0])
@@ -1294,9 +1294,9 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             elif 'fin de semana' in duration_str.lower():
                 days = 2
 
-        # Si no hay duración especificada, estimar basado en lugares
+        
         if duration_str == 'No especificada':
-            # Aproximadamente 3-4 lugares por día
+            
             days = max(1, (num_places + 2) // 3)
 
         return {'days': days, 'places_per_day': max(1, num_places // days)}
@@ -1315,7 +1315,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         start_idx = 0
 
         for day in range(days):
-            # Agregar un lugar extra a los primeros días si hay remainder
+            
             end_idx = start_idx + places_per_day + (1 if day < remainder else 0)
             distribution.append(places[start_idx:end_idx])
             start_idx = end_idx
@@ -1329,7 +1329,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         try:
             mistral_client = MistralClient(model_name="flash")
 
-            # Preparar información de rutas optimizadas
+            
             routes_info = ""
             for day_key, route_data in optimized_routes.items():
                 day_num = day_key.replace('day_', '')
@@ -1398,13 +1398,13 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             formatted_itinerary = response.strip()
 
             simulation_json = format_as_simulation_input(formatted_itinerary, preferences)
-            # Send to simulation agent if available
+            
             if self.simulation_agent:
                 print("🧩 Enviando itinerario al agente de simulación...")
                 print("🧩 JSON para simulación:")
                 simulation_result = self._run_simulation(simulation_json)
 
-                # Add simulation results to the itinerary
+                
                 if simulation_result:
                     formatted_itinerary += f"\n\n{simulation_result}"
             else:
@@ -1415,7 +1415,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
 
         except Exception as e:
             print(f"Error formateando itinerario con rutas: {e}")
-            # Fallback con formato básico pero incluyendo rutas
+            
             fallback = f"🌟 ITINERARIO PARA {preferences.get('destination', 'TU DESTINO').upper()}\n\n"
 
             for day_key, route_data in optimized_routes.items():
@@ -1440,7 +1440,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         Returns:
             String con los resultados de la simulación formateados
         """
-        # Usar la función de utils para ejecutar las 30 réplicas
+        
         return run_simulation_replicas(self.simulation_agent, simulation_json, num_replicas=30)
     
     def _aggregate_simulation_results(self, all_results: list) -> dict:
@@ -1456,51 +1456,51 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         if not all_results:
             return {}
         
-        # Calcular estadísticas agregadas
+        
         satisfacciones = [r.get('satisfaccion_general', 0) for r in all_results]
         cansan_final = [r.get('cansancio_final', 0) for r in all_results]
         duraciones = [r.get('duracion_total_hrs', 0) for r in all_results]
         dias_simulados = [r.get('dias_simulados', 1) for r in all_results]
         
-        # Calcular promedios y estadísticas
+        
         import statistics
         
         aggregated = {
             'perfil_turista': all_results[0].get('perfil_turista', 'average'),
             'num_replicas': len(all_results),
             
-            # Satisfacción
+            
             'satisfaccion_promedio': statistics.mean(satisfacciones),
             'satisfaccion_mediana': statistics.median(satisfacciones),
             'satisfaccion_min': min(satisfacciones),
             'satisfaccion_max': max(satisfacciones),
             'satisfaccion_desv_std': statistics.stdev(satisfacciones) if len(satisfacciones) > 1 else 0,
             
-            # Cansancio
+            
             'cansancio_promedio': statistics.mean(cansan_final),
             'cansancio_mediana': statistics.median(cansan_final),
             'cansancio_min': min(cansan_final),
             'cansancio_max': max(cansan_final),
             'cansancio_desv_std': statistics.stdev(cansan_final) if len(cansan_final) > 1 else 0,
             
-            # Duración
+            
             'duracion_promedio': statistics.mean(duraciones),
             'duracion_mediana': statistics.median(duraciones),
             'duracion_min': min(duraciones),
             'duracion_max': max(duraciones),
             
-            # Días
+            
             'dias_promedio': statistics.mean(dias_simulados),
             'dias_max': max(dias_simulados),
             
-            # Para compatibilidad con visualización
+            
             'satisfaccion_general': statistics.mean(satisfacciones),
             'cansancio_final': statistics.mean(cansan_final),
             'duracion_total_hrs': statistics.mean(duraciones),
             'dias_simulados': max(dias_simulados),
         }
         
-        # Agregar análisis de lugares visitados
+        
         all_places = []
         lugares_por_dia_agregado = {}
         
@@ -1508,14 +1508,14 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             places = result.get('lugares_visitados', [])
             all_places.extend(places)
             
-            # Agregar lugares por día
+            
             lugares_por_dia = result.get('lugares_por_dia', {})
             for dia, lugares in lugares_por_dia.items():
                 if dia not in lugares_por_dia_agregado:
                     lugares_por_dia_agregado[dia] = []
                 lugares_por_dia_agregado[dia].extend(lugares)
         
-        # Calcular estadísticas de lugares
+        
         if all_places:
             place_satisfactions = [p.get('satisfaccion', 0) for p in all_places]
             place_wait_times = [p.get('tiempo_espera_min', 0) for p in all_places]
@@ -1524,11 +1524,11 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                 'total_visitas': len(all_places),
                 'satisfaccion_lugares_promedio': statistics.mean(place_satisfactions),
                 'tiempo_espera_promedio': statistics.mean(place_wait_times),
-                'lugares_visitados': all_places,  # Para compatibilidad
+                'lugares_visitados': all_places,  
                 'lugares_por_dia': lugares_por_dia_agregado
             })
         
-        # Generar valoración agregada
+        
         satisfaccion_prom = aggregated['satisfaccion_promedio']
         desv_std = aggregated['satisfaccion_desv_std']
         
@@ -1562,7 +1562,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         try:
             profile = aggregated_results.get('perfil_turista', 'average')
             
-            # Construir resumen agregado
+            
             summary = f"""
 🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA - ANÁLISIS DE {num_replicas} RÉPLICAS**
 
@@ -1590,7 +1590,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
 💭 **Valoración Agregada:**
 {aggregated_results.get('valoracion_viaje', 'Sin valoración disponible')}"""
 
-            # Análisis de consistencia
+            
             satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
             cansancio_std = aggregated_results.get('cansancio_desv_std', 0)
             
@@ -1608,7 +1608,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             else:
                 summary += "\n- ⚠️ Nivel de cansancio variable entre réplicas"
             
-            # Estadísticas de lugares si están disponibles
+            
             if aggregated_results.get('total_visitas', 0) > 0:
                 total_visitas = aggregated_results.get('total_visitas', 0)
                 satisfaccion_lugares = aggregated_results.get('satisfaccion_lugares_promedio', 0)
@@ -1620,7 +1620,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                 summary += f"\n- Tiempo de espera promedio: {tiempo_espera:.0f} minutos"
                 summary += f"\n- Visitas por réplica: {total_visitas/num_replicas:.1f}"
             
-            # Recomendaciones basadas en los resultados agregados
+            
             summary += "\n\n💡 **Recomendaciones Basadas en el Análisis:**"
             
             satisfaccion_prom = aggregated_results.get('satisfaccion_promedio', 0)
@@ -1641,7 +1641,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             if satisfaccion_std > 2:
                 summary += "\n- 📊 Alta variabilidad sugiere factores externos impredecibles"
             
-            # Intervalo de confianza aproximado (95%)
+            
             satisfaccion_prom = aggregated_results.get('satisfaccion_promedio', 0)
             satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
             
@@ -1671,7 +1671,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             String formateado con el resumen de la simulación
         """
         try:
-            # Extraer datos principales
+            
             profile = results.get('perfil_turista', 'average')
             general_satisfaction = results.get('satisfaccion_general', 0)
             final_fatigue = results.get('cansancio_final', 0)
@@ -1681,7 +1681,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             dias_simulados = results.get('dias_simulados', 1)
             lugares_por_dia = results.get('lugares_por_dia', {})
             
-            # Construir resumen
+            
             summary = f"""
 🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA**
 
@@ -1695,26 +1695,26 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
 💭 **Valoración del viaje:**
 {overall_rating}"""
 
-            # Mostrar distribución por día si hay múltiples días
+            
             if dias_simulados > 1 and lugares_por_dia:
                 summary += "\n\n📅 **Experiencia por día:**"
                 for dia, lugares in sorted(lugares_por_dia.items()):
                     summary += f"\n\n**Día {dia}:**"
                     summary += f"\n- Lugares visitados: {len(lugares)}"
                     
-                    # Calcular satisfacción promedio del día
+                    
                     lugares_dia = [p for p in places_visited if p.get('dia', 1) == dia]
                     if lugares_dia:
                         avg_satisfaction = sum(p.get('satisfaccion', 0) for p in lugares_dia) / len(lugares_dia)
                         summary += f"\n- Satisfacción promedio: {avg_satisfaction:.1f}/10"
                         
-                        # Mejor lugar del día
+                        
                         best_place = max(lugares_dia, key=lambda x: x.get('satisfaccion', 0))
                         summary += f"\n- Mejor experiencia: {best_place['lugar']} ({best_place['satisfaccion']}/10)"
 
             summary += "\n\n🏆 **Mejores experiencias del viaje:**"
             
-            # Encontrar los lugares con mayor satisfacción
+            
             if places_visited:
                 sorted_places = sorted(places_visited, key=lambda x: x.get('satisfaccion', 0), reverse=True)
                 top_places = sorted_places[:3]
@@ -1723,7 +1723,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                     dia_info = f" (Día {place.get('dia', 1)})" if dias_simulados > 1 else ""
                     summary += f"\n- {place['lugar']}{dia_info}: {place['satisfaccion']}/10 - {place.get('comentario', 'Sin comentarios')}"
             
-            # Agregar advertencias si hay problemas
+            
             warnings = []
             if final_fatigue > 8:
                 warnings.append("⚠️ El itinerario es muy agotador. Considera reducir actividades o agregar más descansos entre días.")
@@ -1731,12 +1731,12 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             if general_satisfaction < 6:
                 warnings.append("⚠️ La satisfacción general es baja. Revisa los tiempos de espera y la distribución de actividades.")
             
-            # Encontrar problemas específicos
+            
             problem_places = [p for p in places_visited if p.get('satisfaccion', 0) < 5]
             if problem_places:
                 warnings.append(f"⚠️ {len(problem_places)} lugares con baja satisfacción. Considera alternativas.")
             
-            # Verificar si algún día está muy cargado
+            
             if lugares_por_dia:
                 for dia, lugares in lugares_por_dia.items():
                     if len(lugares) > 5:
@@ -1747,7 +1747,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
                 for warning in warnings:
                     summary += f"\n{warning}"
             
-            # Agregar estadísticas detalladas
+            
             if places_visited:
                 avg_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited) / len(places_visited)
                 total_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited)

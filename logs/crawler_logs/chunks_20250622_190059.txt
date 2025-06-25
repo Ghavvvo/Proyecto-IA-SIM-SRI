@@ -6,12 +6,12 @@ CHUNKS DE CRAWLER - 2025-06-22 19:00:59
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_4274788_1750633362
 TIMESTAMP: 2025-06-22 19:02:42
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['museos en Berlin']",
@@ -21,13 +21,13 @@ PROCESADOR: ACO
   "url": "https://www.berlin.de/en/tourism/rivercruises-boattrips/",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 2000 caracteres
 --------------------------------------------------------------------------------
 © JFL Photography - stock.adobe.com River Cruise: "Historic City Cruise" The "Historic City Cruise" presents many major sights along the River Spree between the Reichstag and Nicholas' Quarter. more © BerlinPictures - stock.adobe.com River Cruise "East Side Tour": Through the East on the River Spree The East Side Tour focuses on the best-known sights along the river Spree in the eastern part of Berlin and includes some highlights in the government quarter as well. more © BWSG River Cruise "City-Spreefahrt": Experience Berlin From the Water Short, interesting and informative: The City-Spreefahrt features the highlights of Berlin, including Berliner Dom, Museum Island and Reichstag. more © Stefan Maria Rother Evening River Cruise of the City Center This river cruise is a tour of Berlin's historic and modern city center during the most romantic hours of the day and offers great views of the city at sunset. more © photowahn - stock.adobe.com River Cruise "City Tour": From Berlin's City Centre to Westhafen From Friedrichstraße to the city's largest port and back: The 2.5 hour City Tour features many notable sights and buildings in Berlin's historic and modern centre. more © JFL Photography - stock.adobe.com River Cruise "Bridge Tour" The popular boat trip along the Spree river and the Landwehr canal shows numerous sights of Berlin - and more than 60 bridges. more © SuK River Cruise "From Tegel to Berlin's City Centre" The boat tour starts on Lake Tegel in the green north of Berlin and proceeds south towards the Government Quarter in the city's centre. more © Stefan Hummel - stock.adobe.com Spree River Cruise to Müggelsee with Köpenick Old Town Discover the beautiful old town of Berlin-Köpenick on this three-hour round trip and enjoy the natural landscape around Müggelsee lake. more © pure-life-pictures - stock.adobe.com River Cruise "Tour of 7 Lakes": From Wannsee to Potsdam This river cruise is a tour of seven Havel lakes in southwestern Berlin with excellent views of s
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['museos en Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 
@@ -40,12 +40,12 @@ FIN DE CHUNK
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_7012741_1750633362
 TIMESTAMP: 2025-06-22 19:02:42
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['museos en Berlin']",
@@ -55,13 +55,13 @@ PROCESADOR: ACO
   "url": "https://www.berlin.de/en/museums/top-10/",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 2000 caracteres
 --------------------------------------------------------------------------------
 © dpa 1st place: Humboldt Forum As a cultural quarter and modern museum, the Humboldt Forum in the City Palace invites visitors to engage in a dialog between art and science. more © Jürgen Sendel / Stiftung Topographie des Terrors 2nd place: Topography of Terror The Topography of Terror, a center for the documentation of Nazi crimes, is one of the most visited places of remembrance in Berlin. more © visitBerlin, Foto: Dagmar Schwelle 3rd place: Gedenkstätte Berliner Mauer One of the most important memorials to the Berlin Wall stretches along Bernauer Straße. The Berlin Wall Memorial is dedicated to documenting the history of Berlin from the construction to the fall of the Wall. more © Thomas Rosenthal / Museum für Naturkunde 4th place: Natural History Museum The Natural History Museum is one of the oldest museums in Berlin and features scientific collections on systematic zoology, palaeontology and mineralogy. more © David von Becker 5th place: Futurium The Futurium is a venue for exhibitions and events on the subject of shaping the future in Berlin. more © visitberlin, Foto: Wolfgang Scholvien 6th place: Jewish Museum Berlin An architectural masterpiece, Daniel Libeskind's spectacular structure has firmly established itself as one of Berlin's most recognizable landmarks. more © Historiale Berlin Museum 7th place: Berlin Story Bunker 800 years of history: In the Berlin Story Bunker, visitors can immerse themselves in the history of Berlin at several stations. more © dpa 8th place: Neue Nationalgalerie The Neue Nationalgalerie’s imposing steel and glass box near Potsdamer Platz is a mecca for lovers of contemporary art and architecture. more © dpa 9th place: Neues Museum The Neues Museum houses the archaeological collections of the Egyptian Museum and Papyrus Collection, the Museum of Pre- and Early History, as well as works from the Collection of Classical Antiquities. more © DDR Museum 10th place: DDR Museum The DDR Museum offers you a hands-on experience of everyd
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['museos en Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 
@@ -74,12 +74,12 @@ FIN DE CHUNK
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_3521575_1750633370
 TIMESTAMP: 2025-06-22 19:02:50
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['guía turística Berlin']",
@@ -89,13 +89,13 @@ PROCESADOR: ACO
   "url": "https://www.guiadealemania.com/berlin/",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 2000 caracteres
 --------------------------------------------------------------------------------
 Conocida por: Museos, arte, conciertos, cicloturismo, shopping Berlín es una ciudad estado y a su vez es capital de Alemania ; se trata de una urbe impregnada de encanto histórico, desde las viejas e inalterables calles del este de hace 50 años, hasta la grandiosa arquitectura del Museumsinsel y Unter den Linden o el parque Tiergarten . También destaca por su animada vida nocturna , que ofrece variedad para todo tipo de gustos, como actividades artísticas, culturales, recreativas y demás. Entre los lugares que ver en Berlín , está la Isla de los Museos y el Muro de Berlín . Destacada por ser capital de los eventos internacionales , con más de 400 ferias y congresos entre ellas la Semana verde Internacional, la Bolsa internacional de Turismo (ITB), entre otros. SPor su vida cultural , que abarca museos impresionantes, eventos constantes, cabaret, espectáculos y conciertos todo el año. También por ser una capital tranquila , puesto que el ruido, tránsito agobiante, y la contaminación no forman parte de su hermoso paisaje. Pero lo primordial que se destaca de Berlín es su Arquitectura , como lo podemos ver en la Puerta de Brandemburgo , en la Catedral de Berlín y más. Berlín es famosa por sus veranos largos y soleados (desde junio a finales de agosto) por lo que éste es el mejor momento para pasar unas vacaciones , cuando los cafés al aire libre en los parques y jardines (en especial el Tiergarten ) cobran vida junto con los mejores acontecimientos. Conoce Berlín por meses: – Berlín en noviembre – Berlín en diciembre Más información sobre Clima en Berlín La gastronomía está ampliamente influenciada por la de la región de Brandeburgo , incluyendo entre sus principales ingredientes a las carnes , como la de cerdo, aves y pescado blanco, también presentan verduras y legumbres , siendo infaltables la col, nabos y papas. Los centros comerciales de la cuidad de Berlín se sitúan a unos kilómetros de distancia. Cada barrio dispone de los centros comerciales que se denomina pas
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['guía turística Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 
@@ -108,12 +108,12 @@ FIN DE CHUNK
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_4024207_1750633412
 TIMESTAMP: 2025-06-22 19:03:32
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['qué visitar en Berlin']",
@@ -123,13 +123,13 @@ PROCESADOR: ACO
   "url": "https://www.expedia.com/Hotels",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 524 caracteres
 --------------------------------------------------------------------------------
 Where to? Dates Travelers Room 1 Adults Decrease the number of adults in room 1 Increase the number of adults in room 1 Children Ages 0 to 17 Decrease the number of children in room 1 Increase the number of children in room 1 Add another room Done Need to book 9 or more rooms? Add a flight Add a car Search Room 1 Adults Decrease the number of adults in room 1 Increase the number of adults in room 1 Children Ages 0 to 17 Decrease the number of children in room 1 Increase the number of children in room 1 Add another room
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['qué visitar en Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 

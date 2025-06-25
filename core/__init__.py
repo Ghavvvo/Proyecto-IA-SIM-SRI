@@ -1,4 +1,4 @@
-# Módulo core del sistema
+
 from .crawler import TourismCrawler
 from .rag import RAGSystem, EnhancedRAGSystem
 from .chromadb_singleton import ChromaDBSingleton

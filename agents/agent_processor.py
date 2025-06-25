@@ -24,7 +24,7 @@ class ProcessorAgent(Agent):
     def receive(self, message, sender):
         """Recibe y procesa mensajes del crawler"""
         if message['type'] == 'process_content':
-            # Procesar contenido individual
+            
             content_data = message.get('content_data')
             if not content_data:
                 return {'type': 'error', 'msg': 'No se proporcionó contenido para procesar'}
@@ -37,7 +37,7 @@ class ProcessorAgent(Agent):
             }
             
         elif message['type'] == 'process_batch':
-            # Procesar múltiples contenidos
+            
             contents = message.get('contents', [])
             processed_results = []
             
@@ -69,14 +69,14 @@ class ProcessorAgent(Agent):
             if not content or len(content) < 100:
                 return None
             
-            # Crear prompt para Mistral
+            
             prompt = self._create_extraction_prompt(content, title, url)
             
-            # Generar respuesta JSON con Mistral
+            
             structured_data = self.mistral_client.generate_json(prompt)
             
             if structured_data:
-                # Añadir metadatos
+                
                 structured_data['source_url'] = url
                 structured_data['source_title'] = title
                 structured_data['processed_by'] = 'mistral'
@@ -98,7 +98,7 @@ class ProcessorAgent(Agent):
         """
         Crea el prompt para Mistral para extraer información turística estructurada
         """
-        # Limitar el contenido para no exceder límites de tokens
+        
         max_content_length = 3000
         if len(content) > max_content_length:
             content = content[:max_content_length] + "..."
@@ -233,19 +233,19 @@ class ProcessorAgent(Agent):
         Parsea la respuesta de Mistral y extrae el JSON estructurado
         """
         try:
-            # Limpiar la respuesta para extraer solo el JSON
-            # Buscar el JSON entre llaves
+            
+            
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
-                # Parsear el JSON
+                
                 data = json.loads(json_str)
                 
-                # Validar que tenga la estructura esperada
+                
                 if isinstance(data, dict):
-                    # Si no tiene países pero tiene otras claves, crear estructura de países
+                    
                     if 'paises' not in data and len(data) > 0:
-                        # Intentar inferir el país del contenido
+                        
                         data = {'paises': [data]}
                     
                     return data
@@ -254,9 +254,9 @@ class ProcessorAgent(Agent):
             
         except json.JSONDecodeError as e:
             print(f"Error parseando JSON de Mistral: {e}")
-            # Intentar corregir errores comunes
+            
             try:
-                # Eliminar comas finales
+                
                 cleaned = re.sub(r',\s*}', '}', response_text)
                 cleaned = re.sub(r',\s*]', ']', cleaned)
                 

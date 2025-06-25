@@ -10,11 +10,11 @@ def check_preferences_flow():
     """
     print("🔍 Verificando cambios en agent_coordinator.py...")
     
-    # Leer el archivo modificado
+    
     with open('agent_coordinator.py', 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Buscar el método _execute_aco_search_with_preferences
+    
     method_pattern = r'def _execute_aco_search_with_preferences\(self, preferences: dict\) -> str:(.*?)(?=\n    def|\Z)'
     match = re.search(method_pattern, content, re.DOTALL)
     
@@ -24,7 +24,7 @@ def check_preferences_flow():
     
     method_content = match.group(1)
     
-    # Verificar que contiene los pasos correctos
+    
     checks = {
         "PASO 1 - Consulta BD local": "Consultando información existente en la base de datos" in method_content,
         "Consulta al RAG primero": "self.rag_agent.receive" in method_content and method_content.index("self.rag_agent.receive") < method_content.index("search_google_aco") if "search_google_aco" in method_content else True,
@@ -51,9 +51,9 @@ def check_preferences_flow():
     else:
         print("\n❌ ERROR: Algunos cambios no se aplicaron correctamente")
     
-    # Mostrar fragmento del código relevante
+    
     print("\n📄 Fragmento del código modificado:")
-    lines = method_content.split('\n')[:20]  # Primeras 20 líneas del método
+    lines = method_content.split('\n')[:20]  
     for i, line in enumerate(lines):
         if "Consultando información existente" in line or "_evaluate_response_usefulness" in line:
             print(f"  >>> {line.strip()}")

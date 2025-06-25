@@ -37,10 +37,10 @@ class AntColonyOptimizer:
     
     def __init__(self, 
                  num_ants: int = 10,
-                 alpha: float = 1.0,      # Importancia de las feromonas
-                 beta: float = 2.0,       # Importancia de la heurística
-                 rho: float = 0.1,        # Tasa de evaporación
-                 q: float = 100.0,        # Constante de deposición de feromonas
+                 alpha: float = 1.0,      
+                 beta: float = 2.0,       
+                 rho: float = 0.1,        
+                 q: float = 100.0,        
                  max_iterations: int = 5,
                  max_depth: int = 3):
         
@@ -52,13 +52,13 @@ class AntColonyOptimizer:
         self.max_iterations = max_iterations
         self.max_depth = max_depth
         
-        # Estructuras de datos
+        
         self.nodes: Dict[str, URLNode] = {}
         self.adjacency_list: Dict[str, List[str]] = {}
         self.best_paths: List[List[str]] = []
         self.iteration_stats: List[Dict] = []
         
-        # Control de hilos
+        
         self.lock = threading.Lock()
         
         print(f"🐜 ACO Inicializado:")
@@ -75,17 +75,17 @@ class AntColonyOptimizer:
         url_lower = url.lower()
         heuristic = 0.0
         
-        # 1. Presencia de palabras clave en la URL
+        
         keyword_score = 0.0
         for keyword in keywords:
             if keyword.lower() in url_lower:
                 keyword_score += 1.0
         
-        # Normalizar por número de keywords
+        
         if keywords:
             keyword_score = keyword_score / len(keywords)
         
-        # 2. Patrones de URL valiosos para turismo
+        
         valuable_patterns = {
             '/destination': 0.8,
             '/travel': 0.7,
@@ -108,7 +108,7 @@ class AntColonyOptimizer:
             if pattern in url_lower:
                 pattern_score += weight
         
-        # 3. Penalizar URLs no deseadas
+        
         unwanted_patterns = [
             '/login', '/signup', '/cart', '/admin', '/api/',
             '.css', '.js', '.jpg', '.png', '.pdf'
@@ -119,17 +119,17 @@ class AntColonyOptimizer:
             if pattern in url_lower:
                 penalty += 0.5
         
-        # 4. Profundidad de la URL (preferir URLs menos profundas)
+        
         path_depth = len([p for p in urlparse(url).path.split('/') if p])
         depth_penalty = min(path_depth * 0.1, 0.5)
         
-        # Combinar scores
+        
         heuristic = (keyword_score * 0.4 + 
                     pattern_score * 0.4 + 
                     (1.0 - depth_penalty) * 0.2 - 
                     penalty)
         
-        return max(0.1, min(1.0, heuristic))  # Mantener entre 0.1 y 1.0
+        return max(0.1, min(1.0, heuristic))  
     
     def extract_links_from_url(self, url: str, keywords: List[str]) -> List[str]:
         """
@@ -153,22 +153,22 @@ class AntColonyOptimizer:
                 
                 absolute_url = urljoin(url, href)
                 
-                # Filtros básicos
+                
                 if not self._is_valid_url(absolute_url):
                     continue
                 
-                # Calcular relevancia del enlace
+                
                 link_text = a_tag.get_text(strip=True)
                 title = a_tag.get('title', '')
                 combined_text = f"{absolute_url} {link_text} {title}".lower()
                 
-                # Verificar si contiene palabras clave
+                
                 has_keywords = any(keyword.lower() in combined_text for keyword in keywords)
                 
                 if has_keywords or self._has_tourism_patterns(absolute_url):
                     links.append(absolute_url)
             
-            return list(set(links))[:20]  # Limitar a 20 enlaces únicos
+            return list(set(links))[:20]  
             
         except Exception as e:
             print(f"Error extrayendo enlaces de {url}: {e}")
@@ -183,7 +183,7 @@ class AntColonyOptimizer:
         except:
             return False
         
-        # Filtrar extensiones no deseadas
+        
         unwanted_extensions = [
             '.css', '.js', '.jpg', '.jpeg', '.png', '.gif', 
             '.pdf', '.svg', '.mp3', '.mp4', '.zip'
@@ -211,13 +211,13 @@ class AntColonyOptimizer:
         if not current_node or not next_node:
             return 0.0
         
-        # Componente de feromona
+        
         pheromone_component = next_node.pheromone ** self.alpha
         
-        # Componente heurística
+        
         heuristic_component = next_node.heuristic_value ** self.beta
         
-        # Probabilidad combinada
+        
         probability = pheromone_component * heuristic_component
         
         return probability
@@ -229,21 +229,21 @@ class AntColonyOptimizer:
         if not available_urls:
             return None
         
-        # Calcular probabilidades para todas las URLs disponibles
+        
         probabilities = []
         for url in available_urls:
             prob = self.calculate_transition_probability(current_url, url)
             probabilities.append(prob)
         
-        # Normalizar probabilidades
+        
         total_prob = sum(probabilities)
         if total_prob == 0:
-            # Si todas las probabilidades son 0, seleccionar aleatoriamente
+            
             return random.choice(available_urls)
         
         normalized_probs = [p / total_prob for p in probabilities]
         
-        # Selección basada en ruleta
+        
         r = random.random()
         cumulative_prob = 0.0
         
@@ -252,7 +252,7 @@ class AntColonyOptimizer:
             if r <= cumulative_prob:
                 return available_urls[i]
         
-        # Fallback
+        
         return available_urls[-1]
     
     def ant_exploration(self, start_url: str, keywords: List[str], ant_id: int) -> List[str]:
@@ -264,13 +264,13 @@ class AntColonyOptimizer:
         visited_in_path = {start_url}
         
         for step in range(self.max_depth):
-            # Obtener enlaces de la URL actual
+            
             if current_url not in self.adjacency_list:
                 links = self.extract_links_from_url(current_url, keywords)
                 with self.lock:
                     self.adjacency_list[current_url] = links
                     
-                    # Añadir nuevos nodos
+                    
                     for link in links:
                         if link not in self.nodes:
                             heuristic = self.calculate_url_heuristic(link, keywords)
@@ -281,7 +281,7 @@ class AntColonyOptimizer:
                                 parent_url=current_url
                             )
             
-            # Obtener URLs disponibles (no visitadas en este path)
+            
             available_urls = [
                 url for url in self.adjacency_list.get(current_url, [])
                 if url not in visited_in_path
@@ -290,7 +290,7 @@ class AntColonyOptimizer:
             if not available_urls:
                 break
             
-            # Seleccionar siguiente URL
+            
             next_url = self.select_next_url(current_url, available_urls)
             
             if next_url:
@@ -298,7 +298,7 @@ class AntColonyOptimizer:
                 visited_in_path.add(next_url)
                 current_url = next_url
                 
-                # Actualizar contador de visitas
+                
                 with self.lock:
                     if next_url in self.nodes:
                         self.nodes[next_url].visited_count += 1
@@ -317,7 +317,7 @@ class AntColonyOptimizer:
         for url in path:
             node = self.nodes.get(url)
             if node:
-                # Factores de calidad
+                
                 heuristic_score = node.heuristic_value
                 keyword_score = len(node.keywords_found) / max(len(keywords), 1)
                 depth_penalty = 1.0 - (node.depth * 0.1)
@@ -329,7 +329,7 @@ class AntColonyOptimizer:
                 total_quality += url_quality
                 content_extracted += 1
         
-        # Normalizar por longitud del camino
+        
         if len(path) > 0:
             return total_quality / len(path)
         
@@ -339,13 +339,13 @@ class AntColonyOptimizer:
         """
         Actualiza las feromonas basándose en la calidad de los caminos
         """
-        # Evaporación
+        
         with self.lock:
             for node in self.nodes.values():
                 node.pheromone *= (1.0 - self.rho)
-                node.pheromone = max(0.1, node.pheromone)  # Mínimo de feromona
+                node.pheromone = max(0.1, node.pheromone)  
         
-        # Deposición de feromonas
+        
         for path, quality in zip(paths, qualities):
             pheromone_deposit = self.q * quality
             
@@ -353,7 +353,7 @@ class AntColonyOptimizer:
                 with self.lock:
                     if url in self.nodes:
                         self.nodes[url].pheromone += pheromone_deposit
-                        # Limitar feromona máxima
+                        
                         self.nodes[url].pheromone = min(10.0, self.nodes[url].pheromone)
     
     def run_optimization(self, start_urls: List[str], keywords: List[str]) -> Dict:
@@ -362,7 +362,7 @@ class AntColonyOptimizer:
         """
         print(f"🐜 Iniciando optimización ACO con {len(start_urls)} URLs iniciales")
         
-        # Inicializar nodos para URLs de inicio
+        
         for url in start_urls:
             heuristic = self.calculate_url_heuristic(url, keywords)
             self.nodes[url] = URLNode(
@@ -380,7 +380,7 @@ class AntColonyOptimizer:
             iteration_paths = []
             iteration_qualities = []
             
-            # Ejecutar hormigas en paralelo
+            
             with ThreadPoolExecutor(max_workers=min(self.num_ants, 5)) as executor:
                 futures = []
                 
@@ -389,22 +389,22 @@ class AntColonyOptimizer:
                     future = executor.submit(self.ant_exploration, start_url, keywords, ant_id)
                     futures.append(future)
                 
-                # Recopilar resultados
+                
                 for future in as_completed(futures):
                     try:
                         path = future.result()
-                        if len(path) > 1:  # Solo considerar caminos con al menos 2 nodos
+                        if len(path) > 1:  
                             quality = self.evaluate_path_quality(path, keywords)
                             iteration_paths.append(path)
                             iteration_qualities.append(quality)
                     except Exception as e:
                         print(f"Error en exploración de hormiga: {e}")
             
-            # Actualizar feromonas
+            
             if iteration_paths:
                 self.update_pheromones(iteration_paths, iteration_qualities)
                 
-                # Encontrar mejores caminos de esta iteración
+                
                 best_iteration_quality = max(iteration_qualities)
                 best_iteration_idx = iteration_qualities.index(best_iteration_quality)
                 best_iteration_path = iteration_paths[best_iteration_idx]
@@ -413,7 +413,7 @@ class AntColonyOptimizer:
                     best_overall_quality = best_iteration_quality
                     best_overall_paths = [best_iteration_path]
                 
-                # Estadísticas de iteración
+                
                 avg_quality = np.mean(iteration_qualities)
                 self.iteration_stats.append({
                     'iteration': iteration + 1,
@@ -431,7 +431,7 @@ class AntColonyOptimizer:
             else:
                 print(f"   • No se encontraron caminos válidos")
         
-        # Estadísticas finales
+        
         total_nodes = len(self.nodes)
         total_edges = sum(len(edges) for edges in self.adjacency_list.values())
         avg_pheromone = np.mean([node.pheromone for node in self.nodes.values()]) if self.nodes else 0
@@ -472,40 +472,40 @@ def extract_content_from_url(url: str, keywords: List[str]) -> Optional[Dict]:
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Extraer título
+        
         title = soup.title.string if soup.title else ""
         title = title.strip()
         
-        # Limpiar elementos no deseados
+        
         for element in soup.find_all(['script', 'style', 'nav', 'header', 'footer']):
             element.decompose()
         
-        # Extraer contenido principal
+        
         content_candidates = []
         
-        # Buscar elementos de contenido principal
+        
         for tag in ['article', 'main', 'section']:
             elements = soup.find_all(tag)
             content_candidates.extend(elements)
         
-        # Si no hay elementos principales, usar párrafos
+        
         if not content_candidates:
             content_candidates = soup.find_all('p')
         
-        # Combinar texto
+        
         content_text = ""
         for candidate in content_candidates:
             text = candidate.get_text(separator=' ', strip=True)
             if text and len(text) > 50:
                 content_text += text + " "
         
-        # Limpiar texto
+        
         content_text = ' '.join(content_text.split())
         
         if len(content_text) < 100:
             return None
         
-        # Verificar presencia de palabras clave
+        
         keywords_found = []
         content_lower = content_text.lower()
         for keyword in keywords:
@@ -515,7 +515,7 @@ def extract_content_from_url(url: str, keywords: List[str]) -> Optional[Dict]:
         return {
             'url': url,
             'title': title,
-            'content': content_text[:2000],  # Limitar contenido
+            'content': content_text[:2000],  
             'keywords_found': keywords_found,
             'extraction_method': 'aco'
         }
@@ -541,17 +541,17 @@ def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15,
         print(f"🔍 Con consulta mejorada: '{improved_query}'")
     print(f"🔢 Profundidad de exploración: {max_depth}")
     
-    # Configurar ACO con profundidad dinámica
+    
     aco = AntColonyOptimizer(
         num_ants=8,
         alpha=1.0,
         beta=2.0,
         rho=0.1,
         max_iterations=3,
-        max_depth=max_depth  # Usar profundidad dinámica
+        max_depth=max_depth  
     )
     
-    # Obtener URLs iniciales usando el método del crawler con consulta mejorada
+    
     initial_urls = crawler.google_search_links(keywords, num_results=10, improved_query=improved_query)
     
     if not initial_urls:
@@ -560,18 +560,18 @@ def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15,
     
     print(f"🔍 URLs iniciales para ACO: {len(initial_urls)}")
     
-    # Ejecutar optimización ACO
+    
     aco_results = aco.run_optimization(initial_urls, keywords)
     
-    # Extraer contenido de las mejores URLs encontradas
+    
     extracted_content = []
     urls_to_extract = set()
     
-    # Recopilar URLs de los mejores caminos
+    
     for path in aco_results['best_paths']:
         urls_to_extract.update(path)
     
-    # Si no hay caminos, usar nodos con mejor feromona
+    
     if not urls_to_extract:
         sorted_nodes = sorted(
             aco.nodes.items(),
@@ -580,12 +580,12 @@ def integrate_aco_with_crawler(crawler, keywords: List[str], max_urls: int = 15,
         )
         urls_to_extract = {url for url, _ in sorted_nodes[:max_urls]}
     
-    # Limitar número de URLs
+    
     urls_to_extract = list(urls_to_extract)[:max_urls]
     
     print(f"📄 Extrayendo contenido de {len(urls_to_extract)} URLs optimizadas por ACO")
     
-    # Extraer contenido en paralelo
+    
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {
             executor.submit(extract_content_from_url, url, keywords): url 
@@ -612,7 +612,7 @@ def test_aco_performance():
     print("🧪 PRUEBA DE RENDIMIENTO ACO")
     print("=" * 50)
     
-    # Configurar ACO de prueba
+    
     aco = AntColonyOptimizer(
         num_ants=5,
         alpha=1.0,
@@ -622,7 +622,7 @@ def test_aco_performance():
         max_depth=2
     )
     
-    # URLs de prueba
+    
     test_urls = [
         "https://www.tripadvisor.com/",
         "https://www.booking.com/",
@@ -631,7 +631,7 @@ def test_aco_performance():
     
     test_keywords = ["hotel", "tourism", "travel"]
     
-    # Ejecutar optimización
+    
     start_time = time.time()
     results = aco.run_optimization(test_urls, test_keywords)
     end_time = time.time()

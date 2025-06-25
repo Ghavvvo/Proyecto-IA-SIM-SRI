@@ -6,12 +6,12 @@ CHUNKS DE CRAWLER - 2025-06-22 18:07:28
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_5107758_1750630147
 TIMESTAMP: 2025-06-22 18:09:07
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['museos en Berlin']",
@@ -21,13 +21,13 @@ PROCESADOR: ACO
   "url": "https://www.expedia.com/Hotels",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 524 caracteres
 --------------------------------------------------------------------------------
 Where to? Dates Travelers Room 1 Adults Decrease the number of adults in room 1 Increase the number of adults in room 1 Children Ages 0 to 17 Decrease the number of children in room 1 Increase the number of children in room 1 Add another room Done Need to book 9 or more rooms? Add a flight Add a car Search Room 1 Adults Decrease the number of adults in room 1 Increase the number of adults in room 1 Children Ages 0 to 17 Decrease the number of children in room 1 Increase the number of children in room 1 Add another room
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['museos en Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 
@@ -40,12 +40,12 @@ FIN DE CHUNK
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_5107758_1750630178
 TIMESTAMP: 2025-06-22 18:09:38
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['guía turística Berlin']",
@@ -55,13 +55,13 @@ PROCESADOR: ACO
   "url": "https://www.expedia.com/Hotels",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 524 caracteres
 --------------------------------------------------------------------------------
 Where to? Dates Travelers Room 1 Adults Decrease the number of adults in room 1 Increase the number of adults in room 1 Children Ages 0 to 17 Decrease the number of children in room 1 Increase the number of children in room 1 Add another room Done Need to book 9 or more rooms? Add a flight Add a car Search Room 1 Adults Decrease the number of adults in room 1 Increase the number of adults in room 1 Children Ages 0 to 17 Decrease the number of children in room 1 Increase the number of children in room 1 Add another room
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['guía turística Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 
@@ -74,12 +74,12 @@ FIN DE CHUNK
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_9041083_1750630208
 TIMESTAMP: 2025-06-22 18:10:08
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['qué visitar en Berlin']",
@@ -89,13 +89,13 @@ PROCESADOR: ACO
   "url": "https://www.lonelyplanet.com/search?q=qué+visitar+en+Berlin",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 2000 caracteres
 --------------------------------------------------------------------------------
 Germany Berlin Berlin's combo of glamour and grit is bound to mesmerise all those keen to explore its vibrant culture, cutting-edge architecture, fabulous food, intense parties and tangible history. Berlin City West & Charlottenburg The glittering heart of West Berlin during the Cold War, Charlottenburg is a big draw for shopaholics, royal groupies and art lovers. Its main sightseeing attraction is Schloss Charlottenburg, with its park and adjacent art museums. About 3.5km southeast of here, the City West area, around Zoologischer Garten (Zoo Station), is characterised by Berlin's biggest shopping boulevard, the KurfÃ¼rstendamm. After dark, the many fine restaurants and bars in this sedate and well-heeled borough teem with locals as well as tourists overnighting in the area's abundant hotels. Berlin Prenzlauer Berg Splendidly well-groomed Prenzlauer Berg is one of Berlin's most charismatic residential neighbourhoods, filled with cafes, historic buildings and indie boutiques. It's a joy to explore on foot. On Sundays, the world descends on its Mauerpark for flea marketeering, summertime karaoke and chilling in the sun. It's easily combined with a visit to the quarter's main sightseeing attraction, the GedenkstÃ¤tte Berliner Mauer, an engrossing 1.4km-long exhibit that explains how the Berlin Wall shaped the city. Berlin Friedrichshain The former East Berlin district of Friedrichshain is famous for high-profile GDR-era relics such as the longest surviving stretch of the Berlin Wall (the East Side Gallery), the socialist boulevard Karl-Marx-Allee and the former Stasi headquarters. But the area also stakes its reputation on having Berlinâs most rambunctious nightlife scene, with a glut of clubs and bars holding forth along Revaler Strasse and around the Ostkreuz train station. Thereâs also nice indie boutique shopping and a popular Sunday flea market around Boxhagener Platz. Berlin Kreuzberg Kreuzberg and NeukÃ¶lln across the canal are Berlin's most dynamic and cool
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['qué visitar en Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 
@@ -108,12 +108,12 @@ FIN DE CHUNK
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_1117104_1750630208
 TIMESTAMP: 2025-06-22 18:10:08
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['qué visitar en Berlin']",
@@ -123,13 +123,13 @@ PROCESADOR: ACO
   "url": "https://www.lonelyplanet.com/destinations/spain",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 2000 caracteres
 --------------------------------------------------------------------------------
 Shop Get even more with a Lonely Planet guide. Spain $28.99 Shop Book Best Things to Do There are so many incredible experiences awaiting you in Spain. Here are some of the very best. Read article Best Places to Visit With stunning beaches, top-notch art museums and unmatched cuisine, Spain regularly steals hearts. Add these top 14 places to your shortlist for 2025 travel. Read article Best Time to Visit From the liveliest events to when you'll find the best weather, here's when to visit Spain. Read article Things to Know From speaking Spanish to avoiding common tourist mistakes, this guide full of top tips can get you ready for a trip to Spain. Read article Transportation Traveling around Spain is convenient, efficient and manageable â thanks to its advanced and accessible public transport infrastructure. Read article Visa Requirements Don't let your visa application mess up your trip to Spain. Here's everything you need to know about whether you need one. Read article Money and Costs Compared to the rest of Europe, Spain is easy on the eyes and even easier on the wallet. Here are the best ways to save money while you're there. Read article Traveling with Kids Of all the places to travel with children, Spain is up there with the best of them. Here are some of the best things to do with kids in this dynamic country. Read article Best Road Trips Set out for history, natural beauty and delicious flavors on these five road-trip itineraries, which will show you the best of Spain. Read article Get Connected Stay connected when on vacation in Spain with this guide to cell service, roaming charges and data. Read article Spain Shop Get even more with a Lonely Planet guide. Spain $28.99 Shop Book Getty Images Get your eSIM Overview Passionate, sophisticated Spain is full of wild beauty, deep history and some of the best food you'll ever eat. Life is a fiesta, and everyone's invited. Attractions Must-see attractions Save your favorites! Sign in to save, get inspo & more La 
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['qué visitar en Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 

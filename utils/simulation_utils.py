@@ -71,7 +71,7 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
         """
         response = mistral_client.generate(prompt)
         json_str = response.strip()
-        # Buscar el JSON en la respuesta
+        
         start_idx = json_str.find('{')
         end_idx = json_str.rfind('}') + 1
         if start_idx != -1 and end_idx > start_idx:
@@ -79,13 +79,13 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
             import json
             simulation_data = json.loads(json_str)
             
-            # Enriquecer con valores por defecto si faltan
+            
             if 'season' not in simulation_data:
                 simulation_data['season'] = 'verano'
             if 'tourist_profile' not in simulation_data:
                 simulation_data['tourist_profile'] = 'average'
                 
-            # Asegurar que cada actividad tenga todos los campos necesarios
+            
             for day in simulation_data.get('days', []):
                 if 'day_of_week' not in day:
                     day['day_of_week'] = 'sabado'
@@ -100,11 +100,11 @@ def format_as_simulation_input(raw_response: str, preferences: dict) -> Dict[str
                     if 'distance_from_previous_km' not in activity:
                         activity['distance_from_previous_km'] = 3.0 if i == 0 else 2.0
                     if 'time' not in activity or not activity['time']:
-                        # Asignar horarios secuenciales si no existen
+                        
                         base_hours = [9, 11, 14, 16, 18, 20]
                         activity['time'] = f"{base_hours[i % len(base_hours)]:02d}:00"
                     
-                    # Asegurar que los nuevos campos tengan valores por defecto
+                    
                     if 'is_travel' not in activity:
                         activity['is_travel'] = activity.get('type', 'otro') == 'desplazamiento'
                     if 'travel_time_hours' not in activity:
@@ -142,7 +142,7 @@ def _infer_activity_type(location_name: str) -> str:
 def _get_default_duration(activity_type: str) -> float:
     """Obtiene la duración por defecto según el tipo de actividad"""
     durations = {
-        'desplazamiento': 2.0,  # Tiempo promedio de desplazamiento
+        'desplazamiento': 2.0,  
         'museo': 1.5,
         'restaurante': 1.2,
         'parque': 1.0,
@@ -173,42 +173,42 @@ def run_simulation_replicas(simulation_agent, simulation_json: dict, num_replica
         print(f"🔍 Iniciando proceso de simulación con {num_replicas} réplicas...")
         print(f"📋 Datos recibidos: {len(simulation_json.get('days', []))} días de itinerario")
         
-        # Verificar que el agente de simulación esté disponible
+        
         if not simulation_agent:
             print("⚠️ Agente de simulación no está disponible")
             return ""
         
-        # Convertir el JSON del itinerario al formato esperado por el simulador
+        
         itinerary_data = []
         context_data = {
             'temporada': simulation_json.get('season', 'verano'),
-            'hora_inicio': 9,  # Hora de inicio por defecto
-            'prob_lluvia': 0.2,  # Probabilidad de lluvia por defecto
-            'preferencias_cliente': simulation_json.get('interests', [])  # Pasar las preferencias del cliente
+            'hora_inicio': 9,  
+            'prob_lluvia': 0.2,  
+            'preferencias_cliente': simulation_json.get('interests', [])  
         }
         
         print(f"🎯 Preferencias del cliente: {context_data['preferencias_cliente']}")
         
-        # Extraer actividades de cada día
+        
         for day_info in simulation_json.get('days', []):
             day_num = day_info.get('day', 1)
             day_of_week = day_info.get('day_of_week', 'sabado')
             
             print(f"📅 Procesando día {day_num} ({day_of_week})")
             
-            # Actualizar contexto con el día de la semana
-            if day_num == 1:  # Solo para el primer día
+            
+            if day_num == 1:  
                 context_data['dia_semana'] = day_of_week
             
             for i, activity in enumerate(day_info.get('activities', [])):
-                # Convertir hora string a número
+                
                 time_str = activity.get('time', '09:00')
                 try:
                     hour = int(time_str.split(':')[0])
                 except:
-                    hour = 9 + i * 2  # Fallback: espaciar 2 horas entre actividades
+                    hour = 9 + i * 2  
                 
-                # Determinar si es una actividad de viaje
+                
                 is_travel = activity.get('is_travel', False)
                 
                 place_data = {
@@ -226,23 +226,23 @@ def run_simulation_replicas(simulation_agent, simulation_json: dict, num_replica
                 itinerary_data.append(place_data)
                 print(f"  📍 Añadido: {place_data['nombre']} (tipo: {place_data['tipo']})")
         
-        # Verificar que hay datos para simular
+        
         if not itinerary_data:
             print("⚠️ No hay actividades para simular")
             return ""
         
         print(f"📊 Total de lugares a simular: {len(itinerary_data)}")
         
-        # Determinar el perfil del turista basado en las preferencias
+        
         tourist_profile = simulation_json.get('tourist_profile', 'average')
         
-        # Validar que el perfil sea válido
+        
         valid_profiles = ['exigente', 'relajado', 'average']
         if tourist_profile not in valid_profiles:
             print(f"⚠️ Perfil '{tourist_profile}' no válido. Usando 'average'")
             tourist_profile = 'average'
         
-        # EJECUTAR MÚLTIPLES RÉPLICAS DE LA SIMULACIÓN
+        
         print(f"🎮 Ejecutando {num_replicas} réplicas de simulación (perfil: {tourist_profile})...")
         
         all_results = []
@@ -257,14 +257,14 @@ def run_simulation_replicas(simulation_agent, simulation_json: dict, num_replica
                     'itinerary': itinerary_data,
                     'context': context_data,
                     'profile': tourist_profile
-                }, None)  # No sender needed for simulation
+                }, None)  
                 
                 if simulation_response.get('type') == 'simulation_results':
                     results = simulation_response.get('results', {})
                     all_results.append(results)
                     successful_simulations += 1
                     
-                    # Mostrar progreso cada 5 réplicas
+                    
                     if (replica + 1) % 5 == 0:
                         satisfaction = results.get('satisfaccion_general', 0)
                         print(f"   ✅ Réplica {replica + 1} completada - Satisfacción: {satisfaction}/10")
@@ -282,13 +282,13 @@ def run_simulation_replicas(simulation_agent, simulation_json: dict, num_replica
             print("❌ No se pudo completar ninguna simulación")
             return ""
         
-        # ANALIZAR RESULTADOS AGREGADOS DE LAS RÉPLICAS
+        
         aggregated_results = aggregate_simulation_results(all_results)
         
-        # Formatear los resultados agregados
+        
         simulation_summary = format_aggregated_simulation_results(aggregated_results, successful_simulations)
         
-        # Generar visualización con los resultados agregados
+        
         try:
             simulation_agent.visualizar_resultados(aggregated_results)
             print("📊 Gráficos de simulación agregados guardados en 'simulacion_turista.png'")
@@ -319,7 +319,7 @@ def aggregate_simulation_results(all_results: list) -> dict:
     if not all_results:
         return {}
     
-    # Calcular estadísticas agregadas
+    
     satisfacciones = [r.get('satisfaccion_general', 0) for r in all_results]
     cansan_final = [r.get('cansancio_final', 0) for r in all_results]
     duraciones = [r.get('duracion_total_hrs', 0) for r in all_results]
@@ -329,38 +329,38 @@ def aggregate_simulation_results(all_results: list) -> dict:
         'perfil_turista': all_results[0].get('perfil_turista', 'average'),
         'num_replicas': len(all_results),
         
-        # Satisfacción
+        
         'satisfaccion_promedio': statistics.mean(satisfacciones),
         'satisfaccion_mediana': statistics.median(satisfacciones),
         'satisfaccion_min': min(satisfacciones),
         'satisfaccion_max': max(satisfacciones),
         'satisfaccion_desv_std': statistics.stdev(satisfacciones) if len(satisfacciones) > 1 else 0,
         
-        # Cansancio
+        
         'cansancio_promedio': statistics.mean(cansan_final),
         'cansancio_mediana': statistics.median(cansan_final),
         'cansancio_min': min(cansan_final),
         'cansancio_max': max(cansan_final),
         'cansancio_desv_std': statistics.stdev(cansan_final) if len(cansan_final) > 1 else 0,
         
-        # Duración
+        
         'duracion_promedio': statistics.mean(duraciones),
         'duracion_mediana': statistics.median(duraciones),
         'duracion_min': min(duraciones),
         'duracion_max': max(duraciones),
         
-        # Días
+        
         'dias_promedio': statistics.mean(dias_simulados),
         'dias_max': max(dias_simulados),
         
-        # Para compatibilidad con visualización
+        
         'satisfaccion_general': statistics.mean(satisfacciones),
         'cansancio_final': statistics.mean(cansan_final),
         'duracion_total_hrs': statistics.mean(duraciones),
         'dias_simulados': max(dias_simulados),
     }
     
-    # Agregar análisis de lugares visitados
+    
     all_places = []
     lugares_por_dia_agregado = {}
     
@@ -368,14 +368,14 @@ def aggregate_simulation_results(all_results: list) -> dict:
         places = result.get('lugares_visitados', [])
         all_places.extend(places)
         
-        # Agregar lugares por día
+        
         lugares_por_dia = result.get('lugares_por_dia', {})
         for dia, lugares in lugares_por_dia.items():
             if dia not in lugares_por_dia_agregado:
                 lugares_por_dia_agregado[dia] = []
             lugares_por_dia_agregado[dia].extend(lugares)
     
-    # Calcular estadísticas de lugares
+    
     if all_places:
         place_satisfactions = [p.get('satisfaccion', 0) for p in all_places]
         place_wait_times = [p.get('tiempo_espera_min', 0) for p in all_places]
@@ -384,11 +384,11 @@ def aggregate_simulation_results(all_results: list) -> dict:
             'total_visitas': len(all_places),
             'satisfaccion_lugares_promedio': statistics.mean(place_satisfactions),
             'tiempo_espera_promedio': statistics.mean(place_wait_times),
-            'lugares_visitados': all_places,  # Para compatibilidad
+            'lugares_visitados': all_places,  
             'lugares_por_dia': lugares_por_dia_agregado
         })
     
-    # Generar valoración agregada
+    
     satisfaccion_prom = aggregated['satisfaccion_promedio']
     desv_std = aggregated['satisfaccion_desv_std']
     
@@ -423,7 +423,7 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
     try:
         profile = aggregated_results.get('perfil_turista', 'average')
         
-        # Construir resumen agregado
+        
         summary = f"""
 🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA - ANÁLISIS DE {num_replicas} RÉPLICAS**
 
@@ -451,7 +451,7 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
 💭 **Valoración Agregada:**
 {aggregated_results.get('valoracion_viaje', 'Sin valoración disponible')}"""
 
-        # Análisis de consistencia
+        
         satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
         cansancio_std = aggregated_results.get('cansancio_desv_std', 0)
         
@@ -469,7 +469,7 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
         else:
             summary += "\n- ⚠️ Nivel de cansancio variable entre réplicas"
         
-        # Estadísticas de lugares si están disponibles
+        
         if aggregated_results.get('total_visitas', 0) > 0:
             total_visitas = aggregated_results.get('total_visitas', 0)
             satisfaccion_lugares = aggregated_results.get('satisfaccion_lugares_promedio', 0)
@@ -481,7 +481,7 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
             summary += f"\n- Tiempo de espera promedio: {tiempo_espera:.0f} minutos"
             summary += f"\n- Visitas por réplica: {total_visitas/num_replicas:.1f}"
         
-        # Recomendaciones basadas en los resultados agregados
+        
         summary += "\n\n💡 **Recomendaciones Basadas en el Análisis:**"
         
         satisfaccion_prom = aggregated_results.get('satisfaccion_promedio', 0)
@@ -502,7 +502,7 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
         if satisfaccion_std > 2:
             summary += "\n- 📊 Alta variabilidad sugiere factores externos impredecibles"
         
-        # Intervalo de confianza aproximado (95%)
+        
         satisfaccion_prom = aggregated_results.get('satisfaccion_promedio', 0)
         satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
         
@@ -532,7 +532,7 @@ def format_simulation_results(results: dict) -> str:
         String formateado con el resumen de la simulación
     """
     try:
-        # Extraer datos principales
+        
         profile = results.get('perfil_turista', 'average')
         general_satisfaction = results.get('satisfaccion_general', 0)
         final_fatigue = results.get('cansancio_final', 0)
@@ -542,7 +542,7 @@ def format_simulation_results(results: dict) -> str:
         dias_simulados = results.get('dias_simulados', 1)
         lugares_por_dia = results.get('lugares_por_dia', {})
         
-        # Construir resumen
+        
         summary = f"""
 🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA**
 
@@ -556,26 +556,26 @@ def format_simulation_results(results: dict) -> str:
 💭 **Valoración del viaje:**
 {overall_rating}"""
 
-        # Mostrar distribución por día si hay múltiples días
+        
         if dias_simulados > 1 and lugares_por_dia:
             summary += "\n\n📅 **Experiencia por día:**"
             for dia, lugares in sorted(lugares_por_dia.items()):
                 summary += f"\n\n**Día {dia}:**"
                 summary += f"\n- Lugares visitados: {len(lugares)}"
                 
-                # Calcular satisfacción promedio del día
+                
                 lugares_dia = [p for p in places_visited if p.get('dia', 1) == dia]
                 if lugares_dia:
                     avg_satisfaction = sum(p.get('satisfaccion', 0) for p in lugares_dia) / len(lugares_dia)
                     summary += f"\n- Satisfacción promedio: {avg_satisfaction:.1f}/10"
                     
-                    # Mejor lugar del día
+                    
                     best_place = max(lugares_dia, key=lambda x: x.get('satisfaccion', 0))
                     summary += f"\n- Mejor experiencia: {best_place['lugar']} ({best_place['satisfaccion']}/10)"
 
         summary += "\n\n🏆 **Mejores experiencias del viaje:**"
         
-        # Encontrar los lugares con mayor satisfacción
+        
         if places_visited:
             sorted_places = sorted(places_visited, key=lambda x: x.get('satisfaccion', 0), reverse=True)
             top_places = sorted_places[:3]
@@ -584,7 +584,7 @@ def format_simulation_results(results: dict) -> str:
                 dia_info = f" (Día {place.get('dia', 1)})" if dias_simulados > 1 else ""
                 summary += f"\n- {place['lugar']}{dia_info}: {place['satisfaccion']}/10 - {place.get('comentario', 'Sin comentarios')}"
         
-        # Agregar advertencias si hay problemas
+        
         warnings = []
         if final_fatigue > 8:
             warnings.append("⚠️ El itinerario es muy agotador. Considera reducir actividades o agregar más descansos entre días.")
@@ -592,12 +592,12 @@ def format_simulation_results(results: dict) -> str:
         if general_satisfaction < 6:
             warnings.append("⚠️ La satisfacción general es baja. Revisa los tiempos de espera y la distribución de actividades.")
         
-        # Encontrar problemas específicos
+        
         problem_places = [p for p in places_visited if p.get('satisfaccion', 0) < 5]
         if problem_places:
             warnings.append(f"⚠️ {len(problem_places)} lugares con baja satisfacción. Considera alternativas.")
         
-        # Verificar si algún día está muy cargado
+        
         if lugares_por_dia:
             for dia, lugares in lugares_por_dia.items():
                 if len(lugares) > 5:
@@ -608,7 +608,7 @@ def format_simulation_results(results: dict) -> str:
             for warning in warnings:
                 summary += f"\n{warning}"
         
-        # Agregar estadísticas detalladas
+        
         if places_visited:
             avg_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited) / len(places_visited)
             total_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited)

@@ -12,10 +12,10 @@ def test_manual_preferences_extraction():
     """
     print("=== TEST: Extracción manual de preferencias ===\n")
     
-    # Crear agente turístico
+    
     guide = TouristGuideAgent("TestGuide")
     
-    # Simular que ya tenemos algunas preferencias
+    
     guide.conversation_state['preferences'] = {
         'destination': 'Cuba',
         'interests': ['beaches', 'museums'],
@@ -27,14 +27,14 @@ def test_manual_preferences_extraction():
         'preferred_activities': []
     }
     
-    # Probar extracción manual
+    
     test_message = "También quiero conocer buenos restaurantes y hoteles"
     guide._manual_extraction(test_message)
     
     print(f"Mensaje: {test_message}")
     print(f"Intereses después de extracción manual: {guide.conversation_state['preferences']['interests']}")
     
-    # Verificar que se agregaron los nuevos intereses
+    
     expected_interests = ['beaches', 'museums', 'restaurants', 'accommodation']
     actual_interests = guide.conversation_state['preferences']['interests']
     
@@ -56,10 +56,10 @@ def test_response_structure():
     """
     print("\n\n=== TEST: Estructura de respuestas ===\n")
     
-    # Crear agente turístico
+    
     guide = TouristGuideAgent("TestGuide")
     
-    # Simular estado con preferencias
+    
     guide.conversation_state['phase'] = 'summary'
     guide.conversation_state['preferences'] = {
         'destination': 'Cuba',
@@ -72,7 +72,7 @@ def test_response_structure():
         'preferred_activities': []
     }
     
-    # Crear respuesta simulada sin llamar a Mistral
+    
     response = {
         'type': 'guide_response',
         'message': 'Resumen simulado',
@@ -94,7 +94,7 @@ def test_response_structure():
         print(f"- Destino: {prefs.get('destination')}")
         print(f"- Intereses: {prefs.get('interests')}")
     
-    # Verificar que ambos campos están presentes y contienen los datos correctos
+    
     if ('current_preferences' in response and 
         'final_preferences' in response and
         response['current_preferences'] == response['final_preferences'] and
@@ -111,7 +111,7 @@ def test_coordinator_flow_logic():
     """
     print("\n\n=== TEST: Lógica del coordinador ===\n")
     
-    # Simular respuesta del agente turístico
+    
     mock_response = {
         'type': 'guide_response',
         'message': 'Perfecto, buscaré información...',
@@ -123,13 +123,13 @@ def test_coordinator_flow_logic():
         }
     }
     
-    # Simular lógica del coordinador
+    
     print("Simulando lógica del coordinador:")
     
     if mock_response.get('preferences_collected', False):
         print("✓ Se detectó que las preferencias fueron recopiladas")
         
-        # Intentar obtener preferencias de diferentes fuentes
+        
         final_prefs = mock_response.get('final_preferences')
         current_prefs = mock_response.get('current_preferences')
         
@@ -147,7 +147,7 @@ def test_coordinator_flow_logic():
         print(f"- Destino: {preferences.get('destination')}")
         print(f"- Intereses: {preferences.get('interests')}")
         
-        # Verificar que incluye todos los intereses
+        
         if 'restaurants' in preferences.get('interests', []):
             print("\n✅ Las preferencias incluyen 'restaurants' del último mensaje")
             return True
@@ -158,7 +158,7 @@ def test_coordinator_flow_logic():
     return False
 
 if __name__ == "__main__":
-    # Ejecutar pruebas
+    
     test1_passed = test_manual_preferences_extraction()
     test2_passed = test_response_structure()
     test3_passed = test_coordinator_flow_logic()

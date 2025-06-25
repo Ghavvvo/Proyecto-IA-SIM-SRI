@@ -5,18 +5,18 @@ from datetime import datetime
 class CrawlerAgent(Agent):
     def __init__(self, name, starting_urls, max_pages=100, max_depth=2, num_threads=10, enable_mistral_processing=True):
         super().__init__(name)
-        # Crear crawler con soporte para paralelismo mejorado y procesamiento Mistral
+        
         self.crawler = TourismCrawler(
             starting_urls=starting_urls, 
             max_pages=max_pages, 
             max_depth=max_depth,
-            num_threads=num_threads,  # 10 hilos por defecto
-            enable_mistral_processing=enable_mistral_processing  # Procesar con Mistral por defecto
+            num_threads=num_threads,  
+            enable_mistral_processing=enable_mistral_processing  
         )
     def receive(self, message, sender):
         if message['type'] == 'crawl':
             print(f"🚀 Iniciando crawler paralelo con {self.crawler.num_threads} hilos...")
-            # Ejecutar el crawler paralelo y devolver la colección
+            
             pages_processed = self.crawler.run_parallel_crawler()
             return {
                 'type': 'crawled', 
@@ -26,7 +26,7 @@ class CrawlerAgent(Agent):
             }
             
         elif message['type'] == 'crawl_keywords':
-            # Extraer palabras clave del mensaje
+            
             keywords = message.get('keywords', [])
             improved_query = message.get('improved_query', None)
             
@@ -38,7 +38,7 @@ class CrawlerAgent(Agent):
                 print(f"🔍 Con consulta mejorada: '{improved_query}'")
             print(f"⚡ Usando {self.crawler.num_threads} hilos en paralelo")
             
-            # Usar el método paralelo para crawling basado en keywords con consulta mejorada
+            
             pages_processed = self.crawler.run_parallel_crawler_from_keywords(
                 keywords, 
                 max_depth=3,
@@ -57,7 +57,7 @@ class CrawlerAgent(Agent):
                 return {'type': 'error', 'msg': 'No se pudo actualizar la base de datos con nueva información'}
         
         elif message['type'] == 'search_google_aco':
-            # NUEVO: Búsqueda en Google + Exploración ACO
+            
             keywords = message.get('keywords', [])
             improved_query = message.get('improved_query', None)
             max_urls = message.get('max_urls', 15)
@@ -73,11 +73,11 @@ class CrawlerAgent(Agent):
             print(f"📊 Parámetros: max_urls={max_urls}, max_depth={max_depth}")
             
             try:
-                # Importar y usar ACO
+                
                 from utils.ant_colony_crawler import integrate_aco_with_crawler
                 import time
                 
-                # Ejecutar exploración ACO con consulta mejorada y profundidad
+                
                 extracted_content = integrate_aco_with_crawler(
                     self.crawler, 
                     keywords, 
@@ -86,14 +86,14 @@ class CrawlerAgent(Agent):
                     max_depth=max_depth
                 )
                 
-                # Añadir contenido a la base de datos
+                
                 content_added = 0
                 for content_item in extracted_content:
                     try:
-                        # Añadir a ChromaDB
+                        
                         doc_id = f"aco_doc_{hash(content_item['url']) % 10000000}_{int(time.time())}"
                         
-                        # IMPRIMIR INFORMACIÓN DEL CHUNK
+                        
                         print(f"\n📝 GUARDANDO CHUNK EN CHROMADB (ACO):")
                         print(f"   📌 ID: {doc_id}")
                         print(f"   🔗 URL: {content_item['url']}")
@@ -103,7 +103,7 @@ class CrawlerAgent(Agent):
                         print(f"   🔍 Palabras clave: {keywords}")
                         print(f"   ✅ Chunk guardado exitosamente\n")
                         
-                        # Preparar metadata
+                        
                         metadata = {
                             "url": content_item['url'],
                             "title": content_item['title'],
@@ -113,7 +113,7 @@ class CrawlerAgent(Agent):
                             "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         }
                         
-                        # Guardar en archivo ANTES de guardar en ChromaDB
+                        
                         self.crawler._save_chunk_to_file(
                             doc_id, 
                             content_item['content'], 
@@ -132,7 +132,7 @@ class CrawlerAgent(Agent):
                         print(f"❌ Error añadiendo contenido ACO a DB: {e}")
                         continue
                 
-                # Obtener estadísticas ACO (simuladas si no están disponibles)
+                
                 aco_stats = {
                     'success_rate': content_added / max(max_urls, 1),
                     'pheromone_trails_count': len(extracted_content) * 2,

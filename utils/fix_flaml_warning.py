@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Script para solucionar el warning de flaml.automl
 """
@@ -47,30 +47,30 @@ def add_warning_suppression():
         with open('main.py', 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Buscar dónde insertar el código
+        
         lines = content.split('\n')
         insert_index = 0
         
-        # Buscar después de los imports existentes
+        
         for i, line in enumerate(lines):
-            if line.strip() and not line.startswith('#') and not line.startswith('import') and not line.startswith('from'):
+            if line.strip() and not line.startswith('
                 insert_index = i
                 break
         
-        # Preparar el código a insertar
+        
         warning_code = [
             "",
-            "# Suprimir warning de flaml.automl",
+            "
             "import warnings",
             "warnings.filterwarnings('ignore', message='flaml.automl is not available')",
             ""
         ]
         
-        # Insertar el código
+        
         for j, code_line in enumerate(warning_code):
             lines.insert(insert_index + j, code_line)
         
-        # Escribir el archivo actualizado
+        
         with open('main.py', 'w', encoding='utf-8') as f:
             f.write('\n'.join(lines))
         

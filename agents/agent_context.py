@@ -7,7 +7,7 @@ class ContextAgent(Agent):
     def __init__(self, name: str):
         super().__init__(name)
         self.conversation_history: List[Dict[str, Any]] = []
-        self.max_history_length = 10  # Mantener solo las últimas 10 interacciones
+        self.max_history_length = 10  
         self.last_relevant_places = []
         
     def receive(self, message: Dict[str, Any], sender) -> Dict[str, Any]:
@@ -58,16 +58,16 @@ class ContextAgent(Agent):
             Diccionario con la consulta mejorada y análisis del contexto
         """
         try:
-            # Obtener contexto de conversación
+            
             context_summary = self._build_context_summary()
             
-            # Debug: Mostrar el contexto que se está usando
+            
             print(f"🔍 Contexto disponible: {context_summary[:100]}...")
             
-            # Usar Mistral para analizar y mejorar la consulta
+            
             mistral_client = MistralClient(model_name="flash")
             
-            # Prompt más específico y directo
+            
             prompt = f"""
 Eres un experto en mejora de consultas para sistemas RAG. Tu tarea es SIEMPRE mejorar la consulta del usuario basándote en el contexto conversacional.
 
@@ -92,16 +92,16 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             response = mistral_client.generate(prompt)
             improved_query = response.strip().strip('"\'')
             
-            # Debug: Mostrar la respuesta de Mistral
+            
             print(f"🤖 Respuesta de Mistral: {improved_query}")
             
-            # Validar que la consulta mejorada sea diferente y válida
+            
             if not improved_query or improved_query.lower() == query.lower() or len(improved_query) < 5:
-                # Si Mistral no mejoró la consulta, aplicar mejoras básicas
+                
                 improved_query = self._apply_basic_improvements(query, context_summary)
                 print(f"🔧 Aplicando mejoras básicas: {improved_query}")
             
-            # Determinar si es continuación basándose en el contexto
+            
             is_continuation = self._is_query_continuation(query, context_summary)
             
             return {
@@ -121,7 +121,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
                 
         except Exception as e:
             print(f"❌ Error al analizar consulta con contexto: {e}")
-            # Fallback: aplicar mejoras básicas sin Mistral
+            
             improved_query = self._apply_basic_improvements(query, self._build_context_summary())
             
             return {
@@ -159,7 +159,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         
         self.conversation_history.append(interaction)
         
-        # Mantener solo las últimas interacciones
+        
         if len(self.conversation_history) > self.max_history_length:
             self.conversation_history = self.conversation_history[-self.max_history_length:]
         
@@ -207,7 +207,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         
         summary_parts = []
         
-        for i, interaction in enumerate(self.conversation_history[-5:], 1):  # Últimas 5 interacciones
+        for i, interaction in enumerate(self.conversation_history[-5:], 1):  
             summary_parts.append(f"""
             Interacción {i}:
             - Usuario preguntó: {interaction['query']}
@@ -228,19 +228,19 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             Consulta mejorada extraída o la original si no se puede extraer
         """
         try:
-            # Buscar patrones comunes de consulta mejorada
+            
             lines = text.split('\n')
             
             for line in lines:
                 line = line.strip()
                 if any(keyword in line.lower() for keyword in ['consulta mejorada', 'improved query', 'mejor consulta']):
-                    # Extraer la parte después de los dos puntos
+                    
                     if ':' in line:
                         improved = line.split(':', 1)[1].strip()
-                        if improved and len(improved) > 10:  # Validar que no esté vacía
+                        if improved and len(improved) > 10:  
                             return improved.strip('"\'')
             
-            # Si no se encuentra un patrón específico, buscar la línea más larga que parezca una consulta
+            
             potential_queries = [line.strip() for line in lines if len(line.strip()) > 20 and '?' in line]
             if potential_queries:
                 return potential_queries[0].strip('"\'')
@@ -315,12 +315,12 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         """
         improved_query = query
         
-        # Extraer ubicaciones del contexto
+        
         locations = self._extract_locations_from_context(context_summary)
         
-        # Aplicar mejoras básicas según patrones comunes
+        
         if query.lower().startswith(('¿y ', '¿qué ', 'y ', 'qué ')):
-            # Es una continuación, añadir contexto de ubicación si está disponible
+            
             if locations:
                 location = locations[0]
                 if 'restaurante' in query.lower():
@@ -332,7 +332,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
                 else:
                     improved_query = f"{query} en {location}"
         
-        # Hacer la consulta más específica añadiendo términos relacionados
+        
         if 'restaurante' in improved_query.lower() and 'recomendado' not in improved_query.lower():
             improved_query = improved_query.replace('restaurante', 'restaurante recomendado')
         
@@ -342,7 +342,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         if 'lugar' in improved_query.lower() and 'turístico' not in improved_query.lower():
             improved_query = improved_query.replace('lugar', 'lugar turístico')
         
-        # Si la consulta es muy corta, hacerla más descriptiva
+        
         if len(query.split()) <= 3:
             if 'clima' in query.lower():
                 improved_query = f"{query} y recomendaciones de vestimenta"
@@ -361,7 +361,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         Returns:
             Lista de ubicaciones encontradas
         """
-        # Lista de ciudades/lugares comunes en Perú (expandible)
+        
         common_locations = [
             'Lima', 'Cusco', 'Arequipa', 'Trujillo', 'Piura', 'Iquitos', 
             'Huancayo', 'Chiclayo', 'Ayacucho', 'Cajamarca', 'Puno',
@@ -389,7 +389,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         Returns:
             True si es una continuación, False si es un tema nuevo
         """
-        # Indicadores de continuación
+        
         continuation_indicators = [
             '¿y ', 'y ', '¿qué más', 'también', 'además', 'otra', 'otro',
             '¿dónde más', '¿cuál', '¿cuáles', 'mejor', 'recomiendan'
@@ -397,20 +397,20 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         
         query_lower = query.lower()
         
-        # Verificar indicadores directos
+        
         for indicator in continuation_indicators:
             if query_lower.startswith(indicator):
                 return True
         
-        # Verificar si hay contexto previo
+        
         if not context_summary or context_summary == "No hay conversación previa.":
             return False
         
-        # Verificar temas relacionados
+        
         if len(self.conversation_history) > 0:
             last_query = self.conversation_history[-1]['query'].lower()
             
-            # Temas relacionados
+            
             related_themes = {
                 'turismo': ['lugar', 'sitio', 'visitar', 'turístico', 'atracción'],
                 'comida': ['restaurante', 'comida', 'comer', 'gastronomía', 'plato'],
@@ -440,10 +440,10 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         
         topics = set()
         
-        for interaction in self.conversation_history[-3:]:  # Últimas 3 interacciones
+        for interaction in self.conversation_history[-3:]:  
             query = interaction['query'].lower()
             
-            # Identificar temas por palabras clave
+            
             if any(word in query for word in ['restaurante', 'comida', 'comer', 'gastronomía']):
                 topics.add('gastronomía')
             
@@ -459,7 +459,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             if any(word in query for word in ['transporte', 'bus', 'taxi', 'avión']):
                 topics.add('transporte')
             
-            # Extraer ubicaciones
+            
             locations = self._extract_locations_from_context(query)
             topics.update(locations)
         
@@ -521,7 +521,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         if improved_query != original_query:
             improvements.append('Consulta contextualizada')
         
-        # Verificar mejoras específicas
+        
         original_lower = original_query.lower()
         improved_lower = improved_query.lower()
         if 'recomendado' in improved_lower and 'recomendado' not in original_lower:
@@ -551,7 +551,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
         Returns:
             Dict con tipo y booleano indicando si se debe ofrecer ruta
         """
-        # Usar Mistral para analizar si se debe ofrecer ruta
+        
         try:
             mistral_client = MistralClient(model_name="flash")
             prompt = f"""
@@ -581,7 +581,7 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             }
         except Exception as e:
             print(f"Error al determinar oferta de ruta: {e}")
-            # En caso de error, usar heurística básica
+            
             basic_decision = self._basic_should_offer_route(query, response)
             return {
                 'type': 'route_offer_decision',
@@ -647,11 +647,11 @@ RESPONDE SOLO CON LA CONSULTA MEJORADA, SIN EXPLICACIONES ADICIONALES:
             result = mistral_client.generate(prompt)
             places_str = result.strip()
             
-            # Procesar la cadena de lugares
+            
             if not places_str:
                 return {'type': 'extracted_places', 'places': []}
                 
-            # Limpieza y eliminación de duplicados
+            
             places = []
             seen = set()
             for place in places_str.split(';'):

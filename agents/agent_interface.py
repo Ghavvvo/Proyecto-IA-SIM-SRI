@@ -20,10 +20,10 @@ class InterfaceAgent(Agent):
             }
             sender: Agente que envía el mensaje
         """
-        # Actualizar contexto de conversación
+        
         self._update_context(message, sender)
         
-        # Generar respuesta natural
+        
         response = self._generate_natural_response(message)
         print(f"\n[Asistente]: {response}\n")
         return response
@@ -38,7 +38,7 @@ class InterfaceAgent(Agent):
         }
         self.conversation_context.append(context_entry)
         
-        # Mantener solo los últimos 5 eventos para contexto
+        
         if len(self.conversation_context) > 5:
             self.conversation_context.pop(0)
     

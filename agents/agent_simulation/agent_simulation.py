@@ -5,13 +5,13 @@ from skfuzzy import control as ctrl
 from typing import Dict, List, Tuple, Any
 from autogen import Agent
 
-# Configure matplotlib before importing pyplot
+
 import os
 import sys
-# Check if we're in experiment/testing mode
+
 if any('experiment' in arg for arg in sys.argv) or os.environ.get('TESTING', '').lower() == 'true':
     import matplotlib
-    matplotlib.use('Agg')  # Use non-interactive backend
+    matplotlib.use('Agg')  
 
 import matplotlib.pyplot as plt
 
@@ -27,7 +27,7 @@ class TouristSimulationAgent(Agent):
         super().__init__(name)
         self.tourist_profile = tourist_profile
 
-        # Configurar perfiles de turista (valores de 0 a 10)
+        
         self.tourist_profiles = {
             "exigente": {
                 "umbral_satisfaccion": 7.5,
@@ -55,58 +55,58 @@ class TouristSimulationAgent(Agent):
             }
         }
 
-        # Inicializar sistema de lógica difusa
+        
         self._setup_fuzzy_system()
 
-        # Variables de estado - valores más equilibrados
+        
         self.cansancio_acumulado = 0
-        self.satisfaccion_general = 7.5  # Reducido de 8.5 a 7.5 - más moderado
+        self.satisfaccion_general = 7.5  
         self.lugares_visitados = []
 
     def _setup_fuzzy_system(self):
         """Configurar el sistema de lógica difusa para evaluación de experiencias"""
-        # Definir variables de entrada (antecedentes)
+        
         self.clima = ctrl.Antecedent(np.arange(0, 11, 1), 'clima')
         self.crowding = ctrl.Antecedent(np.arange(0, 11, 1), 'crowding')
         self.atencion = ctrl.Antecedent(np.arange(0, 11, 1), 'atencion')
         self.tiempo_espera = ctrl.Antecedent(np.arange(0, 121, 1), 'tiempo_espera')
         self.interes_lugar = ctrl.Antecedent(np.arange(0, 11, 1), 'interes_lugar')
 
-        # Definir variable de salida (consecuente)
+        
         self.satisfaccion = ctrl.Consequent(np.arange(0, 11, 1), 'satisfaccion')
 
-        # Definir conjuntos difusos para cada variable
-        # Clima (0: muy malo, 10: excelente)
+        
+        
         self.clima['malo'] = fuzz.trimf(self.clima.universe, [0, 0, 5])
         self.clima['moderado'] = fuzz.trimf(self.clima.universe, [2, 5, 8])
         self.clima['bueno'] = fuzz.trimf(self.clima.universe, [5, 10, 10])
 
-        # Crowding (0: vacío, 10: extremadamente lleno)
+        
         self.crowding['bajo'] = fuzz.trimf(self.crowding.universe, [0, 0, 4])
         self.crowding['medio'] = fuzz.trimf(self.crowding.universe, [3, 5, 7])
         self.crowding['alto'] = fuzz.trimf(self.crowding.universe, [6, 10, 10])
 
-        # Atención (0: pésima, 10: excelente)
+        
         self.atencion['mala'] = fuzz.trimf(self.atencion.universe, [0, 0, 4])
         self.atencion['regular'] = fuzz.trimf(self.atencion.universe, [3, 5, 7])
         self.atencion['buena'] = fuzz.trimf(self.atencion.universe, [6, 10, 10])
 
-        # Tiempo de espera en minutos (0: sin espera, 120: espera excesiva)
+        
         self.tiempo_espera['corto'] = fuzz.trimf(self.tiempo_espera.universe, [0, 0, 20])
         self.tiempo_espera['medio'] = fuzz.trimf(self.tiempo_espera.universe, [15, 30, 60])
         self.tiempo_espera['largo'] = fuzz.trimf(self.tiempo_espera.universe, [45, 120, 120])
 
-        # Interés en el lugar (0: ningún interés, 10: máximo interés)
+        
         self.interes_lugar['bajo'] = fuzz.trimf(self.interes_lugar.universe, [0, 0, 4])
         self.interes_lugar['medio'] = fuzz.trimf(self.interes_lugar.universe, [3, 5, 7])
         self.interes_lugar['alto'] = fuzz.trimf(self.interes_lugar.universe, [6, 10, 10])
 
-        # Satisfacción (0: insatisfecho, 10: completamente satisfecho)
+        
         self.satisfaccion['baja'] = fuzz.trimf(self.satisfaccion.universe, [0, 0, 4])
         self.satisfaccion['media'] = fuzz.trimf(self.satisfaccion.universe, [3, 5, 7])
         self.satisfaccion['alta'] = fuzz.trimf(self.satisfaccion.universe, [6, 10, 10])
 
-        # Definir reglas
+        
         regla1 = ctrl.Rule(
             self.clima['bueno'] & self.crowding['bajo'] & self.atencion['buena'] &
             self.tiempo_espera['corto'] & self.interes_lugar['alto'],
@@ -148,12 +148,12 @@ class TouristSimulationAgent(Agent):
             self.satisfaccion['media']
         )
 
-        # Crear sistema de control
+        
         self.system = ctrl.ControlSystem([
             regla1, regla2, regla3, regla4, regla5, regla6, regla7, regla8
         ])
 
-        # Crear simulación
+        
         self.simulation = ctrl.ControlSystemSimulation(self.system)
 
     def _generar_clima(self, temporada: str = "verano", probabilidad_lluvia: float = 0.2) -> Tuple[str, float]:
@@ -167,50 +167,50 @@ class TouristSimulationAgent(Agent):
         Returns:
             Tupla con (descripción del clima, valor numérico para el sistema difuso)
         """
-        # Ajustar probabilidades según temporada - más moderado
+        
         if temporada == "verano":
             temp_base = 28
             temp_var = 5
-            prob_lluvia = probabilidad_lluvia * 0.4  # Moderado
+            prob_lluvia = probabilidad_lluvia * 0.4  
         elif temporada == "invierno":
             temp_base = 10
             temp_var = 8
-            prob_lluvia = probabilidad_lluvia * 1.3  # Moderado
+            prob_lluvia = probabilidad_lluvia * 1.3  
         elif temporada == "otoño":
             temp_base = 18
             temp_var = 7
-            prob_lluvia = probabilidad_lluvia * 1.1  # Moderado
-        else:  # primavera
+            prob_lluvia = probabilidad_lluvia * 1.1  
+        else:  
             temp_base = 22
             temp_var = 6
-            prob_lluvia = probabilidad_lluvia * 0.9  # Moderado
+            prob_lluvia = probabilidad_lluvia * 0.9  
 
-        # Generar temperatura
+        
         temperatura = round(random.normalvariate(temp_base, temp_var/3), 1)
 
-        # Determinar si llueve
+        
         esta_lloviendo = random.random() < prob_lluvia
 
-        # Valoración climática para el sistema difuso (0-10) - con mayor variabilidad
+        
         if esta_lloviendo:
-            valor_clima = max(2, 10 - random.randint(4, 8))  # Mayor variabilidad en lluvia
+            valor_clima = max(2, 10 - random.randint(4, 8))  
             descripcion = f"Lluvia, {temperatura}°C"
         else:
-            # Calcular valor climático con mayor variabilidad
+            
             if temporada == "verano":
                 if temperatura < 18:
-                    valor_clima = random.uniform(4.5, 7.5)  # Mayor rango de variación
+                    valor_clima = random.uniform(4.5, 7.5)  
                 elif temperatura > 35:
-                    valor_clima = random.uniform(3.5, 6.5)  # Mayor rango de variación
+                    valor_clima = random.uniform(3.5, 6.5)  
                 else:
-                    valor_clima = min(10, max(5.5, 10 - abs(temperatura - 26) * random.uniform(0.3, 0.6)))  # Más variabilidad
+                    valor_clima = min(10, max(5.5, 10 - abs(temperatura - 26) * random.uniform(0.3, 0.6)))  
             elif temporada == "invierno":
                 if temperatura < 0:
-                    valor_clima = random.uniform(3.0, 6.5)  # Mayor rango de variación
+                    valor_clima = random.uniform(3.0, 6.5)  
                 else:
-                    valor_clima = min(10, max(5.5, 10 - abs(temperatura - 12) * random.uniform(0.3, 0.6)))  # Más variabilidad
-            else:  # primavera/otoño
-                valor_clima = min(10, max(5.5, 10 - abs(temperatura - 22) * random.uniform(0.3, 0.6)))  # Más variabilidad
+                    valor_clima = min(10, max(5.5, 10 - abs(temperatura - 12) * random.uniform(0.3, 0.6)))  
+            else:  
+                valor_clima = min(10, max(5.5, 10 - abs(temperatura - 22) * random.uniform(0.3, 0.6)))  
 
             descripcion = f"Despejado, {temperatura}°C"
 
@@ -228,34 +228,34 @@ class TouristSimulationAgent(Agent):
         Returns:
             Tupla con (descripción del crowding, valor numérico para el sistema difuso)
         """
-        # Factor base de popularidad del lugar (0-10)
+        
         popularidad_base = lugar.get("popularidad", 5)
 
-        # Modificadores por día de semana - equilibrados
+        
         modificador_dia = {
-            "lunes": 0.65,   # Ligeramente aumentado
-            "martes": 0.65,  # Ligeramente aumentado
-            "miercoles": 0.75, # Ligeramente aumentado
-            "jueves": 0.85,  # Ligeramente aumentado
+            "lunes": 0.65,   
+            "martes": 0.65,  
+            "miercoles": 0.75, 
+            "jueves": 0.85,  
             "viernes": 1.0,
-            "sabado": 1.4,   # Ligeramente reducido
-            "domingo": 1.25  # Ligeramente reducido
+            "sabado": 1.4,   
+            "domingo": 1.25  
         }.get(dia_semana.lower(), 1.0)
 
-        # Modificadores por hora - equilibrados
+        
         if hora < 9 or hora > 20:
-            modificador_hora = 0.45  # Ligeramente reducido
-        elif 11 <= hora <= 14 or 17 <= hora <= 19:  # Horas pico
-            modificador_hora = 1.4  # Ligeramente reducido
+            modificador_hora = 0.45  
+        elif 11 <= hora <= 14 or 17 <= hora <= 19:  
+            modificador_hora = 1.4  
         else:
             modificador_hora = 1.0
 
-        # Calcular nivel de crowding con mayor componente aleatorio
+        
         nivel_base = popularidad_base * modificador_dia * modificador_hora
-        variacion = random.uniform(-2.5, 2.0)  # Mayor variabilidad
+        variacion = random.uniform(-2.5, 2.0)  
         nivel_crowding = max(0, min(10, nivel_base + variacion))
 
-        # Descripción cualitativa
+        
         if nivel_crowding < 3:
             descripcion = "Casi vacío"
         elif nivel_crowding < 5:
@@ -279,28 +279,28 @@ class TouristSimulationAgent(Agent):
         Returns:
             Tupla con (descripción de la atención, valor numérico para el sistema difuso)
         """
-        # Niveles base según tipo de lugar - moderadamente mejorados
+        
         niveles_base = {
-            "museo": 7.8,      # Ligeramente reducido de 8.2
-            "restaurante": 7.4, # Ligeramente reducido de 7.8
-            "parque": 6.8,     # Ligeramente reducido de 7.2
-            "monumento": 7.4,  # Ligeramente reducido de 7.8
-            "hotel": 7.8,     # Ligeramente reducido de 8.2
-            "playa": 6.4,     # Ligeramente reducido de 6.8
-            "centro_comercial": 6.8, # Ligeramente reducido de 7.2
-            "teatro": 7.4,    # Ligeramente reducido de 7.8
-            "zoo": 7.4,       # Ligeramente reducido de 7.8
-            "desplazamiento": 6.2,  # Ligeramente reducido
-            "otro": 6.8       # Ligeramente reducido de 7.0
+            "museo": 7.8,      
+            "restaurante": 7.4, 
+            "parque": 6.8,     
+            "monumento": 7.4,  
+            "hotel": 7.8,     
+            "playa": 6.4,     
+            "centro_comercial": 6.8, 
+            "teatro": 7.4,    
+            "zoo": 7.4,       
+            "desplazamiento": 6.2,  
+            "otro": 6.8       
         }
 
-        nivel_base = niveles_base.get(tipo_lugar.lower(), 6.8)  # Ligeramente reducido de 7.2
+        nivel_base = niveles_base.get(tipo_lugar.lower(), 6.8)  
 
-        # Añadir variación aleatoria con mayor variabilidad
-        variacion = random.normalvariate(0, 1.8)  # Mayor variabilidad, sin sesgo
+        
+        variacion = random.normalvariate(0, 1.8)  
         nivel_atencion = max(2.5, min(10, nivel_base + variacion))
 
-        # Descripción cualitativa
+        
         if nivel_atencion < 3:
             descripcion = "Pésima atención"
         elif nivel_atencion < 5:
@@ -327,31 +327,31 @@ class TouristSimulationAgent(Agent):
         """
         tipo_lugar = lugar.get("tipo", "otro")
 
-        # Tiempos base según tipo de lugar (en minutos) - ligeramente aumentados
+        
         tiempos_base = {
-            "museo": 12,       # Ligeramente aumentado de 10
-            "restaurante": 18, # Ligeramente aumentado de 15
-            "parque": 3,       # Ligeramente aumentado de 2
-            "monumento": 7,    # Ligeramente aumentado de 5
-            "hotel": 6,        # Ligeramente aumentado de 5
-            "playa": 2,        # Ligeramente aumentado de 1
-            "centro_comercial": 5, # Ligeramente aumentado de 3
-            "teatro": 10,      # Ligeramente aumentado de 8
-            "zoo": 12,         # Ligeramente aumentado de 10
-            "desplazamiento": 3, # Ligeramente aumentado
-            "otro": 7          # Ligeramente aumentado de 5
+            "museo": 12,       
+            "restaurante": 18, 
+            "parque": 3,       
+            "monumento": 7,    
+            "hotel": 6,        
+            "playa": 2,        
+            "centro_comercial": 5, 
+            "teatro": 10,      
+            "zoo": 12,         
+            "desplazamiento": 3, 
+            "otro": 7          
         }
 
         tiempo_base = tiempos_base.get(tipo_lugar.lower(), 7)
 
-        # El crowding impacta moderadamente en el tiempo de espera
-        factor_crowding = (nivel_crowding / 5.5) ** 1.6  # Ligeramente más agresivo
+        
+        factor_crowding = (nivel_crowding / 5.5) ** 1.6  
 
-        # Calcular tiempo con variación aleatoria equilibrada
-        tiempo_espera = tiempo_base * factor_crowding * random.uniform(0.7, 1.2)  # Ligeramente menos favorable
-        tiempo_espera = max(0, min(100, tiempo_espera))  # Límite máximo ligeramente aumentado
+        
+        tiempo_espera = tiempo_base * factor_crowding * random.uniform(0.7, 1.2)  
+        tiempo_espera = max(0, min(100, tiempo_espera))  
 
-        # Descripción cualitativa
+        
         if tiempo_espera < 5:
             descripcion = "Sin espera"
         elif tiempo_espera < 15:
@@ -378,13 +378,13 @@ class TouristSimulationAgent(Agent):
         """
         tipo_lugar = lugar.get("tipo", "otro")
 
-        # Tiempos base según tipo de lugar (en horas)
+        
         tiempos_base = {
             "museo": 1.5,
             "restaurante": 1.2,
             "parque": 1.0,
             "monumento": 0.5,
-            "hotel": 0.2,  # Tiempo para check-in/check-out
+            "hotel": 0.2,  
             "playa": 2.0,
             "centro_comercial": 1.5,
             "teatro": 2.0,
@@ -395,14 +395,14 @@ class TouristSimulationAgent(Agent):
 
         tiempo_base = tiempos_base.get(tipo_lugar.lower(), 1.0)
 
-        # El interés modifica el tiempo de visita - equilibrado
-        factor_interes = 0.65 + (nivel_interes / 10) * 0.7  # Ligeramente menos generoso
+        
+        factor_interes = 0.65 + (nivel_interes / 10) * 0.7  
 
-        # Variación aleatoria
-        variacion = random.normalvariate(0, 0.18)  # Ligeramente más variación
+        
+        variacion = random.normalvariate(0, 0.18)  
 
         tiempo_visita = tiempo_base * factor_interes + variacion
-        return max(0.1, tiempo_visita)  # Mínimo 6 minutos de visita
+        return max(0.1, tiempo_visita)  
 
     def _actualizar_cansancio(self, tiempo_visita: float, distancia_km: float):
         """
@@ -412,18 +412,18 @@ class TouristSimulationAgent(Agent):
             tiempo_visita: Tiempo de visita en horas
             distancia_km: Distancia recorrida en km hasta el lugar
         """
-        # Incremento de cansancio más realista
-        incremento_cansancio = tiempo_visita * 0.5 + distancia_km * 0.2  # Más realista
+        
+        incremento_cansancio = tiempo_visita * 0.5 + distancia_km * 0.2  
 
-        # Añadir aleatoriedad moderada al cansancio
-        variacion = random.normalvariate(0, 0.25)  # Ligeramente más variación
+        
+        variacion = random.normalvariate(0, 0.25)  
 
         self.cansancio_acumulado += incremento_cansancio + variacion
         self.cansancio_acumulado = min(10, self.cansancio_acumulado)
 
-        # Oportunidades de recuperación más moderadas
-        if tiempo_visita > 0.5 and random.random() < 0.7:  # Probabilidad moderada de recuperación
-            recuperacion = random.uniform(0.8, 2.0)  # Recuperación moderada
+        
+        if tiempo_visita > 0.5 and random.random() < 0.7:  
+            recuperacion = random.uniform(0.8, 2.0)  
             self.cansancio_acumulado = max(0, self.cansancio_acumulado - recuperacion)
 
     def _calcular_interes_lugar(self, lugar: Dict, preferencias_cliente: List[str] = None) -> float:
@@ -439,7 +439,7 @@ class TouristSimulationAgent(Agent):
         """
         tipo_lugar = lugar.get("tipo", "otro").lower()
 
-        # Mapeo de tipos de lugares a categorías de interés
+        
         tipo_a_interes = {
             "museo": ["cultura", "historia", "arte", "museums"],
             "monumento": ["cultura", "historia", "arquitectura", "monuments"],
@@ -452,39 +452,39 @@ class TouristSimulationAgent(Agent):
             "desplazamiento": ["transporte", "viaje"]
         }
 
-        # Si no hay preferencias, usar un interés base moderado
+        
         if not preferencias_cliente:
-            interes_base = 7.0  # Reducido de 7.8 a 7.0 - más moderado
+            interes_base = 7.0  
         else:
-            # Calcular interés basado en coincidencia con preferencias
+            
             categorias_lugar = tipo_a_interes.get(tipo_lugar, [])
             coincidencias = 0
 
-            # Convertir preferencias a minúsculas para comparación
+            
             prefs_lower = [pref.lower() for pref in preferencias_cliente]
 
-            # Contar coincidencias
+            
             for categoria in categorias_lugar:
                 for pref in prefs_lower:
                     if categoria in pref or pref in categoria:
                         coincidencias += 1
                         break
 
-            # Calcular interés base - equilibrado
+            
             if coincidencias > 0:
-                interes_base = min(9.2, 8.0 + coincidencias * 0.7)  # Ligeramente menos generoso
+                interes_base = min(9.2, 8.0 + coincidencias * 0.7)  
             else:
-                interes_base = 6.0  # Reducido de 7.0 a 6.0 - más moderado
+                interes_base = 6.0  
 
-        # Modificar según popularidad del lugar - equilibrado
+        
         popularidad = lugar.get("popularidad", 5)
-        modificador_popularidad = (popularidad - 5) * 0.25  # Ligeramente menos impacto
+        modificador_popularidad = (popularidad - 5) * 0.25  
 
-        # Variación aleatoria equilibrada
-        variacion = random.normalvariate(0.1, 0.7)  # Menos sesgo positivo
+        
+        variacion = random.normalvariate(0.1, 0.7)  
 
         interes = interes_base + modificador_popularidad + variacion
-        return max(4.5, min(10, interes))  # Mínimo 4.5 en lugar de 5.0
+        return max(4.5, min(10, interes))  
 
     def simular_visita(self, lugar: Dict, contexto: Dict) -> Dict:
         """
@@ -497,10 +497,10 @@ class TouristSimulationAgent(Agent):
         Returns:
             Diccionario con resultados de la simulación
         """
-        # Obtener factores aleatorios
+        
         clima_desc, valor_clima = self._generar_clima(
             contexto.get("temporada", "verano"),
-            contexto.get("prob_lluvia", 0.18)  # Ligeramente aumentado
+            contexto.get("prob_lluvia", 0.18)  
         )
 
         crowding_desc, valor_crowding = self._generar_crowding(
@@ -513,11 +513,11 @@ class TouristSimulationAgent(Agent):
 
         tiempo_espera_desc, minutos_espera = self._generar_tiempo_espera(lugar, valor_crowding)
 
-        # Calcular interés en el lugar usando las preferencias del cliente
+        
         preferencias_cliente = contexto.get("preferencias_cliente", [])
         interes = self._calcular_interes_lugar(lugar, preferencias_cliente)
 
-        # Ejecutar sistema de lógica difusa
+        
         try:
             self.simulation.input['clima'] = valor_clima
             self.simulation.input['crowding'] = valor_crowding
@@ -527,42 +527,42 @@ class TouristSimulationAgent(Agent):
 
             self.simulation.compute()
 
-            # Verificar si hay salida válida
+            
             if hasattr(self.simulation.output, 'get'):
-                satisfaccion_lugar = self.simulation.output.get('satisfaccion', 6.0)  # Ligeramente reducido
+                satisfaccion_lugar = self.simulation.output.get('satisfaccion', 6.0)  
             else:
                 satisfaccion_lugar = self.simulation.output['satisfaccion']
 
         except Exception as e:
             print(f"  Error en sistema fuzzy: {e}")
             print(f"     Usando satisfaccion por defecto basada en interes")
-            # Fallback: usar una fórmula simple basada en los inputs - equilibrada
+            
             satisfaccion_lugar = (
-                    interes * 0.4 +  # Peso equilibrado del interés
-                    valor_clima * 0.22 +  # Peso equilibrado del clima
+                    interes * 0.4 +  
+                    valor_clima * 0.22 +  
                     valor_atencion * 0.22 +
-                    (10 - valor_crowding) * 0.08 +  # Impacto moderado del crowding
-                    (10 - min(minutos_espera/12, 10)) * 0.08  # Impacto moderado de la espera
+                    (10 - valor_crowding) * 0.08 +  
+                    (10 - min(minutos_espera/12, 10)) * 0.08  
             )
-            # Aplicar un boost moderado para mejorar las calificaciones
-            satisfaccion_lugar = satisfaccion_lugar + 1.0  # Boost reducido de 1.8 a 1.0
-            satisfaccion_lugar = max(4.5, min(10, satisfaccion_lugar))  # Mínimo 4.5
+            
+            satisfaccion_lugar = satisfaccion_lugar + 1.0  
+            satisfaccion_lugar = max(4.5, min(10, satisfaccion_lugar))  
 
-        # Calcular tiempo de visita
+        
         tiempo_visita = self._generar_tiempo_visita(lugar, interes)
 
-        # Actualizar cansancio
+        
         self._actualizar_cansancio(tiempo_visita, contexto.get("distancia_km", 0))
 
-        # Aplicar factor de cansancio a la satisfacción - equilibrado
-        factor_cansancio = max(0.88, 1 - (self.cansancio_acumulado / 22))  # Ligeramente más penalizante
+        
+        factor_cansancio = max(0.88, 1 - (self.cansancio_acumulado / 22))  
         satisfaccion_ajustada = satisfaccion_lugar * factor_cansancio
 
-        # Aplicar boost moderado para mejorar las calificaciones
-        satisfaccion_ajustada = satisfaccion_ajustada + 0.4  # Boost reducido de 0.8 a 0.4
-        satisfaccion_ajustada = max(5.0, min(10, satisfaccion_ajustada))  # Mínimo 5.0, máximo 10
+        
+        satisfaccion_ajustada = satisfaccion_ajustada + 0.4  
+        satisfaccion_ajustada = max(5.0, min(10, satisfaccion_ajustada))  
 
-        # Actualizar satisfacción general (promedio ponderado)
+        
         if self.lugares_visitados:
             peso_visita_actual = 1 / (len(self.lugares_visitados) + 1)
             self.satisfaccion_general = (self.satisfaccion_general * (1 - peso_visita_actual) +
@@ -570,7 +570,7 @@ class TouristSimulationAgent(Agent):
         else:
             self.satisfaccion_general = satisfaccion_ajustada
 
-        # Registrar visita
+        
         visita = {
             "lugar": lugar.get("nombre", "Lugar sin nombre"),
             "tipo": lugar.get("tipo", "otro"),
@@ -587,7 +587,7 @@ class TouristSimulationAgent(Agent):
 
         self.lugares_visitados.append(visita)
 
-        # Añadir comentarios cualitativos basados en la satisfacción
+        
         if satisfaccion_ajustada > 8:
             visita["comentario"] = f"¡Excelente experiencia en {lugar.get('nombre')}! {self._generar_comentario_positivo(lugar.get('tipo', 'lugar'), interes)}"
         elif satisfaccion_ajustada > 6:
@@ -669,74 +669,74 @@ class TouristSimulationAgent(Agent):
         Returns:
             Resultados de la simulación
         """
-        # Reiniciar estado
+        
         self.cansancio_acumulado = 0
-        self.satisfaccion_general = 7.5  # Empezar con satisfacción moderada
+        self.satisfaccion_general = 7.5  
         self.lugares_visitados = []
 
-        # Variables para tracking de días
+        
         dia_actual = 1
-        hora_actual = contexto_base.get("hora_inicio", 9)  # Hora de inicio predeterminada: 9 AM
+        hora_actual = contexto_base.get("hora_inicio", 9)  
         lugares_por_dia = {}
 
         for i, lugar in enumerate(itinerario):
-            # Detectar cambio de día basado en el campo 'dia' del lugar
+            
             dia_lugar = lugar.get("dia", dia_actual)
 
-            # Si cambiamos de día, aplicar descanso nocturno
+            
             if dia_lugar > dia_actual:
-                # Aplicar descanso nocturno
+                
                 self._aplicar_descanso_nocturno()
 
-                # Actualizar día y resetear hora
+                
                 dia_actual = dia_lugar
                 hora_actual = contexto_base.get("hora_inicio", 9)
 
-                # Registrar cambio de día en los resultados
+                
                 if dia_actual not in lugares_por_dia:
                     lugares_por_dia[dia_actual] = []
 
-            # Actualizar contexto específico para este lugar
+            
             contexto_lugar = contexto_base.copy()
             contexto_lugar["hora"] = hora_actual
             contexto_lugar["dia_actual"] = dia_actual
 
-            # Calcular distancia desde lugar anterior o punto de partida
+            
             if i > 0 and lugar.get("dia", dia_actual) == itinerario[i-1].get("dia", dia_actual):
-                # Si es el mismo día, usar distancia desde lugar anterior
+                
                 contexto_lugar["distancia_km"] = lugar.get("distancia_anterior", 2)
             else:
-                # Si es un nuevo día, usar distancia desde punto de inicio (hotel)
+                
                 contexto_lugar["distancia_km"] = lugar.get("distancia_inicio", 5)
 
-            # Simular visita
+            
             resultado_visita = self.simular_visita(lugar, contexto_lugar)
-            resultado_visita["dia"] = dia_actual  # Añadir información del día
+            resultado_visita["dia"] = dia_actual  
 
-            # Registrar en qué día se visitó cada lugar
+            
             if dia_actual not in lugares_por_dia:
                 lugares_por_dia[dia_actual] = []
             lugares_por_dia[dia_actual].append(resultado_visita["lugar"])
 
-            # Actualizar hora para próximo lugar
+            
             tiempo_total = resultado_visita["tiempo_espera_min"] / 60 + resultado_visita["tiempo_visita_hrs"]
             hora_actual += tiempo_total
 
-            # Añadir tiempo de desplazamiento al siguiente lugar
+            
             if i < len(itinerario) - 1:
-                # Solo añadir desplazamiento si el siguiente lugar es del mismo día
+                
                 siguiente_dia = itinerario[i+1].get("dia", dia_actual)
                 if siguiente_dia == dia_actual:
-                    tiempo_desplazamiento = contexto_lugar["distancia_km"] / 32  # Ligeramente más lento
+                    tiempo_desplazamiento = contexto_lugar["distancia_km"] / 32  
                     hora_actual += tiempo_desplazamiento
 
-        # Calcular duración total considerando múltiples días
+        
         duracion_total_hrs = 0
         for dia, lugares in lugares_por_dia.items():
-            # Sumar horas activas por día (asumiendo 12 horas activas por día)
-            duracion_total_hrs += min(12, len(lugares) * 2.5)  # Estimación aproximada
+            
+            duracion_total_hrs += min(12, len(lugares) * 2.5)  
 
-        # Resultados globales
+        
         resultados = {
             "perfil_turista": self.tourist_profile,
             "lugares_visitados": self.lugares_visitados,
@@ -754,24 +754,24 @@ class TouristSimulationAgent(Agent):
         """
         Aplica el efecto del descanso nocturno sobre el cansancio acumulado
         """
-        # Recuperación base por dormir - moderada
-        recuperacion_base = 6.5  # Reducido de 8.5 a 6.5 - más realista
+        
+        recuperacion_base = 6.5  
 
-        # Factor de recuperación según el perfil
+        
         factor_recuperacion = {
-            "exigente": 0.85,  # Ligeramente reducido
-            "relajado": 1.3,   # Ligeramente reducido
-            "average": 1.1     # Ligeramente reducido
+            "exigente": 0.85,  
+            "relajado": 1.3,   
+            "average": 1.1     
         }.get(self.tourist_profile, 1.1)
 
-        # Aplicar recuperación con algo de aleatoriedad
-        recuperacion_total = recuperacion_base * factor_recuperacion * random.uniform(0.9, 1.3)  # Ligeramente menos favorable
+        
+        recuperacion_total = recuperacion_base * factor_recuperacion * random.uniform(0.9, 1.3)  
 
-        # Reducir el cansancio acumulado - moderadamente efectivo
+        
         self.cansancio_acumulado = max(0, self.cansancio_acumulado - recuperacion_total)
 
-        # Boost moderado a la satisfacción general por empezar un nuevo día
-        boost_satisfaccion = random.uniform(0.3, 0.6)  # Ligeramente reducido
+        
+        boost_satisfaccion = random.uniform(0.3, 0.6)  
         self.satisfaccion_general = min(10, self.satisfaccion_general + boost_satisfaccion)
 
     def _generar_valoracion_final(self) -> str:
@@ -798,7 +798,7 @@ class TouristSimulationAgent(Agent):
 
         plt.figure(figsize=(12, 8))
 
-        # Gráfico de satisfacción por lugar
+        
         plt.subplot(2, 1, 1)
         plt.bar(nombres, satisfacciones, color='skyblue')
         plt.axhline(y=resultados["satisfaccion_general"], color='r', linestyle='--', label='Satisfacción media')
@@ -809,7 +809,7 @@ class TouristSimulationAgent(Agent):
         plt.legend()
         plt.tight_layout()
 
-        # Evolución del cansancio
+        
         plt.subplot(2, 1, 2)
         cansancio = [lugar["cansancio"] for lugar in lugares]
         plt.plot(nombres, cansancio, marker='o', color='orange')
@@ -838,7 +838,7 @@ class TouristSimulationAgent(Agent):
             msg_type = message.get('type')
 
             if msg_type == 'simulate_itinerary':
-                # Cambiar perfil si se especifica
+                
                 profile = message.get('profile')
                 if profile and profile in self.tourist_profiles:
                     self.tourist_profile = profile
@@ -867,7 +867,7 @@ class TouristSimulationAgent(Agent):
                 }
 
             elif msg_type == 'simulate_single_place':
-                # Simular una sola visita
+                
                 place = message.get('place', {})
                 context = message.get('context', {})
                 result = self.simular_visita(place, context)

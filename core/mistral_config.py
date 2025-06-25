@@ -13,7 +13,7 @@ from datetime import datetime
 import threading
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
+
 load_dotenv()
 
 
@@ -36,35 +36,35 @@ class MistralConfig:
         if self._initialized:
             return
             
-        # Obtener API key
+        
         self.api_key = os.getenv('MISTRAL_API_KEY')
         if not self.api_key:
             raise ValueError("MISTRAL_API_KEY no encontrada en las variables de entorno")
         
-        # Configurar cliente Mistral
+        
         self.client = Mistral(api_key=self.api_key)
         
-        # Modelos disponibles
+        
         self.models = {
-            'flash': 'mistral-small-latest',  # Equivalente a Gemini Flash
-            'pro': 'mistral-large-latest',    # Equivalente a Gemini Pro
-            'flash-8b': 'mistral-small-latest'  # Usando small como equivalente
+            'flash': 'mistral-small-latest',  
+            'pro': 'mistral-large-latest',    
+            'flash-8b': 'mistral-small-latest'  
         }
         
-        # Modelo por defecto
+        
         self.default_model = 'flash'
         
-        # Configuraciones de generación por defecto
+        
         self.default_generation_config = {
             'temperature': 0.7,
             'top_p': 0.95,
             'max_tokens': 2048,
         }
         
-        # Cache de configuraciones
+        
         self._config_cache = {}
         
-        # Estadísticas de uso
+        
         self.stats = {
             'total_requests': 0,
             'successful_requests': 0,
@@ -87,11 +87,11 @@ class MistralConfig:
         Returns:
             Nombre completo del modelo
         """
-        # Usar modelo por defecto si no se especifica
+        
         if model_name is None:
             model_name = self.default_model
         
-        # Convertir alias a nombre completo
+        
         if model_name in self.models:
             return self.models[model_name]
         
@@ -107,7 +107,7 @@ class MistralConfig:
         Returns:
             Configuración final
         """
-        # Combinar configuración por defecto con personalizada
+        
         final_config = self.default_generation_config.copy()
         final_config.update(kwargs)
         return final_config
@@ -165,14 +165,14 @@ class MistralClient:
         Returns:
             Respuesta generada en el formato especificado
         """
-        # Actualizar estadísticas
+        
         self.config.stats['total_requests'] += 1
         model_key = self.model_name
         if model_key not in self.config.stats['requests_by_model']:
             self.config.stats['requests_by_model'][model_key] = 0
         self.config.stats['requests_by_model'][model_key] += 1
         
-        # Preparar mensajes
+        
         messages = []
         if system_instruction:
             messages.append({
@@ -184,14 +184,14 @@ class MistralClient:
             "content": prompt
         })
         
-        # Obtener configuración final
+        
         final_config = self.config.get_generation_config(**self.generation_config, **kwargs)
         
-        # Intentar generar respuesta con reintentos
+        
         last_error = None
         for attempt in range(max_retries):
             try:
-                # Generar respuesta usando la API de Mistral
+                
                 response = self.config.client.chat.complete(
                     model=self.model,
                     messages=messages,
@@ -200,10 +200,10 @@ class MistralClient:
                     max_tokens=final_config.get('max_tokens', 2048),
                 )
                 
-                # Extraer el contenido de la respuesta
+                
                 response_text = response.choices[0].message.content
                 
-                # Procesar según formato esperado
+                
                 if response_format == "json":
                     result = self._parse_json_response(response_text)
                 elif response_format == "structured":
@@ -211,7 +211,7 @@ class MistralClient:
                 else:
                     result = response_text.strip()
                 
-                # Actualizar estadísticas de éxito
+                
                 self.config.stats['successful_requests'] += 1
                 if hasattr(response, 'usage'):
                     self.config.stats['total_tokens'] += response.usage.total_tokens
@@ -224,7 +224,7 @@ class MistralClient:
                     print(f"⚠️ Error en intento {attempt + 1}/{max_retries}: {str(e)}")
                     continue
         
-        # Si llegamos aquí, todos los intentos fallaron
+        
         self.config.stats['failed_requests'] += 1
         self.config.stats['errors'].append({
             'timestamp': datetime.now().isoformat(),
@@ -247,7 +247,7 @@ class MistralClient:
         Returns:
             Diccionario con la respuesta o None si falla
         """
-        # Añadir instrucciones para formato JSON
+        
         json_prompt = prompt
         if schema:
             json_prompt += f"\n\nDevuelve la respuesta en formato JSON siguiendo este esquema:\n{json.dumps(schema, indent=2)}"
@@ -285,10 +285,10 @@ class MistralClient:
             Diccionario parseado o None si falla
         """
         try:
-            # Intentar parsear directamente
+            
             return json.loads(response_text)
         except json.JSONDecodeError:
-            # Intentar extraer JSON del texto
+            
             json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
             if json_match:
                 try:
@@ -296,9 +296,9 @@ class MistralClient:
                 except json.JSONDecodeError:
                     pass
             
-            # Intentar con limpieza adicional
+            
             cleaned = response_text.strip()
-            # Eliminar comillas de código si existen
+            
             cleaned = re.sub(r'^```json\s*', '', cleaned)
             cleaned = re.sub(r'\s*```$', '', cleaned)
             
@@ -318,12 +318,12 @@ class MistralClient:
         Returns:
             Diccionario con la información estructurada
         """
-        # Intentar primero como JSON
+        
         json_result = self._parse_json_response(response_text)
         if json_result:
             return json_result
         
-        # Si no es JSON, parsear como texto estructurado
+        
         result = {}
         lines = response_text.strip().split('\n')
         
@@ -331,7 +331,7 @@ class MistralClient:
         current_value = []
         
         for line in lines:
-            # Detectar claves (líneas que terminan en ':')
+            
             if ':' in line and not line.strip().startswith('-'):
                 if current_key:
                     result[current_key] = '\n'.join(current_value).strip()
@@ -342,7 +342,7 @@ class MistralClient:
             elif current_key:
                 current_value.append(line.strip())
         
-        # Guardar último par clave-valor
+        
         if current_key:
             result[current_key] = '\n'.join(current_value).strip()
         
@@ -359,24 +359,24 @@ class MistralClient:
         Returns:
             Respuesta del asistente
         """
-        # Convertir mensajes al formato de Mistral
+        
         mistral_messages = []
         for msg in messages:
             role = msg.get('role', 'user')
             content = msg.get('content', '')
             
-            # Mistral usa 'system', 'user', 'assistant'
+            
             if role in ['system', 'user', 'assistant']:
                 mistral_messages.append({
                     "role": role,
                     "content": content
                 })
         
-        # Obtener configuración final
+        
         final_config = self.config.get_generation_config(**self.generation_config, **kwargs)
         
         try:
-            # Generar respuesta
+            
             response = self.config.client.chat.complete(
                 model=self.model,
                 messages=mistral_messages,
@@ -392,7 +392,7 @@ class MistralClient:
             return None
 
 
-# Funciones de conveniencia (mantienen la misma interfaz que gemini_config.py)
+
 @lru_cache(maxsize=1)
 def get_mistral_client(model_name: str = None, **kwargs) -> MistralClient:
     """
@@ -445,7 +445,7 @@ def mistral_json(prompt: str, schema: Dict = None, model: str = "flash", **kwarg
     return client.generate_json(prompt, schema, **kwargs)
 
 
-# Alias para mantener compatibilidad con la interfaz anterior
+
 GeminiClient = MistralClient
 GeminiConfig = MistralConfig
 gemini_generate = mistral_generate
@@ -453,16 +453,16 @@ gemini_json = mistral_json
 get_gemini_client = get_mistral_client
 
 
-# Ejemplo de uso y pruebas
+
 if __name__ == "__main__":
     print("=== Prueba de Configuración Centralizada de Mistral ===\n")
     
-    # Prueba 1: Generación de texto simple
+    
     print("1. Generación de texto simple:")
     response = mistral_generate("¿Cuál es la capital de Francia?")
     print(f"Respuesta: {response}\n")
     
-    # Prueba 2: Generación de JSON
+    
     print("2. Generación de JSON:")
     json_response = mistral_json(
         "Dame información sobre París en formato JSON con campos: nombre, pais, poblacion, atracciones",
@@ -475,7 +475,7 @@ if __name__ == "__main__":
     )
     print(f"Respuesta JSON: {json.dumps(json_response, indent=2, ensure_ascii=False)}\n")
     
-    # Prueba 3: Cliente personalizado
+    
     print("3. Cliente personalizado con configuración específica:")
     custom_client = MistralClient(
         model_name="flash",
@@ -488,7 +488,7 @@ if __name__ == "__main__":
     )
     print(f"Haiku:\n{creative_response}\n")
     
-    # Prueba 4: Estadísticas
+    
     print("4. Estadísticas de uso:")
     config = MistralConfig()
     stats = config.get_stats()

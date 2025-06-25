@@ -6,12 +6,12 @@ CHUNKS DE CRAWLER - 2025-06-22 18:49:33
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_5805985_1750632859
 TIMESTAMP: 2025-06-22 18:54:19
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['guía turística Berlin']",
@@ -21,13 +21,13 @@ PROCESADOR: ACO
   "url": "https://www.viajarberlin.com/",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 2000 caracteres
 --------------------------------------------------------------------------------
 Viajar a Berlín , guía de turismo En la capital de Alemania, la historia se mezcla con la modernidad. El patrimonio clásico convive con lo underground, y los grandes edificios contrastan con zonas verdes extensas. Prepárate para viajar a Berlín y descubrir todas sus facetas con esta guía de turismo online. 15/06/2025 Guía Berlín Guía de turismo sobre Berlín Berlín nos dice mucho sobre nuestra historia reciente . Testimonio de la Segunda Guerra Mundial y dividida por el Muro durante la Guerra Fría, la capital alemana recuerda su pasado en museos , monumentos y edificios. Pero también mira hacia adelante con modernidad, cosmopolitismo y cultura : viajar a Berlín es visitar una ciudad con arte urbano, cantidad de eventos culturales a diario, 170 museos y galerías… No en vano tiene el título de Ciudad Creativa de la UNESCO . El menú de esta guía turística se divide en distintos apartados que te ayudarán a organizar tu viaje a Berlín: las mejores zonas donde alojarse , el clima , los lugares que visitar , las actividades que hacer … También te contamos dónde salir de fiesta y conocer la cultura underground o te recomendamos desconectar (e incluso bañarte) en los parques , que representan un tercio de su superficie. De hecho, Berlín es una de las capitales europeas más verdes . Lo muestran también sus restaurantes , donde son tendencia la sostenibilidad, el slow food y la cocina vegana . ¿Por qué viajar a Berlín? Por muchos motivos. Para conocer de primera mano la historia contemporánea, para ver el ambiente de cada barrio, para perderse en sus áreas verdes o en los alrededores… Historia y modernidad Berlín es consciente de su pasado y así lo reflejan lugares como el Monumento a las víctimas del Holocausto . A la vez, es una ciudad renovada y moderna. Descubre qué visitar en Berlín . Infinitas cosas que hacer Desde tours turísticos, hasta dejarse caer por mercados y mercadillos . En Berlín, y en sus alrededores , se pueden hacer actividades para todos los gustos. Barrios 
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['guía turística Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 
@@ -40,12 +40,12 @@ FIN DE CHUNK
 INICIO DE CHUNK - EXACTAMENTE COMO SE GUARDA EN CHROMADB
 ====================================================================================================
 
-### INFORMACIÓN DEL DOCUMENTO ###
+
 ID: aco_doc_8426871_1750632870
 TIMESTAMP: 2025-06-22 18:54:30
 PROCESADOR: ACO
 
-### METADATA (como se guarda en ChromaDB) ###
+
 {
   "extraction_method": "aco",
   "keywords_used": "['qué visitar en Berlin']",
@@ -55,13 +55,13 @@ PROCESADOR: ACO
   "url": "https://www.viajeroscallejeros.com/lugares-que-visitar-berlin/",
 }
 
-### CONTENIDO DEL DOCUMENTO (como se guarda en ChromaDB) ###
+
 Tamaño: 2000 caracteres
 --------------------------------------------------------------------------------
 Esta lista de los mejores lugares que visitar en Berlín te ayudará a no perderte nada de una de las ciudades más multiculturales y sorprendentes de Europa. Renacida de sus cenizas después de su total destrucción durante la Segunda Guerra Mundial, Berlín tiene una interminable oferta de ocio y cultura con la que te será imposible aburrirte. Y, aunque no conserva el encanto de otras ciudades europeas al no tener un centro histórico, sí que paseando por algunas zonas como el barrio judío o el turco; tomando una cerveza en alguna taberna o biergarten; encontrarás el auténtico y encantador Berlín que sorprende a todos los viajeros. Aunque tengas el tiempo que tengas disfrutarás de la ciudad, según nuestra experiencia, te recomendamos dedicar entre dos y tres días para ver sus principales puntos de interés entre los que destacan la Puerta de Branderburgo, el Muro de Berlín y el Museo de Pérgamo, entre otros muchos, además de disfrutar del buen ambiente en parques y locales alternativos. Basándonos en la experiencia de las varias visitas que hemos hecho a la ciudad, después de la última escribimos esta guía de Berlín y esta serie de consejos para viajar a Berlín , hemos realizado esta lista de los que creemos son, los 26 lugares que ver en Berlín imprescindibles . ¡Empezamos! 1. Puerta de Brandeburgo Una de las mejores cosas que hacer en Berlín es pasar de día y de noche por delante de la Puerta de Brandeburgo , una de los pocos monumentos que sobrevivieron a la guerra . Este antigua puerta de entrada a la ciudad, situada en al bonita Pariser Plaz, fue inaugurada en 1791 y ha presenciado la mayoría de grandes momentos históricos de la ciudad como el desfile de las tropas de Napoleón y Hitler. Parecido a un arco del triunfo, este monumento destaca por la cuadriga de cobre que representa a la Diosa de la Victoria situada en la parte superior y, como curiosidad, es importante saber que durante la construcción del Muro de Berlín, quedó situada en la frontera de las dos Alemani
 --------------------------------------------------------------------------------
 
-### RESUMEN DE INFORMACIÓN CLAVE ###
+
 PALABRAS CLAVE UTILIZADAS: ['qué visitar en Berlin']
 MÉTODO DE EXTRACCIÓN: aco
 

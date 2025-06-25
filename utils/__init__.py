@@ -1,4 +1,4 @@
-# Módulo de utilidades
+
 from .urls import starting_urls
 from .simulation_utils import (
     format_as_simulation_input,

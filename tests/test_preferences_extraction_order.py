@@ -12,14 +12,14 @@ def test_extraction_before_proceed_check():
     """
     print("=== TEST: Extracción de preferencias antes de verificar intención de proceder ===\n")
     
-    # Crear agente turístico
+    
     guide = TouristGuideAgent("TestGuide")
     
-    # Simular estado inicial con destino ya establecido
+    
     guide.conversation_state['phase'] = 'interests'
     guide.conversation_state['preferences']['destination'] = 'Cuba'
     
-    # Casos de prueba donde el usuario da información Y dice que no quiere dar más
+    
     test_cases = [
         {
             'message': "Solo me interesan museos, nada más",
@@ -49,17 +49,17 @@ def test_extraction_before_proceed_check():
         print(f"\nCaso {i}: {test_case['description']}")
         print(f"Mensaje: '{test_case['message']}'")
         
-        # Resetear intereses para cada prueba
+        
         guide.conversation_state['preferences']['interests'] = []
         
-        # Simular extracción manual (para evitar llamadas a API)
+        
         guide._manual_extraction(test_case['message'])
         
-        # Verificar resultados
+        
         actual_interests = guide.conversation_state['preferences']['interests']
         print(f"Intereses extraídos: {actual_interests}")
         
-        # Verificar si se extrajeron los intereses esperados
+        
         if 'expected_interest' in test_case:
             expected = [test_case['expected_interest']]
         else:
@@ -81,14 +81,14 @@ def test_process_flow():
     """
     print("\n\n=== TEST: Flujo completo de procesamiento ===\n")
     
-    # Crear agente turístico
+    
     guide = TouristGuideAgent("TestGuide")
     
-    # Simular estado con destino
+    
     guide.conversation_state['phase'] = 'interests'
     guide.conversation_state['preferences']['destination'] = 'México'
     
-    # Mensaje que combina preferencia con indicación de no dar más info
+    
     test_message = "Solo quiero conocer museos, nada más"
     
     print(f"Estado inicial:")
@@ -96,25 +96,25 @@ def test_process_flow():
     print(f"- Intereses: {guide.conversation_state['preferences']['interests']}")
     print(f"\nProcesando mensaje: '{test_message}'")
     
-    # Simular el flujo de _process_user_message
-    # 1. Agregar al historial
+    
+    
     guide.conversation_state['conversation_history'].append({
         'role': 'user',
         'content': test_message,
         'timestamp': 'test'
     })
     
-    # 2. Extraer preferencias (esto debe ocurrir ANTES de verificar si quiere proceder)
+    
     guide._manual_extraction(test_message)
     
     print(f"\nDespués de extracción:")
     print(f"- Intereses: {guide.conversation_state['preferences']['interests']}")
     
-    # 3. Verificar si quiere proceder
+    
     wants_to_proceed = guide._wants_to_proceed_with_current_info(test_message)
     print(f"\n¿Usuario quiere proceder?: {wants_to_proceed}")
     
-    # Verificar que se extrajo el interés antes de proceder
+    
     if 'museums' in guide.conversation_state['preferences']['interests'] and wants_to_proceed:
         print("\n✅ ÉXITO: Se extrajo el interés 'museums' antes de detectar que el usuario quiere proceder")
         return True
@@ -128,13 +128,13 @@ def test_order_of_operations():
     """
     print("\n\n=== TEST: Orden de operaciones ===\n")
     
-    # Leer el código del método para verificar el orden
+    
     import inspect
     
     guide = TouristGuideAgent("TestGuide")
     source_lines = inspect.getsource(guide._process_user_message).split('\n')
     
-    # Buscar las líneas clave
+    
     extract_line = -1
     proceed_line = -1
     
@@ -155,7 +155,7 @@ def test_order_of_operations():
         return False
 
 if __name__ == "__main__":
-    # Ejecutar pruebas
+    
     test1_passed = test_extraction_before_proceed_check()
     test2_passed = test_process_flow()
     test3_passed = test_order_of_operations()
