@@ -345,7 +345,7 @@ class TouristSimulationAgent(Agent):
         tiempo_base = tiempos_base.get(tipo_lugar.lower(), 7)
 
         
-        factor_crowding = (nivel_crowding / 5.5) ** 1.6  
+        factor_crowding = (nivel_crowding / 5.0) ** 1.6
 
         
         tiempo_espera = tiempo_base * factor_crowding * random.uniform(0.7, 1.2)  
