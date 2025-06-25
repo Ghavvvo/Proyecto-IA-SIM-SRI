@@ -1,8 +1,9 @@
 import json
-
+import statistics
 from autogen import Agent
 from typing import List
 from core.mistral_config import MistralClient
+import math
 
 from utils import (
     format_as_simulation_input,
@@ -1463,7 +1464,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
         dias_simulados = [r.get('dias_simulados', 1) for r in all_results]
         
         
-        import statistics
+
         
         aggregated = {
             'perfil_turista': all_results[0].get('perfil_turista', 'average'),
@@ -1646,7 +1647,7 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
             
             if num_replicas >= 10 and satisfaccion_std > 0:
-                import math
+
                 error_std = satisfaccion_std / math.sqrt(num_replicas)
                 ic_inferior = satisfaccion_prom - 1.96 * error_std
                 ic_superior = satisfaccion_prom + 1.96 * error_std
@@ -1660,106 +1661,3 @@ Puedes decirme "quiero planificar vacaciones" para iniciar una conversación gui
             print(f"Error formateando resultados agregados: {e}")
             return f"\n\n⚠️ Error al procesar resultados agregados de {num_replicas} réplicas."
 
-    def _format_simulation_results(self, results: dict) -> str:
-        """
-        Formatea los resultados de la simulación en un texto legible
-        
-        Args:
-            results: Diccionario con los resultados de la simulación
-            
-        Returns:
-            String formateado con el resumen de la simulación
-        """
-        try:
-            
-            profile = results.get('perfil_turista', 'average')
-            general_satisfaction = results.get('satisfaccion_general', 0)
-            final_fatigue = results.get('cansancio_final', 0)
-            total_duration = results.get('duracion_total_hrs', 0)
-            overall_rating = results.get('valoracion_viaje', '')
-            places_visited = results.get('lugares_visitados', [])
-            dias_simulados = results.get('dias_simulados', 1)
-            lugares_por_dia = results.get('lugares_por_dia', {})
-            
-            
-            summary = f"""
-🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA**
-
-📊 **Resultados Generales:**
-- Perfil del turista: {profile.capitalize()}
-- Satisfacción general: {general_satisfaction}/10 {'⭐' * int(general_satisfaction)}
-- Nivel de cansancio final: {final_fatigue}/10
-- Duración total estimada: {total_duration:.1f} horas
-- Días simulados: {dias_simulados}
-
-💭 **Valoración del viaje:**
-{overall_rating}"""
-
-            
-            if dias_simulados > 1 and lugares_por_dia:
-                summary += "\n\n📅 **Experiencia por día:**"
-                for dia, lugares in sorted(lugares_por_dia.items()):
-                    summary += f"\n\n**Día {dia}:**"
-                    summary += f"\n- Lugares visitados: {len(lugares)}"
-                    
-                    
-                    lugares_dia = [p for p in places_visited if p.get('dia', 1) == dia]
-                    if lugares_dia:
-                        avg_satisfaction = sum(p.get('satisfaccion', 0) for p in lugares_dia) / len(lugares_dia)
-                        summary += f"\n- Satisfacción promedio: {avg_satisfaction:.1f}/10"
-                        
-                        
-                        best_place = max(lugares_dia, key=lambda x: x.get('satisfaccion', 0))
-                        summary += f"\n- Mejor experiencia: {best_place['lugar']} ({best_place['satisfaccion']}/10)"
-
-            summary += "\n\n🏆 **Mejores experiencias del viaje:**"
-            
-            
-            if places_visited:
-                sorted_places = sorted(places_visited, key=lambda x: x.get('satisfaccion', 0), reverse=True)
-                top_places = sorted_places[:3]
-                
-                for place in top_places:
-                    dia_info = f" (Día {place.get('dia', 1)})" if dias_simulados > 1 else ""
-                    summary += f"\n- {place['lugar']}{dia_info}: {place['satisfaccion']}/10 - {place.get('comentario', 'Sin comentarios')}"
-            
-            
-            warnings = []
-            if final_fatigue > 8:
-                warnings.append("⚠️ El itinerario es muy agotador. Considera reducir actividades o agregar más descansos entre días.")
-            
-            if general_satisfaction < 6:
-                warnings.append("⚠️ La satisfacción general es baja. Revisa los tiempos de espera y la distribución de actividades.")
-            
-            
-            problem_places = [p for p in places_visited if p.get('satisfaccion', 0) < 5]
-            if problem_places:
-                warnings.append(f"⚠️ {len(problem_places)} lugares con baja satisfacción. Considera alternativas.")
-            
-            
-            if lugares_por_dia:
-                for dia, lugares in lugares_por_dia.items():
-                    if len(lugares) > 5:
-                        warnings.append(f"⚠️ El día {dia} tiene demasiadas actividades ({len(lugares)}). Considera distribuir mejor.")
-            
-            if warnings:
-                summary += "\n\n⚠️ **Recomendaciones de mejora:**"
-                for warning in warnings:
-                    summary += f"\n{warning}"
-            
-            
-            if places_visited:
-                avg_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited) / len(places_visited)
-                total_wait_time = sum(p.get('tiempo_espera_min', 0) for p in places_visited)
-                
-                summary += f"\n\n📈 **Estadísticas adicionales:**"
-                summary += f"\n- Tiempo promedio de espera: {avg_wait_time:.0f} minutos"
-                summary += f"\n- Tiempo total en esperas: {total_wait_time:.0f} minutos"
-                summary += f"\n- Total de lugares visitados: {len(places_visited)}"
-                summary += f"\n- Promedio de lugares por día: {len(places_visited)/dias_simulados:.1f}"
-            
-            return summary
-            
-        except Exception as e:
-            print(f"Error formateando resultados de simulación: {e}")
-            return "\n\n⚠️ No se pudieron procesar los resultados de la simulación."
