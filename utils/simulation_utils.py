@@ -364,11 +364,17 @@ def aggregate_simulation_results(all_results: list) -> dict:
 
     all_places = []
     lugares_por_dia_agregado = {}
+    all_comments = []
 
     for result in all_results:
         places = result.get('lugares_visitados', [])
         all_places.extend(places)
 
+
+        for place in places:
+            comment = place.get('comentario', '')
+            if comment and comment != 'Sin comentarios':
+                all_comments.append(comment)
 
         lugares_por_dia = result.get('lugares_por_dia', {})
         for dia, lugares in lugares_por_dia.items():
@@ -389,6 +395,20 @@ def aggregate_simulation_results(all_results: list) -> dict:
             'lugares_por_dia': lugares_por_dia_agregado
         })
 
+
+    mejor_experiencia_comentario = ""
+    mejor_lugar_nombre = ""
+    
+    if all_places:
+
+        places_with_comments = [p for p in all_places if p.get('comentario', '') and p.get('comentario', '') != 'Sin comentarios']
+        if places_with_comments:
+            best_place = max(places_with_comments, key=lambda x: x.get('satisfaccion', 0))
+            mejor_experiencia_comentario = best_place.get('comentario', '')
+            mejor_lugar_nombre = best_place.get('lugar', '')
+    
+    aggregated['mejor_experiencia_comentario'] = mejor_experiencia_comentario
+    aggregated['mejor_lugar_nombre'] = mejor_lugar_nombre
 
     satisfaccion_prom = aggregated['satisfaccion_promedio']
     desv_std = aggregated['satisfaccion_desv_std']
@@ -424,7 +444,6 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
     try:
         profile = aggregated_results.get('perfil_turista', 'average')
 
-
         summary = f"""
 🎮 **SIMULACIÓN DE EXPERIENCIA TURÍSTICA - ANÁLISIS DE {num_replicas} RÉPLICAS**
 
@@ -452,6 +471,11 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
 💭 **Valoración Agregada:**
 {aggregated_results.get('valoracion_viaje', 'Sin valoración disponible')}"""
 
+        mejor_comentario = aggregated_results.get('mejor_experiencia_comentario', '')
+        mejor_lugar = aggregated_results.get('mejor_lugar_nombre', '')
+        if mejor_comentario and mejor_lugar:
+            summary += f"\n\n💬 **Mejor experiencia del viaje ({mejor_lugar}):**"
+            summary += f"\n\"{mejor_comentario.strip()}\""
 
         satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
         cansancio_std = aggregated_results.get('cansancio_desv_std', 0)
@@ -470,7 +494,6 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
         else:
             summary += "\n- ⚠️ Nivel de cansancio variable entre réplicas"
 
-
         if aggregated_results.get('total_visitas', 0) > 0:
             total_visitas = aggregated_results.get('total_visitas', 0)
             satisfaccion_lugares = aggregated_results.get('satisfaccion_lugares_promedio', 0)
@@ -481,7 +504,6 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
             summary += f"\n- Satisfacción promedio por lugar: {satisfaccion_lugares:.1f}/10"
             summary += f"\n- Tiempo de espera promedio: {tiempo_espera:.0f} minutos"
             summary += f"\n- Visitas por réplica: {total_visitas/num_replicas:.1f}"
-
 
         summary += "\n\n💡 **Recomendaciones Basadas en el Análisis:**"
 
@@ -502,7 +524,6 @@ def format_aggregated_simulation_results(aggregated_results: dict, num_replicas:
 
         if satisfaccion_std > 2:
             summary += "\n- 📊 Alta variabilidad sugiere factores externos impredecibles"
-
 
         satisfaccion_prom = aggregated_results.get('satisfaccion_promedio', 0)
         satisfaccion_std = aggregated_results.get('satisfaccion_desv_std', 0)
