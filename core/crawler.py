@@ -830,8 +830,6 @@ class TourismCrawler:
         search_engines = [
             ("DuckDuckGo", self._search_duckduckgo_links),
             ("Bing", self._search_bing_links),
-            ("Searx", self._search_searx_links),
-            ("Búsqueda directa", self._fallback_direct_search)
         ]
         
         for engine_name, search_function in search_engines:
@@ -853,60 +851,6 @@ class TourismCrawler:
         print("   - Todos los motores de búsqueda fallaron o están bloqueados")
         return []
     
-    def _direct_keyword_search(self, keywords: list) -> list:
-        """
-        Búsqueda directa construyendo URLs basadas en palabras clave.
-        """
-        direct_urls = []
-        
-        
-        url_templates = [
-            "https://www.tripadvisor.com/Search?q={keyword}",
-            "https://www.booking.com/searchresults.html?ss={keyword}",
-            "https://www.expedia.com/Hotel-Search?destination={keyword}",
-            "https://www.hotels.com/search.do?q={keyword}",
-            "https://www.lonelyplanet.com/search?q={keyword}",
-            "https://www.viator.com/searchResults/all?text={keyword}",
-            "https://www.getyourguide.com/s/?q={keyword}",
-            "https://www.airbnb.com/s/{keyword}/homes"
-        ]
-        
-        
-        for keyword in keywords[:3]:  
-            keyword_encoded = keyword.replace(' ', '+')
-            
-            for template in url_templates:
-                try:
-                    url = template.format(keyword=keyword_encoded)
-                    direct_urls.append(url)
-                except:
-                    continue
-        
-        
-        for keyword in keywords:
-            keyword_lower = keyword.lower()
-            
-            
-            if any(term in keyword_lower for term in ['cuba', 'habana', 'havana', 'varadero']):
-                direct_urls.extend([
-                    "https://www.tripadvisor.com/Tourism-g147270-Cuba-Vacations.html",
-                    "https://www.lonelyplanet.com/cuba",
-                    "https://www.booking.com/country/cu.html"
-                ])
-            elif any(term in keyword_lower for term in ['panama', 'panamá']):
-                direct_urls.extend([
-                    "https://www.tripadvisor.com/Tourism-g294479-Panama-Vacations.html",
-                    "https://www.lonelyplanet.com/panama",
-                    "https://www.booking.com/country/pa.html"
-                ])
-            elif any(term in keyword_lower for term in ['angola', 'luanda']):
-                direct_urls.extend([
-                    "https://www.tripadvisor.com/Tourism-g293819-Angola-Vacations.html",
-                    "https://www.lonelyplanet.com/angola",
-                    "https://www.booking.com/country/ao.html"
-                ])
-        
-        return list(set(direct_urls))  
     
     def _search_duckduckgo_links(self, keywords: list, num_results_per_query: int = 8) -> list:
         """
