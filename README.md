@@ -1,8 +1,17 @@
+# Sistema Multiagente para Turismo Inteligente
 
+**Grupo:** C312
+
+**Integrantes:**
+- Gabriel Herrera Carrazana
+- Adrian A Souto Morales  
+- Lauren Peraza García
+
+## Descripción
 
 Sistema inteligente de asistencia turística basado en agentes que utiliza técnicas de IA para proporcionar recomendaciones personalizadas, planificación de viajes y simulación de experiencias turísticas.
 
-
+## Estructura del Proyecto
 
 ```
 Proyecto-IA-SIM-SRI/
@@ -188,3 +197,4 @@ Este proyecto está bajo la Licencia MIT - ver el archivo LICENSE para más deta
 - Mistral AI por proporcionar capacidades de generación de lenguaje
 - ChromaDB por la base de datos vectorial
 - La comunidad de Python por las excelentes librerías
+
